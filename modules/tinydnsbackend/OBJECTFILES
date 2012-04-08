@@ -1,1 +1,1 @@
-tinydnsbackend.o cdb.o
+tinydnssecbackend.o tinydnsbackend.o cdb.o

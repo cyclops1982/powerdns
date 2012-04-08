@@ -25,7 +25,7 @@ bind bind-dnssec bind-dnssec-nsec3
 gmysql-nodnssec gmysql gmysql-nsec3
 gsqlite3-nodnssec gsqlite3 gsqlite3-nsec3
 gpgsql-nodnssec gpgsql gpgsql-nsec3
-tinydns
+tinydns tinydns-dnssec
 
 add 'wait' (literally) after the context to not kill 
 pdns_server immediately after testing
@@ -254,6 +254,16 @@ __EOF__
 			else
 				extracontexts="dnssec"
 			fi
+			;;
+		tinydns-dnssec)
+			../modules/tinydnsbackend/tinydns-dnssec-setup
+			../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./ \
+				--no-shuffle --launch=tinydns \
+				--query-logging --loglevel=9 --cache-ttl=0 --no-config \
+				--send-root-referral \
+				--tinydns-dbfile=../modules/tinydnsbackend/data.cdb \
+				--tinydns-dnssec-db=../modules/tinydnsbackend/data.sqlite3 &
+				extracontexts="dnssec nsec3"
 			;;
 		tinydns)
 			../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./ \

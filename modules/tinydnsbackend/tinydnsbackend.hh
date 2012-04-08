@@ -41,6 +41,8 @@ struct TDI_SerialModifier {
 		int d_newSerial;
 };
 
+class SSQLite3;
+class NSEC3PARAMRecordContent;
 
 class TinyDNSBackend : public DNSBackend
 {
@@ -55,6 +57,19 @@ public:
 	//Master mode operation
 	void getUpdatedMasters(vector<DomainInfo>* domains);
 	void setNotified(uint32_t id, uint32_t serial);
+
+	//DNSSEC Operation
+	bool getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after);
+	bool getDomainMetadata(const string& name, const std::string& kind, std::vector<std::string>& meta);
+	bool setDomainMetadata(const string& name, const std::string& kind, const std::vector<std::string>& meta);
+	bool getDomainKeys(const string& name, unsigned int kind, std::vector<KeyData>& keys);
+	bool removeDomainKey(const string& name, unsigned int id);
+	int addDomainKey(const string& name, const KeyData& key);
+	bool activateDomainKey(const string& name, unsigned int id);
+	bool deactivateDomainKey(const string& name, unsigned int id);
+	bool getTSIGKey(const string& name, string* algorithm, string* content);
+	static void createDNSSECDB(const string& fname);
+
 private:
 	vector<string> getLocations();
 
@@ -88,6 +103,12 @@ private:
 	static pthread_mutex_t s_domainInfoLock;
 	static TDI_suffix_t s_domainInfo;
 	static uint32_t s_lastId; // used to give a domain an id.
+
+	// DNSSEC operation
+	void setupDNSSEC();
+	shared_ptr<SSQLite3> d_dnssecdb;
+	bool getNSEC3PARAM(const std::string& zname, NSEC3PARAMRecordContent* ns3p);
+
 };
 
 #endif // TINYDNSBACKEND_HH 
