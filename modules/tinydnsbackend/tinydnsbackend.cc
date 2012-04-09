@@ -17,45 +17,6 @@ pthread_mutex_t TinyDNSBackend::s_domainInfoLock=PTHREAD_MUTEX_INITIALIZER;
 TinyDNSBackend::TDI_suffix_t TinyDNSBackend::s_domainInfo;
 
 
-vector<string> TinyDNSBackend::getLocations()
-{
-	vector<string> ret;
-
-	if (! d_dnspacket) {
-		return ret;
-	}
-
-	//TODO: We do not have IPv6 support.
-	Netmask remote = d_dnspacket->getRealRemote();
-	if (remote.getBits() != 32) {
-		return ret;
-	}
-	
-	unsigned long addr = remote.getNetwork().sin4.sin_addr.s_addr;	
-
-	char key[6];
-	key[0] = '\000';
-	key[1] = '\045';
-	key[2] = (addr      )&0xff;
-	key[3] = (addr >>  8)&0xff;
-	key[4] = (addr >> 16)&0xff;
-	key[5] = (addr >> 24)&0xff;
-
-	for (int i=4;i>=0;i--) {
-		string searchkey(key, i+2);
-		CDB *reader = new CDB(getArg("dbfile"));
-		ret = reader->findall(searchkey);
-		delete reader;
-
-		//Biggest item wins, so when we find something, we can jump out.
-		if (ret.size() > 0) {
-			break;
-		}
-	}
-
-	return ret; 
-}
-
 TinyDNSBackend::TinyDNSBackend(const string &suffix)
 {
 	setArgPrefix("tinydns"+suffix);
@@ -347,6 +308,49 @@ bool TinyDNSBackend::get(DNSResourceRecord &rr)
 	delete d_cdbReader;
 	return false;
 }
+
+
+vector<string> TinyDNSBackend::getLocations()
+{
+	vector<string> ret;
+
+	if (! d_dnspacket) {
+		return ret;
+	}
+
+	//TODO: We do not have IPv6 support.
+	Netmask remote = d_dnspacket->getRealRemote();
+	if (remote.getBits() != 32) {
+		return ret;
+	}
+	
+	unsigned long addr = remote.getNetwork().sin4.sin_addr.s_addr;	
+
+	char key[6];
+	key[0] = '\000';
+	key[1] = '\045';
+	key[2] = (addr      )&0xff;
+	key[3] = (addr >>  8)&0xff;
+	key[4] = (addr >> 16)&0xff;
+	key[5] = (addr >> 24)&0xff;
+
+	for (int i=4;i>=0;i--) {
+		string searchkey(key, i+2);
+		CDB *reader = new CDB(getArg("dbfile"));
+		ret = reader->findall(searchkey);
+		delete reader;
+
+		//Biggest item wins, so when we find something, we can jump out.
+		if (ret.size() > 0) {
+			break;
+		}
+	}
+
+	return ret; 
+}
+
+
+
 
 // boilerplate
 class TinyDNSFactory: public BackendFactory
