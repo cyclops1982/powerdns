@@ -4,4 +4,5 @@ rm -f ../modules/tinydnsbackend/data.sqlite3
 for zone in $(grep zone named.conf  | cut -f2 -d\")
 do
 	../pdns/pdnssec --config-dir=../modules/tinydnsbackend/ secure-zone $zone 2>&1
+	../pdns/pdnssec --config-dir=../modules/tinydnsbackend/ set-nsec3 $zone '1 1 1 abcd' narrow 2>&1
 done
