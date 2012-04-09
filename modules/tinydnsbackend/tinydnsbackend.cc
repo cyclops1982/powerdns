@@ -68,11 +68,12 @@ TinyDNSBackend::TinyDNSBackend(const string &suffix)
 	if (! s_domainInfo.count(d_suffix)) {
 		domains = new TDI_t;
 		s_domainInfo[d_suffix] = *domains;
-	} 
-	domains = &s_domainInfo[d_suffix];
+	}	
 
 	if (!getArg("dnssec-db").empty()) {
 		setupDNSSEC();
+
+		domains = &s_domainInfo[d_suffix];
 		if(domains->size() == 0) { // We need a list of zone's to fix the Auth field in the get()
 			d_isAxfr=true;
 			d_dnspacket = NULL;
@@ -82,7 +83,6 @@ TinyDNSBackend::TinyDNSBackend(const string &suffix)
 			DNSResourceRecord rr;
 			while (get(rr)) {
 				if (rr.qtype.getCode() == QType::SOA) {
-					cerr<<"Adding zone "<<rr.qname<<endl;
 					s_lastId++;
 
 					SOAData sd;
@@ -112,18 +112,15 @@ void TinyDNSBackend::getUpdatedMasters(vector<DomainInfo>* retDomains) {
 	getAllDomains(&allDomains);
 
 	if (domains->size() == 0 && !mustDo("notify-on-startup")) {
-		cerr<<"Domain list is EMPTY"<<endl;
 		for (vector<DomainInfo>::iterator di=allDomains.begin(); di!=allDomains.end(); ++di) {
 			di->notified_serial = 0;
 		}
 	}
 
 	for(vector<DomainInfo>::iterator di=allDomains.begin(); di!=allDomains.end(); ++di) {
-		cerr<<"AllDomains loop:"<<di->zone<<endl;
 		TDIByZone_t& zone_index = domains->get<tag_zone>();
 		TDIByZone_t::iterator itByZone = zone_index.find(di->zone);
 		if (itByZone == zone_index.end()) { // We didn't find the zone, so it must be new!
-			cerr<<"New zone, adding!"<<endl;
 			s_lastId++;
 			di->id = s_lastId;
 
@@ -134,12 +131,10 @@ void TinyDNSBackend::getUpdatedMasters(vector<DomainInfo>* retDomains) {
 			domains->insert(tmp);
 
 			if (di->notified_serial > 0) { 
-				cerr<<"Serial is > 0"<<endl;
 				retDomains->push_back(*di);
 			}
 		} else {
 			if (itByZone->notified_serial < di->serial) {
-				cerr<<"Old zone, updated serial!"<<endl;
 				di->id = itByZone->id;
 				retDomains->push_back(*di);
 			}
