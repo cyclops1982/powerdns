@@ -259,7 +259,6 @@ bool TinyDNSBackend::get(DNSResourceRecord &rr)
 
 				TDIByZone_t::iterator itByZone = zone_index.find(rr.qname);
 				if (itByZone == zone_index.end()) {
-					cerr<<"SETING AUTH FLAG TO FALSE"<<endl;
 					rr.auth = false;
 				}
 			}
