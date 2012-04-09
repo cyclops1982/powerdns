@@ -263,7 +263,7 @@ __EOF__
 				--send-root-referral \
 				--tinydns-dbfile=../modules/tinydnsbackend/data.cdb \
 				--tinydns-dnssec-db=../modules/tinydnsbackend/data.sqlite3 &
-				extracontexts="dnssec nsec3"
+				extracontexts="dnssec"
 			;;
 		tinydns)
 			../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./ \

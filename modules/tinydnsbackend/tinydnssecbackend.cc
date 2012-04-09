@@ -177,7 +177,6 @@ bool TinyDNSBackend::removeDomainKey(const string& name, unsigned int id)
 
 int TinyDNSBackend::addDomainKey(const string& name, const KeyData& key)
 {
-  cerr<<"AddDomainKey called!"<<endl;
   if(!d_dnssecdb)
     return false;
   
