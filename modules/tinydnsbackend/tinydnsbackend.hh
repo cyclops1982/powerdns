@@ -73,7 +73,9 @@ public:
 private:
 	vector<string> getLocations();
 
-	//TypeDefs
+	// The typedef's and mutli_index_container are used for master mode operation AND to determine the auth flag.
+	// TDI_t has the actual TinyDomainInfo with two indexes to query them easily with the master-mode methods.
+	// The TDI_suffix_t is used to have TDI_t for every d_suffix (named-instance of the backend).
 	struct tag_zone{};
 	struct tag_domainid{};
 	typedef multi_index_container<
@@ -86,6 +88,7 @@ private:
 	typedef map<string, TDI_t> TDI_suffix_t;
 	typedef TDI_t::index<tag_zone>::type TDIByZone_t;
 	typedef TDI_t::index<tag_domainid>::type TDIById_t;
+
 
 	//data member variables
 	uint64_t d_taiepoch;

@@ -46,11 +46,7 @@ bool TinyDNSBackend::getTSIGKey(const string& name, string* algorithm, string* c
 { return false; }
 
 bool TinyDNSBackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after)
-{
-  cerr<<"WRONG TinyDNSBackend::GetBeforeAndAfterNameAbsolute called Id="<<id<<"; qname:"<<qname<<"; unhashed:"<<unhashed<<"; before: "<<before<<"; after:"<<after<<endl;
-  return false; 
-}
-
+{ return false; }
 #else
 
 
@@ -58,14 +54,12 @@ bool TinyDNSBackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::stri
 #include "pdns/ssqlite3.hh"
 bool TinyDNSBackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after)
 { 
-  cerr<<"TinyDNSBackend::GetBeforeAndAfterNameAbsolute called Id="<<id<<"; qname:"<<qname<<"; unhashed:"<<unhashed<<"; before: "<<before<<"; after:"<<after<<endl;
-  return false; 
+  throw runtime_error("The TinyDNSBackend can only be operated in NSEC3-narrow mode. The current configuration is not NSEC3-narrow.");
 } 
 
 
 void TinyDNSBackend::setupDNSSEC()
 {
-  cerr<<"DNSSEC DB:"<<getArg("dnssec-db")<<endl;
   if(getArg("dnssec-db").empty())
     return;
   try {
@@ -75,20 +69,6 @@ void TinyDNSBackend::setupDNSSEC()
   catch(SSqlException& se) {
     // this error is meant to kill the server dead - it makes no sense to continue..
     throw runtime_error("Error opening DNSSEC database in TinyDNS backend: "+se.txtReason());
-  }
-}
-
-void TinyDNSBackend::createDNSSECDB(const string& fname)
-{
-  try {
-    SSQLite3 db(fname, true); // create=ok
-    vector<string> statements;
-    stringtok(statements, sqlCreate, ";");
-    BOOST_FOREACH(const string& statement, statements)
-      db.doCommand(statement);
-  }
-  catch(SSqlException& se) {
-    throw AhuException("Error creating DNSSEC SQLite database in TinyDNS backend: "+se.txtReason());
   }
 }
 

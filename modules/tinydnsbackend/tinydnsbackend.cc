@@ -12,6 +12,7 @@
 
 static string backendname="[TinyDNSBackend] ";
 uint32_t TinyDNSBackend::s_lastId;
+
 pthread_mutex_t TinyDNSBackend::s_domainInfoLock=PTHREAD_MUTEX_INITIALIZER;
 TinyDNSBackend::TDI_suffix_t TinyDNSBackend::s_domainInfo;
 
@@ -61,45 +62,84 @@ TinyDNSBackend::TinyDNSBackend(const string &suffix)
 	d_suffix = suffix;
 	d_locations = mustDo("locations");
 	d_taiepoch = 4611686018427387904ULL + getArgAsNum("tai-adjust");
-	setupDNSSEC();
-}
 
-void TinyDNSBackend::getUpdatedMasters(vector<DomainInfo>* retDomains) {
-	Lock l(&s_domainInfoLock); //TODO: We could actually lock less if we do it per suffix.
-	
-	TDI_t *domains;
+	Lock l(&s_domainInfoLock);
+	TDI_t *domains; // Setup the s_domainInfo object so we can always be sure it exists for this suffix.
 	if (! s_domainInfo.count(d_suffix)) {
 		domains = new TDI_t;
 		s_domainInfo[d_suffix] = *domains;
 	} 
 	domains = &s_domainInfo[d_suffix];
 
+	if (!getArg("dnssec-db").empty()) {
+		setupDNSSEC();
+		if(domains->size() == 0) { // We need a list of zone's to fix the Auth field in the get()
+			d_isAxfr=true;
+			d_dnspacket = NULL;
+			d_cdbReader=new CDB(getArg("dbfile"));
+			d_cdbReader->searchAll();
+
+			DNSResourceRecord rr;
+			while (get(rr)) {
+				if (rr.qtype.getCode() == QType::SOA) {
+					cerr<<"Adding zone "<<rr.qname<<endl;
+					s_lastId++;
+
+					SOAData sd;
+					fillSOAData(rr.content, sd);
+
+					TinyDomainInfo tmp;
+					tmp.zone = rr.qname;
+					tmp.id = s_lastId;
+					if (mustDo("notify-on-startup")) {
+						tmp.notified_serial = 0;
+					} else {
+						tmp.notified_serial = sd.serial;
+					}
+					domains->insert(tmp);
+				}
+			}
+		}
+	}
+
+}
+
+void TinyDNSBackend::getUpdatedMasters(vector<DomainInfo>* retDomains) {
+	Lock l(&s_domainInfoLock); //TODO: We could actually lock less if we do it per suffix.
+	TDI_t *domains = &s_domainInfo[d_suffix];
+
 	vector<DomainInfo> allDomains;
 	getAllDomains(&allDomains);
+
 	if (domains->size() == 0 && !mustDo("notify-on-startup")) {
+		cerr<<"Domain list is EMPTY"<<endl;
 		for (vector<DomainInfo>::iterator di=allDomains.begin(); di!=allDomains.end(); ++di) {
 			di->notified_serial = 0;
 		}
 	}
 
 	for(vector<DomainInfo>::iterator di=allDomains.begin(); di!=allDomains.end(); ++di) {
+		cerr<<"AllDomains loop:"<<di->zone<<endl;
 		TDIByZone_t& zone_index = domains->get<tag_zone>();
 		TDIByZone_t::iterator itByZone = zone_index.find(di->zone);
-		if (itByZone == zone_index.end()) {
+		if (itByZone == zone_index.end()) { // We didn't find the zone, so it must be new!
+			cerr<<"New zone, adding!"<<endl;
 			s_lastId++;
+			di->id = s_lastId;
 
 			TinyDomainInfo tmp;
 			tmp.zone = di->zone;
-			tmp.id = s_lastId;
+			tmp.id = di->id;
 			tmp.notified_serial = di->serial;
 			domains->insert(tmp);
 
-			di->id = s_lastId;
 			if (di->notified_serial > 0) { 
+				cerr<<"Serial is > 0"<<endl;
 				retDomains->push_back(*di);
 			}
 		} else {
 			if (itByZone->notified_serial < di->serial) {
+				cerr<<"Old zone, updated serial!"<<endl;
 				di->id = itByZone->id;
 				retDomains->push_back(*di);
 			}
@@ -254,9 +294,20 @@ bool TinyDNSBackend::get(DNSResourceRecord &rr)
 			rr.qname = dnsKey.human();
 			rr.qname = rr.qname.erase(rr.qname.size()-1, 1);// strip the last dot, packethandler needs this.
 			rr.domain_id=-1;
-			// 11:13.21 <@ahu> IT IS ALWAYS AUTH --- well not really because we are just a backend :-)
-			// We could actually do NSEC3-NARROW DNSSEC according to Habbie, if we do, we need to change something ehre. 
+
+			//TODO: DS record?
 			rr.auth = true;
+			if(d_dnssecdb && rr.qtype.getCode() == QType::NS) {
+				TDI_t *domains = &s_domainInfo[d_suffix];
+				TDIByZone_t& zone_index = domains->get<tag_zone>();
+
+				TDIByZone_t::iterator itByZone = zone_index.find(rr.qname);
+				if (itByZone == zone_index.end()) {
+					cerr<<"SETING AUTH FLAG TO FALSE"<<endl;
+					rr.auth = false;
+				}
+			}
+
 
 			rr.ttl = pr.get32BitInt();
 			uint64_t timestamp = pr.get32BitInt();
@@ -290,7 +341,9 @@ bool TinyDNSBackend::get(DNSResourceRecord &rr)
 			} else {
 				rr.content = content;
 			}
-			DLOG(L<<Logger::Debug<<backendname<<"Returning ["<<rr.content<<"] for ["<<rr.qname<<"] of RecordType ["<<rr.qtype.getName()<<"]"<<endl;);
+			if (!d_isAxfr) {
+				DLOG(L<<Logger::Debug<<backendname<<"Returning ["<<rr.content<<"] for ["<<rr.qname<<"] of RecordType ["<<rr.qtype.getName()<<"]"<<endl;);
+			}
 			return true;
 		}
 	} // end of while
