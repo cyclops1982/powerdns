@@ -787,12 +787,17 @@ int PacketHandler::trySuperMasterSynchronous(DNSPacket *p)
 DNSPacket *PacketHandler::processUpdate(DNSPacket *p) {
   DNSPacket *r=p->replyPacket();
   if (::arg().contains("allow-updates-from", p->getRemote())) {
-
-  } else {
-    if(::arg().mustDo("log-failed-updates")) {
-      L<<Logger::Notice<<"Received an UPDATE opcode from "<<p->getRemote()<<" for "<<p->qdomain<<", but is not listed in allow-updates-from. Sending REFUSED"<<endl;
-      r->setOpcode(RCode::Refused);
+    if (p->qtype != QType::SOA) { // RFC2136 2.3 - ZTYPE must be SOA.
+      r->setOpcode(RCode::FormErr);
+      return r;
     }
+
+    //YOU ARE HERE
+  } else {
+    if(::arg().mustDo("log-failed-updates")) 
+      L<<Logger::Notice<<"Received an UPDATE opcode from "<<p->getRemote()<<" for "<<p->qdomain<<", but is not listed in allow-updates-from. Sending REFUSED"<<endl;
+
+    r->setOpcode(RCode::Refused);
   }
   return r;
 }
