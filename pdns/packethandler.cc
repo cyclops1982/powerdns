@@ -784,9 +784,17 @@ int PacketHandler::trySuperMasterSynchronous(DNSPacket *p)
   return RCode::NoError;
 }
 
-int PacketHandler::processUpdate(DNSPacket *p) {
-//TODO :-)
+DNSPacket *PacketHandler::processUpdate(DNSPacket *p) {
+  DNSPacket *r=p->replyPacket();
+  if (::arg().contains("allow-updates-from", p->getRemote())) {
 
+  } else {
+    if(::arg().mustDo("log-failed-updates")) {
+      L<<Logger::Notice<<"Received an UPDATE opcode from "<<p->getRemote()<<" for "<<p->qdomain<<", but is not listed in allow-updates-from. Sending REFUSED"<<endl;
+      r->setOpcode(RCode::Refused);
+    }
+  }
+  return r;
 }
 
 int PacketHandler::processNotify(DNSPacket *p)
@@ -1116,14 +1124,8 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
     }
     if(p->d.opcode) { // non-zero opcode (again thanks RA!)
       if(p->d.opcode==Opcode::Update) {
-        int res=processUpdate(p);
-        if (res >= 0) {
-          r->setRcode(res);
-          r->setOpcode(Opcode::Update);
-          return r;
-        }
         delete r;
-        return 0;
+        return processUpdate(p);
       }
       else if(p->d.opcode==Opcode::Notify) {
         int res=processNotify(p);

@@ -40,6 +40,7 @@ void declareArguments()
 {
   ::arg().set("local-port","The port on which we listen")="53";
   ::arg().setSwitch("log-failed-updates","If PDNS should log failed update requests")="";
+  ::arg().set("allow-updates-from", "IP address for which we allow an RFC2136 Dynamic DNS Update message")="";
   ::arg().setSwitch("log-dns-details","If PDNS should log DNS non-erroneous details")="";
   ::arg().setSwitch("log-dns-queries","If PDNS should log all incoming DNS queries")="no";
   ::arg().set("urlredirector","Where we send hosts to that need to be url redirected")="127.0.0.1";
