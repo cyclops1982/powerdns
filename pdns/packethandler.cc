@@ -784,6 +784,11 @@ int PacketHandler::trySuperMasterSynchronous(DNSPacket *p)
   return RCode::NoError;
 }
 
+int PacketHandler::processUpdate(DNSPacket *p) {
+//TODO :-)
+
+}
+
 int PacketHandler::processNotify(DNSPacket *p)
 {
   /* now what? 
@@ -1111,10 +1116,14 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
     }
     if(p->d.opcode) { // non-zero opcode (again thanks RA!)
       if(p->d.opcode==Opcode::Update) {
-        if(::arg().mustDo("log-failed-updates"))
-          L<<Logger::Notice<<"Received an UPDATE opcode from "<<p->getRemote()<<" for "<<p->qdomain<<", sending NOTIMP"<<endl;
-        r->setRcode(RCode::NotImp); // notimp;
-        return r; 
+        int res=processUpdate(p);
+        if (res >= 0) {
+          r->setRcode(res);
+          r->setOpcode(Opcode::Update);
+          return r;
+        }
+        delete r;
+        return 0;
       }
       else if(p->d.opcode==Opcode::Notify) {
         int res=processNotify(p);
