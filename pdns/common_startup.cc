@@ -244,6 +244,7 @@ void *qthread(void *number)
     }
 
     if(!(P=N->receive(&question))) { // receive a packet         inline
+      L<<Logger::Warning<<"Received broken packet."<<endl;
       continue;                    // packet was broken, try again
     }
 

@@ -466,7 +466,6 @@ try
       << getRemote() << endl;
     return -1;
   }
-
   MOADNSParser mdp(d_rawpacket);
   EDNSOpts edo;
 
@@ -516,7 +515,7 @@ try
 
   if(!ntohs(d.qdcount)) {
     if(!d_tcp) {
-      L << Logger::Warning << "No question section in packet from " << getRemote() <<", rcode="<<(int)d.rcode<<endl;
+      L<<Logger::Warning << "No question section in packet from " << getRemote() <<", rcode="<<(int)d.rcode<<endl;
       return -1;
     }
   }
@@ -526,6 +525,7 @@ try
   return 0;
 }
 catch(std::exception& e) {
+  L<<Logger::Error<<"Exceptin while parsing DNSPacket: "<<e.what()<<endl;
   return -1;
 }
 
