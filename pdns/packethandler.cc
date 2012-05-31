@@ -1127,7 +1127,9 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
       r->setRcode(RCode::ServFail);
       return r;
     }
+    L<<Logger::Error<<"Opcode is "<<p->d.opcode<<endl;
     if(p->d.opcode) { // non-zero opcode (again thanks RA!)
+
       if(p->d.opcode==Opcode::Update) {
         delete r;
         return processUpdate(p);
