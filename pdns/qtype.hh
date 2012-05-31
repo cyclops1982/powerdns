@@ -69,6 +69,7 @@ public:
     ar & code;
   }
 
+  bool operator!=(const QType &) const; //!< not equal operator
   bool operator==(const QType &) const; //!< equality operator
 
   const string getName() const; //!< Get a string representation of this type

@@ -128,6 +128,11 @@ QType &QType::operator=(const char *p)
   return *this;
 }
 
+bool QType::operator!=(const QType &comp) const
+{
+  return(comp.code!=code);
+}
+
 bool QType::operator==(const QType &comp) const
 {
   return(comp.code==code);
