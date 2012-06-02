@@ -267,7 +267,6 @@ void *qthread(void *number)
       L << Logger::Notice<<"Remote "<< remote <<" wants '" << P->qdomain<<"|"<<P->qtype.getName() << 
             "', do = " <<P->d_dnssecOk <<", bufsize = "<< P->getMaxReplyLen()<<": ";
     }
-    L<<Logger::Error<<"Opcode is "<<P->d.opcode<<endl;
     if((P->d.opcode != Opcode::Notify) && P->couldBeCached() && PC.get(P, &cached)) { // short circuit - does the PacketCache recognize this question?
       if(logDNSQueries)
         L<<"packetcache HIT"<<endl;

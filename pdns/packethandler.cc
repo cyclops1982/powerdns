@@ -785,19 +785,85 @@ int PacketHandler::trySuperMasterSynchronous(DNSPacket *p)
 }
 
 DNSPacket *PacketHandler::processUpdate(DNSPacket *p) {
-  DNSPacket *r=p->replyPacket();
+  DNSPacket *r=0;
+  r=p->replyPacket();
   if (::arg().contains("allow-updates-from", p->getRemote())) {
-    if (p->qtype.getCode() != QType::SOA || p->qclass != 2) { // RFC2136 2.3 - ZTYPE must be SOA && ZCLASS must be IN
-      r->setOpcode(RCode::FormErr);
+    string msgPrefix="Received UPDATE from " + p->getRemote() + " for " + p->qdomain + ": ";
+
+    MOADNSParser mdp(p->getString()); //TODO: DNSPacket::parse also does this. We parse the packet twice :(
+    if (mdp.d_header.qdcount != 1) {
+      L<<Logger::Warning<<msgPrefix<<"Zone Count is not 1, sending FormErr"<<endl;
+      r->setRcode(RCode::FormErr);
+      return r;
+    }     
+
+    if (p->qtype.getCode() != QType::SOA) { // RFC2136 2.3 - ZTYPE must be SOA
+      L<<Logger::Warning<<msgPrefix<<": Query Type is not SOA, sending FormErr"<<endl;
+      r->setRcode(RCode::FormErr);
       return r;
     }
 
-    
-  } else {
-    if(::arg().mustDo("log-failed-updates")) 
-      L<<Logger::Notice<<"Received an UPDATE opcode from "<<p->getRemote()<<" for "<<p->qdomain<<", but is not listed in allow-updates-from. Sending REFUSED"<<endl;
+    if (p->qclass != 1) {
+      L<<Logger::Warning<<msgPrefix<<": Class is not IN, sending NotAuth"<<endl;
+      r->setRcode(RCode::NotAuth);
+      return r;
+    }
 
-    r->setOpcode(RCode::Refused);
+    DomainInfo di;
+    di.backend=0;
+    uint32_t domain_id;
+    if(!B.getDomainInfo(p->qdomain, di) || !di.backend) {
+      L<<Logger::Error<<msgPrefix<<"Can't determine backend for domain '"<<p->qdomain<<"'"<<endl;
+      r->setRcode(RCode::NotAuth);
+      return r;
+    }
+
+    if (di.kind == DomainInfo::Slave) { //TODO: We do not support the forwarding to master stuff.. which we should ;-)
+      L<<Logger::Error<<msgPrefix<<"We are slave for the domain and do not support forwarding to master, sending NotImpl"<<endl;
+      r->setRcode(RCode::NotImp);
+      return r;
+    }
+    
+    if (!di.backend->startTransaction(p->qdomain, domain_id)) {
+      L<<Logger::Error<<msgPrefix<<"Backend for domain "<<p->qdomain<<" does not support transaction. Can't do Update packet."<<endl;
+      r->setRcode(RCode::NotImp);
+      return r;
+    }
+
+    L<<Logger::Notice<<msgPrefix<<"Processing update package for domain "<<di.zone<<", starting transaction."<<endl;
+
+    // RFC2136 uses the same DNS Header as usual. The fieldnames are a little different, a map: 
+    // ZOCOUNT == QDCOUNT
+    // PRCOUNT == ANCOUNT
+    // UPCOUNT == NSCOUNT
+    // ADCOUNT == ARCOUNT
+    // And since we use moadnsparser, this code uses some wrong variable names.
+    cerr<<"ZOCOUNT:"<<mdp.d_header.qdcount<<"; PRCOUNT:"<<mdp.d_header.ancount<<endl;
+    cerr<<"UPCOUNT:"<<mdp.d_header.nscount<<"; ADCOUNT:"<<mdp.d_header.arcount<<endl;
+    for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
+      const DNSRecord *rr = &i->first;
+      if (rr->d_place == DNSRecord::Answer) {
+        cerr<<"PreReq Records:"<<rr->d_label<<endl;
+
+      } else if (rr->d_place == DNSRecord::Nameserver) {
+        cerr<<"Update Records:"<<rr->d_label<<endl;
+      } else {
+        cerr<<"Records:"<<rr->d_label<<endl;
+      }
+    }
+
+
+    if (!di.backend->commitTransaction()) {
+      L<<Logger::Error<<"Failed to commit update for domain "<<di.zone<<"!"<<endl;
+      r->setRcode(RCode::FormErr); //TODO: Change to correct code.
+      return r;
+    }
+    L<<Logger::Notice<<msgPrefix<<"Update completed, changed commited."<<endl;
+  } else {
+    if(::arg().mustDo("log-failed-updates")) { 
+      L<<Logger::Notice<<"Received an UPDATE opcode from "<<p->getRemote()<<" for "<<p->qdomain<<", but is not listed in allow-updates-from. Sending REFUSED"<<endl;
+    }
+    r->setRcode(RCode::Refused);
   }
   return r;
 }
@@ -1127,9 +1193,7 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
       r->setRcode(RCode::ServFail);
       return r;
     }
-    L<<Logger::Error<<"Opcode is "<<p->d.opcode<<endl;
     if(p->d.opcode) { // non-zero opcode (again thanks RA!)
-
       if(p->d.opcode==Opcode::Update) {
         delete r;
         return processUpdate(p);
