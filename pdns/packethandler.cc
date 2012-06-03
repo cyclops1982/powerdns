@@ -842,8 +842,51 @@ DNSPacket *PacketHandler::processUpdate(DNSPacket *p) {
     cerr<<"UPCOUNT:"<<mdp.d_header.nscount<<"; ADCOUNT:"<<mdp.d_header.arcount<<endl;
     for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
       const DNSRecord *rr = &i->first;
+      QType rType = QType(rr->d_type);
       if (rr->d_place == DNSRecord::Answer) {
         cerr<<"PreReq Records:"<<rr->d_label<<endl;
+        // Answer records are the PreRequisit records for Update messages.
+        // The following checks all these items.
+
+        // Section 3.2.5 of RFC2136
+        if (rr->d_ttl != 0) {
+          r->setRcode(RCode::FormErr);
+          return r;
+        }    
+        //TODO: check if rr->d_label is part of p->qdomain, return NOTZONE if not.
+
+        if (rr->d_class == 255 || rr->d_class == 254) { // class==any || none
+          if (rr->d_clen != 0) {
+            r->setRcode(RCode::FormErr);
+            return r;
+          }
+
+          DNSResourceRecord rec;
+          di.backend->lookup(QType(QType::ANY), rr->d_label);
+          if (rType.getCode() == QType::ANY) {
+            if (! di.backend->get(rec)) {
+              if (rr->d_class == 255)
+                r->setRcode(RCode::NXDomain);
+              else
+                r->setRcode(RCode::YXDomain);
+              return r;
+            }
+          } else {
+            bool foundRec=false;
+            while(di.backend->get(rec)) { 
+              if (rec.qtype == rType) 
+                foundRec=true;
+            }
+            if (foundRec==false) {
+              if (rr->d_class == 255)
+                r->setRcode(RCode::NXRRSet);
+              else
+                r->setRcode(RCode::YXRRSet);
+              return r;
+            }
+          }
+        }
+        //TODO: The part of 3.2.5 which implements 3.2.3  
 
       } else if (rr->d_place == DNSRecord::Nameserver) {
         cerr<<"Update Records:"<<rr->d_label<<endl;
