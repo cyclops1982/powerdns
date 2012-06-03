@@ -180,6 +180,25 @@ public:
   {
     return false; // no problem!
   }
+ 
+  // 2.5.3 - name and type is ANY 
+  virtual bool removeRecord(const string &name)
+  {
+    return false;
+  }
+  
+  // rfc 2136 2.5.2 - name and type
+  virtual bool removeRecord(const string &name, QType type)
+  {
+    return false;
+  }
+
+  // RFC 2136- 2.5.3 - Remove exact maching record
+  virtual bool removeRecord(const DNSResourceRecord &rr) 
+  {
+    return false;
+  }
+
   //! if this returns true, DomainInfo di contains information about the domain
   virtual bool getDomainInfo(const string &domain, DomainInfo &di)
   {
