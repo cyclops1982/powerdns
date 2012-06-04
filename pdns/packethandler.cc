@@ -788,7 +788,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   //TODO: This is nice, a check on IP, but should be a range
   // The other part is that we'd like to use Domainmetadata to see who we allow to update, includeing TSIG key.
   if (::arg().contains("allow-updates-from", p->getRemote())) {
-    string msgPrefix="Received UPDATE from " + p->getRemote() + " for " + p->qdomain + ": ";
+    string msgPrefix="UPDATE from " + p->getRemote() + " for " + p->qdomain + ": ";
 
     MOADNSParser mdp(p->getString()); //TODO: DNSPacket::parse also does this. We parse the packet twice :(
     if (mdp.d_header.qdcount != 1) {
@@ -801,7 +801,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
       return RCode::FormErr;
     }
 
-    if (p->qclass != 1) {
+    if (p->qclass != QClass::IN) {
       L<<Logger::Warning<<msgPrefix<<": Class is not IN, sending NotAuth"<<endl;
       return RCode::NotAuth;
     }
@@ -826,12 +826,8 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
     L<<Logger::Notice<<msgPrefix<<"Processing update package for domain "<<di.zone<<", starting transaction."<<endl;
 
-    // RFC2136 uses the same DNS Header as usual. The fieldnames are a little different, a map: 
-    // ZOCOUNT == QDCOUNT
-    // PRCOUNT == ANCOUNT
-    // UPCOUNT == NSCOUNT
-    // ADCOUNT == ARCOUNT
-    // And since we use moadnsparser, this code uses some wrong variable names.
+    // RFC2136 uses the same DNS Header as usual. The fieldnames are a little different.
+    // We can use the MOADNSParser to get the correct fields, we only have to use some different variable names.
     cerr<<"ZOCOUNT:"<<mdp.d_header.qdcount<<"; PRCOUNT:"<<mdp.d_header.ancount<<endl;
     cerr<<"UPCOUNT:"<<mdp.d_header.nscount<<"; ADCOUNT:"<<mdp.d_header.arcount<<endl;
     //TODO: we might need to run a look for PR-rrs and UP-rrs seperatly, because an UP might insert a PR record
@@ -841,8 +837,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
       DNSResourceRecord rec; // used whenever we get something from the backend.
       QType rType = QType(rr->d_type);
 
-
-      if (endsOn(di.zone, rr->d_label)) {
+      if (!endsOn(di.zone, rr->d_label)) {
         L<<Logger::Error<<msgPrefix<<"Received update/record out of zone, sending NotZone."<<endl;
         return RCode::NotZone;
       }
@@ -854,14 +849,14 @@ int PacketHandler::processUpdate(DNSPacket *p) {
         if (rr->d_ttl != 0) 
           return RCode::FormErr;
 
-        if (rr->d_class == 255 || rr->d_class == 254) { // class==any || none
+        if (rr->d_class == QClass::ANY || rr->d_class == QClass::NONE) { 
           if (rr->d_clen != 0) 
             return RCode::FormErr;
 
           di.backend->lookup(QType(QType::ANY), rr->d_label);
           if (rType.getCode() == QType::ANY) {
             if (! di.backend->get(rec)) {
-              if (rr->d_class == 255)
+              if (rr->d_class == QClass::ANY)
                 return RCode::NXDomain;
               else
                 return RCode::YXDomain;
@@ -873,7 +868,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
                 foundRec=true;
             }
             if (foundRec==false) {
-              if (rr->d_class == 255)
+              if (rr->d_class == QClass::ANY)
                 return RCode::NXRRSet;
               else
                 return RCode::YXRRSet;;
@@ -883,43 +878,65 @@ int PacketHandler::processUpdate(DNSPacket *p) {
         //TODO: The part of 3.2.5 which implements 3.2.3
       } 
 
+
+
       if (rr->d_place == DNSRecord::Nameserver) {
-        //Section 3.4.2 of RFC2136; Nameserver records are our Update records.
         cerr<<"Update Records:"<<rr->d_label<<endl;
 
+        //PreScan - Section 3.4.1 of RFC2136
         if (rr->d_class == p->qclass) {
           if (rType.getCode() == QType::ANY || rType.getCode() == QType::AXFR || rType.getCode() == QType::MAILA || rType.getCode() == QType::MAILB) 
             return RCode::FormErr;
-        } else if (rr->d_class == 255) { //class = ANY
+        } else if (rr->d_class == QClass::ANY) {
           if(rr->d_ttl != 0 || rr->d_clen != 0 || rType.getCode() == QType::AXFR || rType.getCode() == QType::MAILA || rType.getCode() == QType::MAILB) 
             return RCode::FormErr;
-        } else if (rr->d_class == 254) { // class = NONE
+        } else if (rr->d_class == QClass::NONE) {
           if(rr->d_ttl != 0 || rType.getCode() == QType::ANY || rType.getCode() == QType::AXFR || rType.getCode() == QType::MAILA || rType.getCode() == QType::MAILB) 
             return RCode::FormErr;
         } else {
           return RCode::FormErr;
         }
 
-        //After all that chacking: OMG, We're actually going to update something! \o/
-        if (rr->d_class == p->qclass) {
+
+        // And finally, after all that checking, Section 3.4.2 of RFC2136
+
+        if (rr->d_class == p->qclass) { // 3.4.2.2
           if (rType.getCode() == QType::CNAME) {
             //Only update if there is a CNAME with the same name.
             di.backend->lookup(QType(QType::CNAME), rr->d_label);
             while (di.backend->get(rec)) {
               //TODO: i'm not sure if we need to search for QType::ANY and filter here, or just query for CNAME and have the backend return the correct things.
-              if (rec.qtype == QType(QType::CNAME)) {
+              if (rec.qtype.getCode() == QType::CNAME) {
                 DNSResourceRecord newRec = rec;
                 newRec.content = rr->d_content->getZoneRepresentation();
                 di.backend->updateRecordContent(rec, newRec);
-              } 
+              } else {
+                L<<Logger::Error<<msgPrefix<<"Queried backend for CNAME, got something else in return - update your backend code!"<<endl;
+              }
             }
           }
           if (rType.getCode() == QType::SOA) {
+            di.backend->lookup(QType(QType::SOA), rr->d_label);
+            while (di.backend->get(rec)) {
+              if (rec.qtype.getCode() == QType::SOA) {
+                DNSResourceRecord newRec = rec;
+                newRec.content = rr->d_content->getZoneRepresentation();
+                SOAData sdOld, sdUpdate;
+                fillSOAData(rec.content, sdOld);
+                fillSOAData(newRec.content, sdUpdate);
+                if (sdOld.serial <= sdUpdate.serial) { //TODO: Use rfc1982LessThan?
+                  di.backend->updateRecordContent(rec, newRec);
+                } else {
+                  L<<Logger::Notice<<msgPrefix<<"Updated serial is older ("<<sdUpdate.serial<<") than the current serial!"<<endl;
+                }
+              }
+            }
           }
-        } else if (rr->d_class == 255) {
+          //TODO: WKS record support?
+        } else if (rr->d_class == QClass::ANY) {
           //TODO 3.4.2.3
           di.backend->removeRecord(rr->d_label);
-        } else if (rr->d_class == 254) {
+        } else if (rr->d_class == QClass::NONE) {
           //TODO: 3.4.2.4
         }
       }
@@ -927,7 +944,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
 
     if (!di.backend->commitTransaction()) {
-      L<<Logger::Error<<"Failed to commit update for domain "<<di.zone<<"!"<<endl;
+      L<<Logger::Error<<msgPrefix<<"Failed to commit update for domain "<<di.zone<<"!"<<endl;
       return RCode::ServFail;
     }
     L<<Logger::Notice<<msgPrefix<<"Update completed, changed commited."<<endl;
