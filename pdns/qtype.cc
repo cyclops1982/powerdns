@@ -74,6 +74,8 @@ QType::QType()
       insert("SPF",99);
       insert("IXFR",251);
       insert("AXFR",252);
+      insert("MAILB",253);
+      insert("MAILA",254);
       insert("ANY",255);
       insert("URL",256);
       insert("MBOXFW",257);

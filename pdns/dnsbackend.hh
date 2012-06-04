@@ -198,6 +198,10 @@ public:
   {
     return false;
   }
+  virtual bool updateRecordContent(const DNSResourceRecord &oldRR, const DNSResourceRecord &newRR)
+  {
+    return false;
+  }
 
   //! if this returns true, DomainInfo di contains information about the domain
   virtual bool getDomainInfo(const string &domain, DomainInfo &di)

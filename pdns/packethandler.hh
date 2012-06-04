@@ -85,7 +85,7 @@ public:
 private:
   int trySuperMaster(DNSPacket *p);
   int processNotify(DNSPacket *);
-  DNSPacket *processUpdate(DNSPacket *p);
+  int processUpdate(DNSPacket *p);
   void addRootReferral(DNSPacket *r);
   int makeCanonic(DNSPacket *p, DNSPacket *r, string &target);
   int doWildcardRecords(DNSPacket *p, DNSPacket *r, string &target);

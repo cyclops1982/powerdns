@@ -784,29 +784,26 @@ int PacketHandler::trySuperMasterSynchronous(DNSPacket *p)
   return RCode::NoError;
 }
 
-DNSPacket *PacketHandler::processUpdate(DNSPacket *p) {
-  DNSPacket *r=0;
-  r=p->replyPacket();
+int PacketHandler::processUpdate(DNSPacket *p) {
+  //TODO: This is nice, a check on IP, but should be a range
+  // The other part is that we'd like to use Domainmetadata to see who we allow to update, includeing TSIG key.
   if (::arg().contains("allow-updates-from", p->getRemote())) {
     string msgPrefix="Received UPDATE from " + p->getRemote() + " for " + p->qdomain + ": ";
 
     MOADNSParser mdp(p->getString()); //TODO: DNSPacket::parse also does this. We parse the packet twice :(
     if (mdp.d_header.qdcount != 1) {
       L<<Logger::Warning<<msgPrefix<<"Zone Count is not 1, sending FormErr"<<endl;
-      r->setRcode(RCode::FormErr);
-      return r;
+      return RCode::FormErr;
     }     
 
     if (p->qtype.getCode() != QType::SOA) { // RFC2136 2.3 - ZTYPE must be SOA
       L<<Logger::Warning<<msgPrefix<<": Query Type is not SOA, sending FormErr"<<endl;
-      r->setRcode(RCode::FormErr);
-      return r;
+      return RCode::FormErr;
     }
 
     if (p->qclass != 1) {
       L<<Logger::Warning<<msgPrefix<<": Class is not IN, sending NotAuth"<<endl;
-      r->setRcode(RCode::NotAuth);
-      return r;
+      return RCode::NotAuth;
     }
 
     DomainInfo di;
@@ -814,20 +811,17 @@ DNSPacket *PacketHandler::processUpdate(DNSPacket *p) {
     uint32_t domain_id;
     if(!B.getDomainInfo(p->qdomain, di) || !di.backend) {
       L<<Logger::Error<<msgPrefix<<"Can't determine backend for domain '"<<p->qdomain<<"'"<<endl;
-      r->setRcode(RCode::NotAuth);
-      return r;
+      return RCode::NotAuth;
     }
 
     if (di.kind == DomainInfo::Slave) { //TODO: We do not support the forwarding to master stuff.. which we should ;-)
-      L<<Logger::Error<<msgPrefix<<"We are slave for the domain and do not support forwarding to master, sending NotImpl"<<endl;
-      r->setRcode(RCode::NotImp);
-      return r;
+      L<<Logger::Error<<msgPrefix<<"We are slave for the domain and do not support forwarding to master, sending NotImp"<<endl;
+      return RCode::NotImp;
     }
     
     if (!di.backend->startTransaction(p->qdomain, domain_id)) {
       L<<Logger::Error<<msgPrefix<<"Backend for domain "<<p->qdomain<<" does not support transaction. Can't do Update packet."<<endl;
-      r->setRcode(RCode::NotImp);
-      return r;
+      return RCode::NotImp;
     }
 
     L<<Logger::Notice<<msgPrefix<<"Processing update package for domain "<<di.zone<<", starting transaction."<<endl;
@@ -840,36 +834,37 @@ DNSPacket *PacketHandler::processUpdate(DNSPacket *p) {
     // And since we use moadnsparser, this code uses some wrong variable names.
     cerr<<"ZOCOUNT:"<<mdp.d_header.qdcount<<"; PRCOUNT:"<<mdp.d_header.ancount<<endl;
     cerr<<"UPCOUNT:"<<mdp.d_header.nscount<<"; ADCOUNT:"<<mdp.d_header.arcount<<endl;
+    //TODO: we might need to run a look for PR-rrs and UP-rrs seperatly, because an UP might insert a PR record
+    // If we're 100% sure of the order in this look (PR comes before UP), this is not needed.
     for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
       const DNSRecord *rr = &i->first;
+      DNSResourceRecord rec; // used whenever we get something from the backend.
       QType rType = QType(rr->d_type);
-      if (rr->d_place == DNSRecord::Answer) {
-        cerr<<"PreReq Records:"<<rr->d_label<<endl;
-        // Answer records are the PreRequisit records for Update messages.
-        // The following checks all these items.
 
-        // Section 3.2.5 of RFC2136
-        if (rr->d_ttl != 0) {
-          r->setRcode(RCode::FormErr);
-          return r;
-        }    
-        //TODO: check if rr->d_label is part of p->qdomain, return NOTZONE if not.
+
+      if (endsOn(di.zone, rr->d_label)) {
+        L<<Logger::Error<<msgPrefix<<"Received update/record out of zone, sending NotZone."<<endl;
+        return RCode::NotZone;
+      }
+
+      if (rr->d_place == DNSRecord::Answer) {
+        // Section 3.2.5 of RFC2136; Answer records are our PreRequisites records.
+        cerr<<"PreReq Records:"<<rr->d_label<<endl;
+
+        if (rr->d_ttl != 0) 
+          return RCode::FormErr;
 
         if (rr->d_class == 255 || rr->d_class == 254) { // class==any || none
-          if (rr->d_clen != 0) {
-            r->setRcode(RCode::FormErr);
-            return r;
-          }
+          if (rr->d_clen != 0) 
+            return RCode::FormErr;
 
-          DNSResourceRecord rec;
           di.backend->lookup(QType(QType::ANY), rr->d_label);
           if (rType.getCode() == QType::ANY) {
             if (! di.backend->get(rec)) {
               if (rr->d_class == 255)
-                r->setRcode(RCode::NXDomain);
+                return RCode::NXDomain;
               else
-                r->setRcode(RCode::YXDomain);
-              return r;
+                return RCode::YXDomain;
             }
           } else {
             bool foundRec=false;
@@ -879,36 +874,70 @@ DNSPacket *PacketHandler::processUpdate(DNSPacket *p) {
             }
             if (foundRec==false) {
               if (rr->d_class == 255)
-                r->setRcode(RCode::NXRRSet);
+                return RCode::NXRRSet;
               else
-                r->setRcode(RCode::YXRRSet);
-              return r;
+                return RCode::YXRRSet;;
             }
           }
         }
-        //TODO: The part of 3.2.5 which implements 3.2.3  
+        //TODO: The part of 3.2.5 which implements 3.2.3
+      } 
 
-      } else if (rr->d_place == DNSRecord::Nameserver) {
+      if (rr->d_place == DNSRecord::Nameserver) {
+        //Section 3.4.2 of RFC2136; Nameserver records are our Update records.
         cerr<<"Update Records:"<<rr->d_label<<endl;
-      } else {
-        cerr<<"Records:"<<rr->d_label<<endl;
+
+        if (rr->d_class == p->qclass) {
+          if (rType.getCode() == QType::ANY || rType.getCode() == QType::AXFR || rType.getCode() == QType::MAILA || rType.getCode() == QType::MAILB) 
+            return RCode::FormErr;
+        } else if (rr->d_class == 255) { //class = ANY
+          if(rr->d_ttl != 0 || rr->d_clen != 0 || rType.getCode() == QType::AXFR || rType.getCode() == QType::MAILA || rType.getCode() == QType::MAILB) 
+            return RCode::FormErr;
+        } else if (rr->d_class == 254) { // class = NONE
+          if(rr->d_ttl != 0 || rType.getCode() == QType::ANY || rType.getCode() == QType::AXFR || rType.getCode() == QType::MAILA || rType.getCode() == QType::MAILB) 
+            return RCode::FormErr;
+        } else {
+          return RCode::FormErr;
+        }
+
+        //After all that chacking: OMG, We're actually going to update something! \o/
+        if (rr->d_class == p->qclass) {
+          if (rType.getCode() == QType::CNAME) {
+            //Only update if there is a CNAME with the same name.
+            di.backend->lookup(QType(QType::CNAME), rr->d_label);
+            while (di.backend->get(rec)) {
+              //TODO: i'm not sure if we need to search for QType::ANY and filter here, or just query for CNAME and have the backend return the correct things.
+              if (rec.qtype == QType(QType::CNAME)) {
+                DNSResourceRecord newRec = rec;
+                newRec.content = rr->d_content->getZoneRepresentation();
+                di.backend->updateRecordContent(rec, newRec);
+              } 
+            }
+          }
+          if (rType.getCode() == QType::SOA) {
+          }
+        } else if (rr->d_class == 255) {
+          //TODO 3.4.2.3
+          di.backend->removeRecord(rr->d_label);
+        } else if (rr->d_class == 254) {
+          //TODO: 3.4.2.4
+        }
       }
     }
 
 
     if (!di.backend->commitTransaction()) {
       L<<Logger::Error<<"Failed to commit update for domain "<<di.zone<<"!"<<endl;
-      r->setRcode(RCode::FormErr); //TODO: Change to correct code.
-      return r;
+      return RCode::ServFail;
     }
     L<<Logger::Notice<<msgPrefix<<"Update completed, changed commited."<<endl;
   } else {
-    if(::arg().mustDo("log-failed-updates")) { 
+    if(::arg().mustDo("log-failed-updates")) 
       L<<Logger::Notice<<"Received an UPDATE opcode from "<<p->getRemote()<<" for "<<p->qdomain<<", but is not listed in allow-updates-from. Sending REFUSED"<<endl;
-    }
-    r->setRcode(RCode::Refused);
+    return RCode::Refused;
   }
-  return r;
+
+  return RCode::NoError; //rfc 2136 3.4.2.5
 }
 
 int PacketHandler::processNotify(DNSPacket *p)
@@ -1238,8 +1267,10 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
     }
     if(p->d.opcode) { // non-zero opcode (again thanks RA!)
       if(p->d.opcode==Opcode::Update) {
-        delete r;
-        return processUpdate(p);
+        int res=processUpdate(p);
+        r->setRcode(res);
+        r->setOpcode(Opcode::Update);
+        return r;
       }
       else if(p->d.opcode==Opcode::Notify) {
         int res=processNotify(p);
