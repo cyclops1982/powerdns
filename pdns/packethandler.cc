@@ -864,47 +864,45 @@ int PacketHandler::processUpdate(DNSPacket *p) {
         if ( (rr->d_class == QClass::NONE || rr->d_class == QClass::ANY) && rr->d_clen != 0)
           return RCode::FormErr;
 
-        // Section 3.2.1
-        if (rr->d_class == QClass::ANY) { 
-          if (rType.getCode() == QType::ANY) {
-            di.backend->lookup(QType(QType::ANY), rLabel);
-            if (di.backend->get(rec) == false)
-              return RCode::NXDomain;
-          }
-          if (rType.getCode() != QType::ANY) {
-            di.backend->lookup(QType(QType::ANY), rLabel); //TODO: check if we can query for a specific type!
-            bool foundRec=false;
-            while(di.backend->get(rec)) { 
-              if (rec.qtype == rType) 
-                foundRec=true;
-            }
-            if (foundRec==false) {
-              return RCode::NXRRSet;
-            }
+        // Section 3.2.1 & 3.2.2 search for a record...
+        di.backend->lookup(QType(QType::ANY), rLabel); //TODO: check if we can query for a specific type!
+        bool foundRecord=false;
+        while(di.backend->get(rec)) {
+          if ((rType.getCode() != QType::ANY && rec.qtype == rType) || rType.getCode() == QType::ANY) {
+            foundRecord=true;
           }
         }
+
+        // Section 3.2.1        
+        if (rr->d_class == QClass::ANY) { 
+          if (!foundRecord) {
+            if (rType.getCode() == QType::ANY) 
+              return RCode::NXDomain;
+            if (rType.getCode() != QType::ANY )
+              return RCode::NXRRSet;
+          }
+        } 
 
         // Section 3.2.2
         if (rr->d_class == QClass::NONE) {
-          if (rType.getCode() == QType::ANY) {
-            di.backend->lookup(QType(QType::ANY), rLabel);
-            if (di.backend->get(rec) == true)
+          if (foundRecord) {
+            if (rType.getCode() == QType::ANY)
               return RCode::YXDomain;
-          }          
-          if (rType.getCode() != QType::ANY) {
-            di.backend->lookup(QType(QType::ANY), rLabel);
-            bool foundRec=false;
-            while(di.backend->get(rec)) { 
-              if (rec.qtype == rType) 
-                foundRec=true;
-            }
-            if (foundRec==true) {
-              return RCode::YXRRSet;;
-            }
+            if (rType.getCode() != QType::ANY)
+              return RCode::YXRRSet;
           }
         }
 
-        //TODO: The part of 3.2.5 which implements 3.2.3
+        // Section 3.2.3
+        if (rr->d_class == p->qclass) { 
+          //TODO
+        } 
+        
+        // Last line of Section 3.2.3
+        if (rr->d_class != p->qclass && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) {
+          return RCode::FormErr;
+        }
+
       } 
 
 
