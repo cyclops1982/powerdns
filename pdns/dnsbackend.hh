@@ -178,24 +178,28 @@ public:
   //! feeds a record to a zone, needs a call to startTransaction first
   virtual bool feedRecord(const DNSResourceRecord &rr)
   {
+    cerr<<"virtual Feedrecord!"<<endl;
     return false; // no problem!
   }
  
   // 2.5.3 - name and type is ANY 
   virtual bool removeRecord(const string &name)
   {
+    cerr<<"virtual removeRecord(name)!"<<endl;
     return false;
   }
   
   // rfc 2136 2.5.2 - name and type
   virtual bool removeRecord(const string &name, QType type)
   {
+    cerr<<"virtual removeRecord(name, type)!"<<endl;
     return false;
   }
 
   // RFC 2136- 2.5.3 - Remove exact maching record
   virtual bool removeRecord(const DNSResourceRecord &rr) 
   {
+    cerr<<"virtual removeRecord(RR)!"<<endl;
     return false;
   }
   virtual bool updateRecordContent(const DNSResourceRecord &oldRR, const DNSResourceRecord &newRR)

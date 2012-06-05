@@ -833,55 +833,84 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     //TODO: we might need to run a look for PR-rrs and UP-rrs seperatly, because an UP might insert a PR record
     // If we're 100% sure of the order in this look (PR comes before UP), this is not needed.
     for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
+
       const DNSRecord *rr = &i->first;
+
+      //TODO: THere mist be a better way. I also wonder what happens if we send '.' as the zone.
+      string rLabel = rr->d_label;
+      int rLabelLen = rLabel.size();
+      if (rLabel[rLabelLen-1] == '.') {
+        rLabelLen--;
+        rLabel.resize(rLabelLen);
+      }
       DNSResourceRecord rec; // used whenever we get something from the backend.
       QType rType = QType(rr->d_type);
 
-      if (!endsOn(di.zone, rr->d_label)) {
+      cerr<<"Record:"<<rLabel<<"; QClass:"<<rr->d_class<<"; QType:"<<rType.getCode()<<endl;
+      if (!endsOn(rLabel, di.zone)) {
         L<<Logger::Error<<msgPrefix<<"Received update/record out of zone, sending NotZone."<<endl;
         return RCode::NotZone;
       }
 
       if (rr->d_place == DNSRecord::Answer) {
         // Section 3.2.5 of RFC2136; Answer records are our PreRequisites records.
-        cerr<<"PreReq Records:"<<rr->d_label<<endl;
+        cerr<<"PreReq Records:"<<rLabel<<endl;
 
-        if (rr->d_ttl != 0) 
+
+        if (rr->d_ttl != 0) // TTL needs to be none 0 in 3.2.[1-3]
           return RCode::FormErr;
 
-        if (rr->d_class == QClass::ANY || rr->d_class == QClass::NONE) { 
-          if (rr->d_clen != 0) 
-            return RCode::FormErr;
+        // Both in 3.2.1 and 3.2.2
+        if ( (rr->d_class == QClass::NONE || rr->d_class == QClass::ANY) && rr->d_clen != 0)
+          return RCode::FormErr;
 
-          di.backend->lookup(QType(QType::ANY), rr->d_label);
+        // Section 3.2.1
+        if (rr->d_class == QClass::ANY) { 
           if (rType.getCode() == QType::ANY) {
-            if (! di.backend->get(rec)) {
-              if (rr->d_class == QClass::ANY)
-                return RCode::NXDomain;
-              else
-                return RCode::YXDomain;
-            }
-          } else {
+            di.backend->lookup(QType(QType::ANY), rLabel);
+            if (di.backend->get(rec) == false)
+              return RCode::NXDomain;
+          }
+          if (rType.getCode() != QType::ANY) {
+            di.backend->lookup(QType(QType::ANY), rLabel); //TODO: check if we can query for a specific type!
             bool foundRec=false;
             while(di.backend->get(rec)) { 
               if (rec.qtype == rType) 
                 foundRec=true;
             }
             if (foundRec==false) {
-              if (rr->d_class == QClass::ANY)
-                return RCode::NXRRSet;
-              else
-                return RCode::YXRRSet;;
+              return RCode::NXRRSet;
             }
           }
         }
+
+        // Section 3.2.2
+        if (rr->d_class == QClass::NONE) {
+          if (rType.getCode() == QType::ANY) {
+            di.backend->lookup(QType(QType::ANY), rLabel);
+            if (di.backend->get(rec) == true)
+              return RCode::YXDomain;
+          }          
+          if (rType.getCode() != QType::ANY) {
+            di.backend->lookup(QType(QType::ANY), rLabel);
+            bool foundRec=false;
+            while(di.backend->get(rec)) { 
+              if (rec.qtype == rType) 
+                foundRec=true;
+            }
+            if (foundRec==true) {
+              return RCode::YXRRSet;;
+            }
+          }
+        }
+
         //TODO: The part of 3.2.5 which implements 3.2.3
       } 
 
 
 
       if (rr->d_place == DNSRecord::Nameserver) {
-        cerr<<"Update Records:"<<rr->d_label<<endl;
+        cerr<<"Update Records:"<<rLabel<<endl;
 
         //PreScan - Section 3.4.1 of RFC2136
         if (rr->d_class == p->qclass) {
@@ -899,11 +928,10 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
 
         // And finally, after all that checking, Section 3.4.2 of RFC2136
-
         if (rr->d_class == p->qclass) { // 3.4.2.2
           if (rType.getCode() == QType::CNAME) {
             //Only update if there is a CNAME with the same name.
-            di.backend->lookup(QType(QType::CNAME), rr->d_label);
+            di.backend->lookup(QType(QType::CNAME), rLabel);
             while (di.backend->get(rec)) {
               //TODO: i'm not sure if we need to search for QType::ANY and filter here, or just query for CNAME and have the backend return the correct things.
               if (rec.qtype.getCode() == QType::CNAME) {
@@ -916,7 +944,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
             }
           }
           if (rType.getCode() == QType::SOA) {
-            di.backend->lookup(QType(QType::SOA), rr->d_label);
+            di.backend->lookup(QType(QType::SOA), rLabel);
             while (di.backend->get(rec)) {
               if (rec.qtype.getCode() == QType::SOA) {
                 DNSResourceRecord newRec = rec;
@@ -934,10 +962,24 @@ int PacketHandler::processUpdate(DNSPacket *p) {
           }
           //TODO: WKS record support?
         } else if (rr->d_class == QClass::ANY) {
-          //TODO 3.4.2.3
-          di.backend->removeRecord(rr->d_label);
+          if (rType.getCode() == QType::ANY) {
+            if (rLabel == p->qdomain) {
+              di.backend->list(rLabel, -1);
+              while (di.backend->get(rec)) {
+                if (rec.qtype.getCode() != QType::SOA && rec.qtype.getCode() != QType::NS) {
+                  di.backend->removeRecord(rec);
+                }
+              }
+            } else {
+              di.backend->removeRecord(rLabel);
+            }
+          } else {
+            if (rLabel != p->qdomain) {
+              di.backend->removeRecord(rLabel, rType);
+            }
+          }
         } else if (rr->d_class == QClass::NONE) {
-          //TODO: 3.4.2.4
+          //Section 3.4.2.4
         }
       }
     }
