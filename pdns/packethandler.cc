@@ -895,6 +895,8 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
         // Section 3.2.3
         if (rr->d_class == p->qclass) { 
+          if (rr->d_class != QClass::IN)
+            return RCode::NotImp; // PowerDNS only has 'IN' records in the backend, so we can't update anything else!
           if (!foundRecord)
             return RCode::NXRRSet;
         } 
