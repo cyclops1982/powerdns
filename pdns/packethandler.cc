@@ -808,7 +808,6 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
     DomainInfo di;
     di.backend=0;
-    uint32_t domain_id;
     if(!B.getDomainInfo(p->qdomain, di) || !di.backend) {
       L<<Logger::Error<<msgPrefix<<"Can't determine backend for domain '"<<p->qdomain<<"'"<<endl;
       return RCode::NotAuth;
@@ -819,7 +818,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
       return RCode::NotImp;
     }
     
-    if (!di.backend->startTransaction(p->qdomain, domain_id)) {
+    if (!di.backend->startTransaction(p->qdomain, -1)) { // Not giving the domain_id means that we do not delete the records.
       L<<Logger::Error<<msgPrefix<<"Backend for domain "<<p->qdomain<<" does not support transaction. Can't do Update packet."<<endl;
       return RCode::NotImp;
     }
@@ -911,39 +910,33 @@ int PacketHandler::processUpdate(DNSPacket *p) {
       if (rr->d_place == DNSRecord::Nameserver) {
         cerr<<"Update Records:"<<rLabel<<endl;
 
-        //PreScan - Section 3.4.1 of RFC2136
-        if (rr->d_class == p->qclass) {
-          if (rType.getCode() == QType::ANY || rType.getCode() == QType::AXFR || rType.getCode() == QType::MAILA || rType.getCode() == QType::MAILB) 
+        //PreScan - Section 3.4.1 of RFC2136 - I think all of this is wrong!
+        //TODO: expand this for the correct types and check if we support the type!
+        if (rr->d_class != QClass::ANY && (
+              rType.getCode() == QType::ANY ||
+              rType.getCode() == QType::AXFR || 
+              rType.getCode() == QType::MAILA || 
+              rType.getCode() == QType::MAILB))
             return RCode::FormErr;
-        } else if (rr->d_class == QClass::ANY) {
-          if(rr->d_ttl != 0 || rr->d_clen != 0 || rType.getCode() == QType::AXFR || rType.getCode() == QType::MAILA || rType.getCode() == QType::MAILB) 
-            return RCode::FormErr;
-        } else if (rr->d_class == QClass::NONE) {
-          if(rr->d_ttl != 0 || rType.getCode() == QType::ANY || rType.getCode() == QType::AXFR || rType.getCode() == QType::MAILA || rType.getCode() == QType::MAILB) 
-            return RCode::FormErr;
-        } else {
+
+        if ((rr->d_class == QClass::NONE || rr->d_class == QClass::ANY) && rr->d_ttl != 0)
           return RCode::FormErr;
-        }
+        
+        //TODO: What happens if we pass d_clen = 0 but do fill some content, does the moaparser 'catch' this?
+        if (rr->d_class == QClass::ANY && (
+            rr->d_clen != 0 ||
+            rType.getCode() == QType::AXFR ||
+            rType.getCode() == QType::MAILA || 
+            rType.getCode() == QType::MAILB))
+          return RCode::FormErr;
 
 
+
+        cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rType.getCode()<<endl;
         // And finally, after all that checking, Section 3.4.2 of RFC2136
-        if (rr->d_class == p->qclass) { // 3.4.2.2
-          if (rType.getCode() == QType::CNAME) {
-            //Only update if there is a CNAME with the same name.
-            di.backend->lookup(QType(QType::CNAME), rLabel);
-            while (di.backend->get(rec)) {
-              //TODO: i'm not sure if we need to search for QType::ANY and filter here, or just query for CNAME and have the backend return the correct things.
-              if (rec.qtype.getCode() == QType::CNAME) {
-                DNSResourceRecord newRec = rec;
-                newRec.content = rr->d_content->getZoneRepresentation();
-                di.backend->updateRecordContent(rec, newRec);
-              } else {
-                L<<Logger::Error<<msgPrefix<<"Queried backend for CNAME, got something else in return - update your backend code!"<<endl;
-              }
-            }
-          }
+        if (rr->d_class == p->qclass) { // 3.4.2.2, TODO: Change to rr->d_class == IN ?
           if (rType.getCode() == QType::SOA) {
-            di.backend->lookup(QType(QType::SOA), rLabel);
+            di.backend->lookup(QType(QType::SOA), rLabel); // we use the lookup because that gives us a Record which we can change and update
             while (di.backend->get(rec)) {
               if (rec.qtype.getCode() == QType::SOA) {
                 DNSResourceRecord newRec = rec;
@@ -952,32 +945,80 @@ int PacketHandler::processUpdate(DNSPacket *p) {
                 fillSOAData(rec.content, sdOld);
                 fillSOAData(newRec.content, sdUpdate);
                 if (sdOld.serial <= sdUpdate.serial) { //TODO: Use rfc1982LessThan?
+                  cerr<<"UPDATE RECORD! New content:"<<rr->d_content->getZoneRepresentation()<<endl;
                   di.backend->updateRecordContent(rec, newRec);
                 } else {
                   L<<Logger::Notice<<msgPrefix<<"Updated serial is older ("<<sdUpdate.serial<<") than the current serial!"<<endl;
                 }
               }
             }
+          } else if (rType.getCode() == QType::CNAME) {
+            di.backend->lookup(QType(QType::ANY), rLabel);
+            while (di.backend->get(rec)) {
+              if (rec.qtype.getCode() == QType::CNAME) {
+                DNSResourceRecord newRec = rec;
+                newRec.content = rr->d_content->getZoneRepresentation();
+                cerr<<"UPDATE RECORD! New content:"<<rr->d_content->getZoneRepresentation()<<endl;
+                di.backend->updateRecordContent(rec, newRec);
+              }
+            }
+          } else {
+            if (rType.isSupportedType()) {
+              //TODO: This copy code is roughly the same as parseResult in resolver.cc, we should create a function to do this.
+              DNSResourceRecord newRec;
+              newRec.qname = rLabel;
+              newRec.qtype = rr->d_type;
+              newRec.ttl = rr->d_ttl;
+              newRec.content = rr->d_content->getZoneRepresentation();
+              newRec.priority = 0;
+          
+              if(!newRec.content.empty() && (newRec.qtype.getCode() == QType::MX || newRec.qtype.getCode() ==QType::NS || newRec.qtype.getCode() ==QType::CNAME))
+                boost::erase_tail(newRec.content, 1);
+
+              if(newRec.qtype.getCode() == QType::MX) {
+                vector<string> parts;
+                stringtok(parts, newRec.content);
+                newRec.priority = atoi(parts[0].c_str());
+                if(parts.size() > 1)
+                  newRec.content=parts[1];
+                else
+                  newRec.content=".";
+              } else if(newRec.qtype.getCode() == QType::SRV) {
+                newRec.priority = atoi(newRec.content.c_str());
+                vector<pair<string::size_type, string::size_type> > fields;
+                vstringtok(fields, newRec.content, " ");
+                if(fields.size()==4)
+                  newRec.content=string(newRec.content.c_str() + fields[1].first, fields[3].second - fields[1].first);
+              }
+
+              newRec.domain_id = di.id;
+
+              cerr<<"ADD NEW RECORD!"<<endl;
+              di.backend->feedRecord(newRec);
+            }
           }
-          //TODO: WKS record support?
         } else if (rr->d_class == QClass::ANY) {
           if (rType.getCode() == QType::ANY) {
             if (rLabel == p->qdomain) {
               di.backend->list(rLabel, -1);
               while (di.backend->get(rec)) {
                 if (rec.qtype.getCode() != QType::SOA && rec.qtype.getCode() != QType::NS) {
+                  cerr<<"REMOVE RECORD! rec.name:"<<rLabel<<endl;
                   di.backend->removeRecord(rec);
                 }
               }
             } else {
+              cerr<<"UPDATE RECORD! rLabel:"<<rLabel<<endl;
               di.backend->removeRecord(rLabel);
             }
           } else {
             if (rLabel != p->qdomain) {
+              cerr<<"UPDATE RECORD! rLabel:"<<rLabel<<";type:"<<rType.getCode()<<endl;
               di.backend->removeRecord(rLabel, rType);
             }
           }
         } else if (rr->d_class == QClass::NONE) {
+          cerr<<"UPDATE RECORD - CLASS IS NONE"<<endl;
           //Section 3.4.2.4
         }
       }
