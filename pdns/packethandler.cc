@@ -864,8 +864,8 @@ int PacketHandler::processUpdate(DNSPacket *p) {
         if ( (rr->d_class == QClass::NONE || rr->d_class == QClass::ANY) && rr->d_clen != 0)
           return RCode::FormErr;
 
-        // Section 3.2.1 & 3.2.2 search for a record...
-        di.backend->lookup(QType(QType::ANY), rLabel); //TODO: check if we can query for a specific type!
+        // Sections 3.2.[1-3] search for a record...
+        di.backend->lookup(QType(QType::ANY), rLabel);
         bool foundRecord=false;
         while(di.backend->get(rec)) {
           if ((rType.getCode() != QType::ANY && rec.qtype == rType) || rType.getCode() == QType::ANY) {
@@ -895,14 +895,13 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
         // Section 3.2.3
         if (rr->d_class == p->qclass) { 
-          //TODO
+          if (!foundRecord)
+            return RCode::NXRRSet;
         } 
         
         // Last line of Section 3.2.3
-        if (rr->d_class != p->qclass && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) {
+        if (rr->d_class != p->qclass && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) 
           return RCode::FormErr;
-        }
-
       } 
 
 
