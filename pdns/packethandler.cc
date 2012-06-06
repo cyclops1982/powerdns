@@ -860,6 +860,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
           return RCode::FormErr;
 
         // Both in 3.2.1 and 3.2.2
+        //TODO: What happens if we pass d_clen = 0 but do fill some content, does the moaparser 'catch' this?
         if ( (rr->d_class == QClass::NONE || rr->d_class == QClass::ANY) && rr->d_clen != 0)
           return RCode::FormErr;
 
@@ -911,7 +912,10 @@ int PacketHandler::processUpdate(DNSPacket *p) {
         cerr<<"Update Records:"<<rLabel<<endl;
 
         //PreScan - Section 3.4.1 of RFC2136 - I think all of this is wrong!
-        //TODO: expand this for the correct types and check if we support the type!
+        if (! rType.isSupportedType())
+          return RCode::FormErr;
+        
+        //TODO: expand this for the correct types
         if (rr->d_class != QClass::ANY && (
               rType.getCode() == QType::ANY ||
               rType.getCode() == QType::AXFR || 
@@ -922,31 +926,30 @@ int PacketHandler::processUpdate(DNSPacket *p) {
         if ((rr->d_class == QClass::NONE || rr->d_class == QClass::ANY) && rr->d_ttl != 0)
           return RCode::FormErr;
         
-        //TODO: What happens if we pass d_clen = 0 but do fill some content, does the moaparser 'catch' this?
-        if (rr->d_class == QClass::ANY && (
-            rr->d_clen != 0 ||
-            rType.getCode() == QType::AXFR ||
-            rType.getCode() == QType::MAILA || 
-            rType.getCode() == QType::MAILB))
+        if (rr->d_class == QClass::ANY && rr->d_clen != 0)
+          return RCode::FormErr;
+
+        if (rr->d_class == QClass::ANY && (rType.getCode() == QType::AXFR || rType.getCode() == QType::MAILA || rType.getCode() != QType::MAILB))
           return RCode::FormErr;
 
 
 
-        cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rType.getCode()<<endl;
+        
         // And finally, after all that checking, Section 3.4.2 of RFC2136
+        cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rType.getCode()<<endl;
         if (rr->d_class == p->qclass) { // 3.4.2.2, TODO: Change to rr->d_class == IN ?
           if (rType.getCode() == QType::SOA) {
             di.backend->lookup(QType(QType::SOA), rLabel); // we use the lookup because that gives us a Record which we can change and update
             while (di.backend->get(rec)) {
               if (rec.qtype.getCode() == QType::SOA) {
                 DNSResourceRecord newRec = rec;
-                newRec.content = rr->d_content->getZoneRepresentation();
+                newRec.content = rr->d_content->getZoneRepresentation();  //TODO: Check if getZoneRepresentation() returns the correct data.
                 SOAData sdOld, sdUpdate;
                 fillSOAData(rec.content, sdOld);
                 fillSOAData(newRec.content, sdUpdate);
                 if (sdOld.serial <= sdUpdate.serial) { //TODO: Use rfc1982LessThan?
                   cerr<<"UPDATE RECORD! New content:"<<rr->d_content->getZoneRepresentation()<<endl;
-                  di.backend->updateRecordContent(rec, newRec);
+                  di.backend->updateRecord(rec, newRec);
                 } else {
                   L<<Logger::Notice<<msgPrefix<<"Updated serial is older ("<<sdUpdate.serial<<") than the current serial!"<<endl;
                 }
@@ -959,7 +962,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
                 DNSResourceRecord newRec = rec;
                 newRec.content = rr->d_content->getZoneRepresentation();
                 cerr<<"UPDATE RECORD! New content:"<<rr->d_content->getZoneRepresentation()<<endl;
-                di.backend->updateRecordContent(rec, newRec);
+                di.backend->updateRecord(rec, newRec);
               }
             }
           } else {
@@ -997,24 +1000,26 @@ int PacketHandler::processUpdate(DNSPacket *p) {
               di.backend->feedRecord(newRec);
             }
           }
-        } else if (rr->d_class == QClass::ANY) {
+        } else if (rr->d_class == QClass::ANY) { //Section 3.4.2.3
           if (rType.getCode() == QType::ANY) {
-            if (rLabel == p->qdomain) {
-              di.backend->list(rLabel, -1);
-              while (di.backend->get(rec)) {
-                if (rec.qtype.getCode() != QType::SOA && rec.qtype.getCode() != QType::NS) {
-                  cerr<<"REMOVE RECORD! rec.name:"<<rLabel<<endl;
-                  di.backend->removeRecord(rec);
-                }
-              }
-            } else {
-              cerr<<"UPDATE RECORD! rLabel:"<<rLabel<<endl;
-              di.backend->removeRecord(rLabel);
+            di.backend->list(rLabel, -1);
+            while (di.backend->get(rec)) {
+              if (rLabel == p->qdomain && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
+                continue;
+
+              cerr<<"Remove record "<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
+              di.backend->removeRecord(rec);
             }
           } else {
-            if (rLabel != p->qdomain) {
-              cerr<<"UPDATE RECORD! rLabel:"<<rLabel<<";type:"<<rType.getCode()<<endl;
-              di.backend->removeRecord(rLabel, rType);
+            di.backend->lookup(QType(QType::ANY), rLabel);
+            while (di.backend->get(rec)) {
+              if (rLabel == p->qdomain && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS))
+                continue;
+
+              if (rType == rec.qtype) {
+                cerr<<"Remove record "<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
+                di.backend->removeRecord(rec);
+              }
             }
           }
         } else if (rr->d_class == QClass::NONE) {

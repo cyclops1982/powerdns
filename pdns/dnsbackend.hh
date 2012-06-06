@@ -149,7 +149,7 @@ public:
     return false;
   }
   
-  //! starts the transaction for updating domain qname (FIXME: what is id?)
+  //! starts the transaction for updating domain qname 
   virtual bool startTransaction(const string &qname, int id=-1)
   {
     return false;
@@ -182,23 +182,12 @@ public:
   }
  
   // 2.5.3 - name and type is ANY 
-  virtual bool removeRecord(const string &name)
+  virtual bool removeRecord(const DNSResourceRecord &rr)
   {
     return false;
   }
   
-  // rfc 2136 2.5.2 - name and type
-  virtual bool removeRecord(const string &name, QType type)
-  {
-    return false;
-  }
-
-  // RFC 2136- 2.5.3 - Remove exact maching record
-  virtual bool removeRecord(const DNSResourceRecord &rr) 
-  {
-    return false;
-  }
-  virtual bool updateRecordContent(const DNSResourceRecord &oldRR, const DNSResourceRecord &newRR)
+  virtual bool updateRecord(const DNSResourceRecord &oldRR, DNSResourceRecord &newRR)
   {
     return false;
   }
