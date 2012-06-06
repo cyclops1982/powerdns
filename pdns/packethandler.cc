@@ -939,7 +939,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
         cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rType.getCode()<<endl;
         if (rr->d_class == p->qclass) { // 3.4.2.2, TODO: Change to rr->d_class == IN ?
           if (rType.getCode() == QType::SOA) {
-            di.backend->lookup(QType(QType::SOA), rLabel); // we use the lookup because that gives us a Record which we can change and update
+            di.backend->lookup(QType(QType::ANY), rLabel); // we use the lookup because that gives us a Record which we can change and update
             while (di.backend->get(rec)) {
               if (rec.qtype.getCode() == QType::SOA) {
                 DNSResourceRecord newRec = rec;
@@ -966,39 +966,38 @@ int PacketHandler::processUpdate(DNSPacket *p) {
               }
             }
           } else {
-            if (rType.isSupportedType()) {
-              //TODO: This copy code is roughly the same as parseResult in resolver.cc, we should create a function to do this.
-              DNSResourceRecord newRec;
-              newRec.qname = rLabel;
-              newRec.qtype = rr->d_type;
-              newRec.ttl = rr->d_ttl;
-              newRec.content = rr->d_content->getZoneRepresentation();
-              newRec.priority = 0;
-          
-              if(!newRec.content.empty() && (newRec.qtype.getCode() == QType::MX || newRec.qtype.getCode() ==QType::NS || newRec.qtype.getCode() ==QType::CNAME))
-                boost::erase_tail(newRec.content, 1);
+            //TODO: Check if the record exists, if so, replace/update!
+            //TODO: This copy code is roughly the same as parseResult in resolver.cc, we should create a function to do this.
+            DNSResourceRecord newRec;
+            newRec.qname = rLabel;
+            newRec.qtype = rr->d_type;
+            newRec.ttl = rr->d_ttl;
+            newRec.content = rr->d_content->getZoneRepresentation();
+            newRec.priority = 0;
+        
+            if(!newRec.content.empty() && (newRec.qtype.getCode() == QType::MX || newRec.qtype.getCode() ==QType::NS || newRec.qtype.getCode() ==QType::CNAME))
+              boost::erase_tail(newRec.content, 1);
 
-              if(newRec.qtype.getCode() == QType::MX) {
-                vector<string> parts;
-                stringtok(parts, newRec.content);
-                newRec.priority = atoi(parts[0].c_str());
-                if(parts.size() > 1)
-                  newRec.content=parts[1];
-                else
-                  newRec.content=".";
-              } else if(newRec.qtype.getCode() == QType::SRV) {
-                newRec.priority = atoi(newRec.content.c_str());
-                vector<pair<string::size_type, string::size_type> > fields;
-                vstringtok(fields, newRec.content, " ");
-                if(fields.size()==4)
-                  newRec.content=string(newRec.content.c_str() + fields[1].first, fields[3].second - fields[1].first);
-              }
-
-              newRec.domain_id = di.id;
-
-              cerr<<"ADD NEW RECORD!"<<endl;
-              di.backend->feedRecord(newRec);
+            if(newRec.qtype.getCode() == QType::MX) {
+              vector<string> parts;
+              stringtok(parts, newRec.content);
+              newRec.priority = atoi(parts[0].c_str());
+              if(parts.size() > 1)
+                newRec.content=parts[1];
+              else
+                newRec.content=".";
+            } else if(newRec.qtype.getCode() == QType::SRV) {
+              newRec.priority = atoi(newRec.content.c_str());
+              vector<pair<string::size_type, string::size_type> > fields;
+              vstringtok(fields, newRec.content, " ");
+              if(fields.size()==4)
+                newRec.content=string(newRec.content.c_str() + fields[1].first, fields[3].second - fields[1].first);
             }
+
+            newRec.domain_id = di.id;
+
+            cerr<<"ADD NEW RECORD!"<<endl;
+            di.backend->feedRecord(newRec);
           }
         } else if (rr->d_class == QClass::ANY) { //Section 3.4.2.3
           if (rType.getCode() == QType::ANY) {
