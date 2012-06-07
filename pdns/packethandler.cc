@@ -1076,10 +1076,12 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
         // finally do all the updates
         for(vector<DNSResourceRecord>::const_iterator i=recordsToDelete.begin(); i!=recordsToDelete.end(); ++i){
+          PC.purge(i->qname);
           di.backend->removeRecord(*i);
         }
 
         for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
+          PC.purge(i->first.qname);
           di.backend->updateRecord(i->first, i->second);
         }
       }
