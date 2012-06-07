@@ -186,7 +186,7 @@ public:
     return false;
   }
   
-  virtual bool updateRecord(const DNSResourceRecord &oldRR, DNSResourceRecord &newRR)
+  virtual bool updateRecord(const DNSResourceRecord &oldRR, const DNSResourceRecord &newRR)
   {
     return false;
   }

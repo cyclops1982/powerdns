@@ -941,6 +941,8 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
         
         // And finally, after all that checking, Section 3.4.2 of RFC2136
+        vector<DNSResourceRecord> recordsToDelete;
+        vector<pair<DNSResourceRecord, DNSResourceRecord> > recordsToUpdate;
         cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rType.getCode()<<endl;
         if (rr->d_class == QClass::IN) { // 3.4.2.2, TODO: Change to rr->d_class == IN ?
           if (rType.getCode() == QType::SOA) {
@@ -954,7 +956,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
                 fillSOAData(newRec.content, sdUpdate);
                 if (sdOld.serial <= sdUpdate.serial) { //TODO: Use rfc1982LessThan?
                   cerr<<"Update Record 1) Content:"<<rr->d_content->getZoneRepresentation()<<endl;
-                  di.backend->updateRecord(rec, newRec);
+                  recordsToUpdate.push_back(make_pair(rec, newRec));
                 } else {
                   L<<Logger::Notice<<msgPrefix<<"Updated serial is older ("<<sdUpdate.serial<<") than the current serial!"<<endl;
                 }
@@ -967,7 +969,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
                 DNSResourceRecord newRec = rec;
                 newRec.content = rr->d_content->getZoneRepresentation();
                 cerr<<"Update Record 2) Content:"<<rr->d_content->getZoneRepresentation()<<endl;
-                di.backend->updateRecord(rec, newRec);
+                recordsToUpdate.push_back(make_pair(rec, newRec));
               }
             }
           } else {
@@ -978,7 +980,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
                 DNSResourceRecord newRec = rec;
                 newRec.content = rr->d_content->getZoneRepresentation();
                 cerr<<"Update Record 3) Content:"<<newRec.content<<endl;
-                di.backend->updateRecord(rec, newRec);
+                recordsToUpdate.push_back(make_pair(rec, newRec));
                 recordUpdated=true;
               }
             }
@@ -1018,7 +1020,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
             cerr<<"Add a new record!"<<endl;
             di.backend->feedRecord(newRec);
           }
-        }
+        } 
 
         if (rr->d_class == QClass::ANY) { //Section 3.4.2.3
           if (rType.getCode() == QType::ANY) {
@@ -1029,13 +1031,13 @@ int PacketHandler::processUpdate(DNSPacket *p) {
                   continue;
     
                 cerr<<"Remove record 1)"<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
-                di.backend->removeRecord(rec);
+                recordsToDelete.push_back(rec);
               }
             } else {
               di.backend->lookup(QType(QType::ANY), rLabel);
               while (di.backend->get(rec)) {
                 cerr<<"Remove record 2)"<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
-                di.backend->removeRecord(rec);
+                recordsToDelete.push_back(rec);
               }
             }
           } else { //rtype != any
@@ -1046,7 +1048,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
               if (rType == rec.qtype) {
                 cerr<<"Remove record 3)"<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
-                di.backend->removeRecord(rec);
+                recordsToDelete.push_back(rec);
               }
             }
           }
@@ -1066,9 +1068,19 @@ int PacketHandler::processUpdate(DNSPacket *p) {
             }
             if (rec.qtype == rType && rec.content == rr->d_content->getZoneRepresentation()) {
               cerr<<"Remove record 4) "<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
-              di.backend->removeRecord(rec);            
+              recordsToDelete.push_back(rec);
             }
           }
+        }
+
+
+        // finally do all the updates
+        for(vector<DNSResourceRecord>::const_iterator i=recordsToDelete.begin(); i!=recordsToDelete.end(); ++i){
+          di.backend->removeRecord(*i);
+        }
+
+        for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
+          di.backend->updateRecord(i->first, i->second);
         }
       }
     }
