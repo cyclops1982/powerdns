@@ -278,7 +278,9 @@ GSQLBackend::GSQLBackend(const string &mode, const string &suffix)
   d_ZoneLastChangeQuery=getArg("zone-lastchange-query");
   d_InfoOfAllMasterDomainsQuery=getArg("info-all-master-query");
   d_DeleteZoneQuery=getArg("delete-zone-query");
+  d_DeleteRecordQuery=getArg("delete-record-query");
   d_getAllDomainsQuery=getArg("get-all-domains-query");
+  d_UpdateContentQuery=getArg("update-query");
   
   if (d_dnssecQueries)
   {
@@ -776,6 +778,36 @@ bool GSQLBackend::feedRecord(const DNSResourceRecord &r)
     throw AhuException(e.txtReason());
   }
   return true; // XXX FIXME this API should not return 'true' I think -ahu 
+}
+
+
+
+bool GSQLBackend::removeRecord(const DNSResourceRecord &r) {
+  //delete from records where domain_id=%d and name='%s' and type='%s' and content='%s'
+  string output = (boost::format(d_DeleteRecordQuery) % r.domain_id % sqlEscape(r.qname) % sqlEscape(r.qtype.getName()) % sqlEscape(r.content)).str();
+
+
+  try {
+    d_db->doCommand(output.c_str());
+  }
+  catch (SSqlException &e) {
+    cerr<<"OEI!"<<e.txtReason()<<endl;
+    throw AhuException(e.txtReason());
+  }
+  return true;
+}
+
+bool GSQLBackend::updateRecord(const DNSResourceRecord &oldR, DNSResourceRecord &r) {
+  //update records set content='%s' where name='%s' and type='%s' and ttl=%d and domain_id='%d'
+  string output = (boost::format(d_UpdateContentQuery) %sqlEscape(r.content) % sqlEscape(oldR.qname) % sqlEscape(oldR.qtype.getName()) % oldR.ttl % oldR.domain_id).str();
+
+  try {
+    d_db->doCommand(output.c_str());
+  }
+  catch (SSqlException &e) {
+    throw AhuException(e.txtReason());
+  }
+  return true;
 }
 
 bool GSQLBackend::startTransaction(const string &domain, int domain_id)

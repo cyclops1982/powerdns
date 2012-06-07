@@ -181,7 +181,6 @@ public:
     return false; // no problem!
   }
  
-  // 2.5.3 - name and type is ANY 
   virtual bool removeRecord(const DNSResourceRecord &rr)
   {
     return false;

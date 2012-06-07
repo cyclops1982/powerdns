@@ -902,7 +902,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
         } 
         
         // Last line of Section 3.2.3
-        if (rr->d_class != p->qclass && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) 
+        if (rr->d_class != QClass::IN && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) 
           return RCode::FormErr;
       } 
 
@@ -910,6 +910,11 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
       if (rr->d_place == DNSRecord::Nameserver) {
         cerr<<"Update Records:"<<rLabel<<endl;
+
+        // Not in the RFC, but we only support these QClasses in PowerDNS
+        if (rr->d_class != QClass::IN && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) 
+          return RCode::FormErr;
+
 
         //PreScan - Section 3.4.1 of RFC2136 - I think all of this is wrong!
         if (! rType.isSupportedType())
@@ -929,7 +934,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
         if (rr->d_class == QClass::ANY && rr->d_clen != 0)
           return RCode::FormErr;
 
-        if (rr->d_class == QClass::ANY && (rType.getCode() == QType::AXFR || rType.getCode() == QType::MAILA || rType.getCode() != QType::MAILB))
+        if (rr->d_class == QClass::ANY && (rType.getCode() == QType::AXFR || rType.getCode() == QType::MAILA || rType.getCode() == QType::MAILB))
           return RCode::FormErr;
 
 
@@ -937,7 +942,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
         
         // And finally, after all that checking, Section 3.4.2 of RFC2136
         cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rType.getCode()<<endl;
-        if (rr->d_class == p->qclass) { // 3.4.2.2, TODO: Change to rr->d_class == IN ?
+        if (rr->d_class == QClass::IN) { // 3.4.2.2, TODO: Change to rr->d_class == IN ?
           if (rType.getCode() == QType::SOA) {
             di.backend->lookup(QType(QType::ANY), rLabel); // we use the lookup because that gives us a Record which we can change and update
             while (di.backend->get(rec)) {
@@ -948,7 +953,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
                 fillSOAData(rec.content, sdOld);
                 fillSOAData(newRec.content, sdUpdate);
                 if (sdOld.serial <= sdUpdate.serial) { //TODO: Use rfc1982LessThan?
-                  cerr<<"UPDATE RECORD! New content:"<<rr->d_content->getZoneRepresentation()<<endl;
+                  cerr<<"Update Record 1) Content:"<<rr->d_content->getZoneRepresentation()<<endl;
                   di.backend->updateRecord(rec, newRec);
                 } else {
                   L<<Logger::Notice<<msgPrefix<<"Updated serial is older ("<<sdUpdate.serial<<") than the current serial!"<<endl;
@@ -961,12 +966,26 @@ int PacketHandler::processUpdate(DNSPacket *p) {
               if (rec.qtype.getCode() == QType::CNAME) {
                 DNSResourceRecord newRec = rec;
                 newRec.content = rr->d_content->getZoneRepresentation();
-                cerr<<"UPDATE RECORD! New content:"<<rr->d_content->getZoneRepresentation()<<endl;
+                cerr<<"Update Record 2) Content:"<<rr->d_content->getZoneRepresentation()<<endl;
                 di.backend->updateRecord(rec, newRec);
               }
             }
           } else {
-            //TODO: Check if the record exists, if so, replace/update!
+            bool recordUpdated=false;
+            di.backend->lookup(QType(QType::ANY), rLabel);
+            while (di.backend->get(rec)) {
+              if (rec.qtype == rType && rec.content == rr->d_content->getZoneRepresentation()) {
+                DNSResourceRecord newRec = rec;
+                newRec.content = rr->d_content->getZoneRepresentation();
+                cerr<<"Update Record 3) Content:"<<newRec.content<<endl;
+                di.backend->updateRecord(rec, newRec);
+                recordUpdated=true;
+              }
+            }
+
+            if (recordUpdated)
+              continue;
+
             //TODO: This copy code is roughly the same as parseResult in resolver.cc, we should create a function to do this.
             DNSResourceRecord newRec;
             newRec.qname = rLabel;
@@ -996,34 +1015,60 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
             newRec.domain_id = di.id;
 
-            cerr<<"ADD NEW RECORD!"<<endl;
+            cerr<<"Add a new record!"<<endl;
             di.backend->feedRecord(newRec);
           }
-        } else if (rr->d_class == QClass::ANY) { //Section 3.4.2.3
+        }
+
+        if (rr->d_class == QClass::ANY) { //Section 3.4.2.3
           if (rType.getCode() == QType::ANY) {
-            di.backend->list(rLabel, -1);
+            if (rLabel == p->qdomain) {
+              di.backend->list(di.zone, di.id);
+              while (di.backend->get(rec)) {
+                if (rLabel == p->qdomain && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
+                  continue;
+    
+                cerr<<"Remove record 1)"<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
+                di.backend->removeRecord(rec);
+              }
+            } else {
+              di.backend->lookup(QType(QType::ANY), rLabel);
+              while (di.backend->get(rec)) {
+                cerr<<"Remove record 2)"<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
+                di.backend->removeRecord(rec);
+              }
+            }
+          } else { //rtype != any
+            di.backend->lookup(QType(QType::ANY), rLabel);
             while (di.backend->get(rec)) {
               if (rLabel == p->qdomain && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
                 continue;
 
-              cerr<<"Remove record "<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
-              di.backend->removeRecord(rec);
-            }
-          } else {
-            di.backend->lookup(QType(QType::ANY), rLabel);
-            while (di.backend->get(rec)) {
-              if (rLabel == p->qdomain && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS))
-                continue;
-
               if (rType == rec.qtype) {
-                cerr<<"Remove record "<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
+                cerr<<"Remove record 3)"<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
                 di.backend->removeRecord(rec);
               }
             }
           }
-        } else if (rr->d_class == QClass::NONE) {
-          cerr<<"UPDATE RECORD - CLASS IS NONE"<<endl;
-          //Section 3.4.2.4
+        }
+
+        if (rr->d_class == QClass::NONE) { //Section 3.4.2.4
+          di.backend->lookup(QType(QType::ANY), rLabel);
+          bool skippedNS=true;
+          while(di.backend->get(rec)) {
+            if (rLabel == p->qdomain) {
+              if (rec.qtype.getCode() == QType::SOA)
+                continue;
+              if (rec.qtype.getCode() == QType::NS && !skippedNS) {
+                skippedNS=true;
+                continue;
+              }
+            }
+            if (rec.qtype == rType && rec.content == rr->d_content->getZoneRepresentation()) {
+              cerr<<"Remove record 4) "<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
+              di.backend->removeRecord(rec);            
+            }
+          }
         }
       }
     }
