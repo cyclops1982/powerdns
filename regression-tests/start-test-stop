@@ -78,7 +78,7 @@ case $context in
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gmysql \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=0 --no-config --allow-updates-from="127.0.0.1" \
 				--gmysql-dbname="$GMYSQLDB" \
 				--gmysql-user="$GMYSQLUSER" \
 				--gmysql-host="$GMYSQLHOST" \
