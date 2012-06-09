@@ -1,1 +1,1 @@
-RFC2136 specifies prerequisites. If some of them are not correct, NXDOMAIN is provided.
+This test performs a delete/add dyndns query with prerequisite on a A-record.
