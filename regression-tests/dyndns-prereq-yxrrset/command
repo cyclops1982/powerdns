@@ -1,0 +1,4 @@
+#!/bin/sh
+cleandig host-2.test.dyndns A
+$testname/sendupdate.pl $nameserver $port
+cleandig host-2.test.dyndns A

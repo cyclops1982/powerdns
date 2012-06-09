@@ -818,6 +818,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
       return RCode::NotImp;
     }
     
+    //TODO: we start the transaction, but when we return, we never finish it - WH000PS!
     if (!di.backend->startTransaction(p->qdomain, -1)) { // Not giving the domain_id means that we do not delete the records.
       L<<Logger::Error<<msgPrefix<<"Backend for domain "<<p->qdomain<<" does not support transaction. Can't do Update packet."<<endl;
       return RCode::NotImp;
@@ -911,32 +912,30 @@ int PacketHandler::processUpdate(DNSPacket *p) {
       if (rr->d_place == DNSRecord::Nameserver) {
         cerr<<"Update Records:"<<rLabel<<endl;
 
-        // Not in the RFC, but we only support these QClasses in PowerDNS
+
+        //PreScan - Section 3.4.1 of RFC2136
+        
+        // The RFC stats that d_class != ZCLASS, but we only support the IN class.
         if (rr->d_class != QClass::IN && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) 
           return RCode::FormErr;
 
-
-        //PreScan - Section 3.4.1 of RFC2136 - I think all of this is wrong!
         if (! rType.isSupportedType())
           return RCode::FormErr;
-        
-        //TODO: expand this for the correct types
-        if (rr->d_class != QClass::ANY && (
-              rType.getCode() == QType::ANY ||
-              rType.getCode() == QType::AXFR || 
-              rType.getCode() == QType::MAILA || 
-              rType.getCode() == QType::MAILB))
-            return RCode::FormErr;
 
         if ((rr->d_class == QClass::NONE || rr->d_class == QClass::ANY) && rr->d_ttl != 0)
           return RCode::FormErr;
-        
+
         if (rr->d_class == QClass::ANY && rr->d_clen != 0)
           return RCode::FormErr;
-
-        if (rr->d_class == QClass::ANY && (rType.getCode() == QType::AXFR || rType.getCode() == QType::MAILA || rType.getCode() == QType::MAILB))
-          return RCode::FormErr;
-
+        
+        // Section 3.4.1.2 is very vague about what to check if the class is ANY or NONE. IMHO these things
+        // contradict each other. I think the essence of this prescan section is to check if we support the
+        // types correctly before applying changes. This last check is 'quite open'
+        if (rType.getCode() == QType::ANY ||
+            rType.getCode() == QType::AXFR || 
+            rType.getCode() == QType::MAILA || 
+            rType.getCode() == QType::MAILB)
+            return RCode::FormErr;
 
 
         
