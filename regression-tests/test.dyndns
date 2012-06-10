@@ -23,6 +23,7 @@ host-4			IN	A	127.0.0.104
 host-5			IN	A	127.0.0.105
 host-6			IN	A	127.0.0.106
 host-7			IN	A	127.0.0.107
+replace			IN	A	127.0.0.1
 delete-add		IN	A	127.0.0.108
 delete-add		IN	TXT	"Should be gone after a while"
 host-9			IN	A	127.0.0.109
