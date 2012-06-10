@@ -97,6 +97,17 @@ bool QType::isSupportedType() {
   return false;
 }
 
+bool QType::isMetadataType() {
+  if (code == QType::AXFR ||
+      code == QType::MAILA ||
+      code == QType::MAILB ||
+      code == QType::TSIG ||
+      code == QType::IXFR)  
+    return true;
+
+  return false;
+}
+
 uint16_t QType::getCode() const
 {
   return code;

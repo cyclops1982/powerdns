@@ -854,13 +854,7 @@ int PacketHandler::updatePrescanCheck(const DNSRecord *rr) {
   if (rr->d_class == QClass::ANY && rr->d_clen != 0)
     return RCode::FormErr;
   
-  // Section 3.4.1.2 is very vague about what to check if the class is ANY or NONE. IMHO these things
-  // contradict each other. I think the essence of this prescan section is to check if we support the
-  // types correctly before applying changes. This last check is 'quite open'
-  //TODO: Add other metadata query types, via a 'isMetadataQueryType'
-  if (qtype.getCode() == QType::AXFR || 
-      qtype.getCode() == QType::MAILA || 
-      qtype.getCode() == QType::MAILB)
+  if (qtype.isMetadataType())
       return RCode::FormErr;
 
   if (rr->d_class != QClass::ANY && qtype.getCode() == QType::ANY)

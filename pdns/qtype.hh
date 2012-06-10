@@ -76,6 +76,7 @@ public:
   const string getName() const; //!< Get a string representation of this type
   uint16_t getCode() const; //!< Get the integer representation of this type
   bool isSupportedType();
+  bool isMetadataType();
   static int chartocode(const char *p); //!< convert a character string to a code
 // more solaris fun
 #undef DS   
