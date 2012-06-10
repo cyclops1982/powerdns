@@ -784,320 +784,355 @@ int PacketHandler::trySuperMasterSynchronous(DNSPacket *p)
   return RCode::NoError;
 }
 
+//Function implements Section 3.2.* of RFC 2136
+int PacketHandler::updatePrerequisitesCheck(const DNSRecord *rr, DomainInfo *di) {
+  if (rr->d_ttl != 0) // TTL needs to be none 0 in 3.2.[1-3]
+    return RCode::FormErr;
+
+  // Both in 3.2.1 and 3.2.2
+  //TODO: What happens if we pass d_clen = 0 but do fill some content, does the moaparser 'catch' this?
+  if ( (rr->d_class == QClass::NONE || rr->d_class == QClass::ANY) && rr->d_clen != 0)
+    return RCode::FormErr;
+
+  // Last line of Section 3.2.3
+  if (rr->d_class != QClass::IN && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) 
+    return RCode::FormErr;
+
+  // Sections 3.2.[1-3] search for a record...
+  string rLabel = rr->d_label;
+  if (rLabel[rr->d_label.size()-1] == '.')
+    rLabel.resize(rr->d_label.size()-1);
+
+  bool foundRecord=false;
+  DNSResourceRecord rec;
+  di->backend->lookup(QType(QType::ANY), rLabel);
+  while(di->backend->get(rec)) {
+    if ((rr->d_type != QType::ANY && rec.qtype == rr->d_type) || rr->d_type == QType::ANY)
+      foundRecord=true;
+  }
+
+  // Section 3.2.1        
+  if (rr->d_class == QClass::ANY && !foundRecord) { 
+    if (rr->d_type == QType::ANY) 
+      return RCode::NXDomain;
+    if (rr->d_type != QType::ANY)
+      return RCode::NXRRSet;
+  } 
+
+  // Section 3.2.2
+  if (rr->d_class == QClass::NONE && foundRecord) {
+    if (rr->d_type == QType::ANY)
+      return RCode::YXDomain;
+    if (rr->d_type != QType::ANY)
+      return RCode::YXRRSet;
+  }
+
+  // Section 3.2.3
+  if (rr->d_class == QClass::IN && !foundRecord)
+    return RCode::NXRRSet;
+  
+
+  return RCode::NoError;
+}
+
+
+// Method implements section 3.4.1 of RFC 2136
+int PacketHandler::updatePrescanCheck(const DNSRecord *rr) {
+  // The RFC stats that d_class != ZCLASS, but we only support the IN class.
+  if (rr->d_class != QClass::IN && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) 
+    return RCode::FormErr;
+
+  QType qtype = QType(rr->d_type);
+
+  if (! qtype.isSupportedType())
+    return RCode::FormErr;
+
+  if ((rr->d_class == QClass::NONE || rr->d_class == QClass::ANY) && rr->d_ttl != 0)
+    return RCode::FormErr;
+
+  if (rr->d_class == QClass::ANY && rr->d_clen != 0)
+    return RCode::FormErr;
+  
+  // Section 3.4.1.2 is very vague about what to check if the class is ANY or NONE. IMHO these things
+  // contradict each other. I think the essence of this prescan section is to check if we support the
+  // types correctly before applying changes. This last check is 'quite open'
+  //TODO: Add other metadata query types, via a 'isMetadataQueryType'
+  if (qtype.getCode() == QType::ANY ||
+      qtype.getCode() == QType::AXFR || 
+      qtype.getCode() == QType::MAILA || 
+      qtype.getCode() == QType::MAILB)
+      return RCode::FormErr;
+
+  return RCode::NoError;
+}
+
+// Implements section 3.4.2 of RFC2136
+void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
+  cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rr->d_type<<endl;
+  DNSResourceRecord rec;
+
+  string rLabel = rr->d_label;
+  if (rLabel[rr->d_label.size()-1] == '.')
+    rLabel.resize(rr->d_label.size());
+
+  if (rr->d_class == QClass::IN) { // 3.4.2.2, Add/update records.
+    vector<pair<DNSResourceRecord, DNSResourceRecord> > recordsToUpdate;
+
+    if (rr->d_type == QType::SOA) {
+      di->backend->lookup(QType(QType::ANY), rLabel); // we use the lookup because that gives us a Record which we can change and update
+      while (di->backend->get(rec)) {
+        if (rec.qtype.getCode() == QType::SOA) {
+          DNSResourceRecord newRec = rec;
+          newRec.content = rr->d_content->getZoneRepresentation();  //TODO: Check if getZoneRepresentation() returns the correct data.
+          SOAData sdOld, sdUpdate;
+          fillSOAData(rec.content, sdOld);
+          fillSOAData(newRec.content, sdUpdate);
+          if (sdOld.serial <= sdUpdate.serial) { //TODO: Use rfc1982LessThan?
+            cerr<<"Update Record 1) Content:"<<rr->d_content->getZoneRepresentation()<<endl;
+            recordsToUpdate.push_back(make_pair(rec, newRec));
+          } else {
+            L<<Logger::Notice<<"Updated serial is older ("<<sdUpdate.serial<<") than the current serial!"<<endl;
+          }
+        }
+      }
+    } else if (rr->d_type == QType::CNAME) {
+      di->backend->lookup(QType(QType::ANY), rLabel);
+      while (di->backend->get(rec)) {
+        if (rec.qtype.getCode() == QType::CNAME) {
+          DNSResourceRecord newRec = rec;
+          newRec.content = rr->d_content->getZoneRepresentation();
+          cerr<<"Update Record 2) Content:"<<rr->d_content->getZoneRepresentation()<<endl;
+          recordsToUpdate.push_back(make_pair(rec, newRec));
+        }
+      }
+    } else {
+      bool recordUpdated=false;
+      di->backend->lookup(QType(QType::ANY), rLabel);
+      while (di->backend->get(rec)) {
+        if (rec.qtype == rr->d_type && rec.content == rr->d_content->getZoneRepresentation()) {
+          DNSResourceRecord newRec = rec;
+          newRec.content = rr->d_content->getZoneRepresentation();
+          cerr<<"Update Record 3) Content:"<<newRec.content<<endl;
+          recordsToUpdate.push_back(make_pair(rec, newRec));
+          recordUpdated=true;
+        }
+      }
+
+      if (!recordUpdated) {
+        //TODO: The method to convert this is in resolver.cc, so should be re-used.
+        DNSResourceRecord newRec;
+        newRec.qname = rLabel;
+        newRec.qtype = rr->d_type;
+        newRec.ttl = rr->d_ttl;
+        newRec.content = rr->d_content->getZoneRepresentation();
+        newRec.priority = 0;
+    
+        if(!newRec.content.empty() && (newRec.qtype.getCode() == QType::MX || newRec.qtype.getCode() ==QType::NS || newRec.qtype.getCode() ==QType::CNAME))
+          boost::erase_tail(newRec.content, 1);
+
+        if(newRec.qtype.getCode() == QType::MX) {
+          vector<string> parts;
+          stringtok(parts, newRec.content);
+          newRec.priority = atoi(parts[0].c_str());
+          if(parts.size() > 1)
+            newRec.content=parts[1];
+          else
+            newRec.content=".";
+        } else if(newRec.qtype.getCode() == QType::SRV) {
+          newRec.priority = atoi(newRec.content.c_str());
+          vector<pair<string::size_type, string::size_type> > fields;
+          vstringtok(fields, newRec.content, " ");
+          if(fields.size()==4)
+            newRec.content=string(newRec.content.c_str() + fields[1].first, fields[3].second - fields[1].first);
+        }
+
+        newRec.domain_id = di->id;
+
+        cerr<<"Add a new record!"<<endl;
+        di->backend->feedRecord(newRec);
+      }
+    }
+
+    for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
+      di->backend->updateRecord(i->first, i->second);
+    }
+  } 
+
+
+  vector<DNSResourceRecord> recordsToDelete;
+  //Section 3.4.2.3, Deleting records
+  if (rr->d_class == QClass::ANY) { 
+    if (rr->d_type == QType::ANY) {
+      if (rLabel == di->zone) {
+        di->backend->list(di->zone, di->id);
+        while (di->backend->get(rec)) {
+          if (rLabel == di->zone && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
+            continue;
+
+          cerr<<"Remove record 1)"<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
+          recordsToDelete.push_back(rec);
+        }
+      } else {
+        di->backend->lookup(QType(QType::ANY), rLabel);
+        while (di->backend->get(rec)) {
+          cerr<<"Remove record 2)"<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
+          recordsToDelete.push_back(rec);
+        }
+      }
+    } else { //rtype != any
+      di->backend->lookup(QType(QType::ANY), rLabel);
+      while (di->backend->get(rec)) {
+        if (rLabel == di->zone && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
+          continue;
+
+        if (rr->d_type == rec.qtype.getCode()) {
+          cerr<<"Remove record 3)"<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
+          recordsToDelete.push_back(rec);
+        }
+      }
+    }
+  }
+
+  //Section 3.4.2.4, Delete a specific record that matches name, type and rdata, with some specifics for NS/SOA records.
+  if (rr->d_class == QClass::NONE) { 
+    di->backend->lookup(QType(QType::ANY), rLabel);
+    bool skippedNS=true;
+    while(di->backend->get(rec)) {
+      if (rLabel == di->zone) {
+        if (rec.qtype.getCode() == QType::SOA)
+          continue;
+        if (rec.qtype.getCode() == QType::NS && !skippedNS) {
+          skippedNS=true;
+          continue;
+        }
+      }
+      if (rec.qtype == rr->d_type && rec.content == rr->d_content->getZoneRepresentation()) {
+        cerr<<"Remove record 4) "<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
+        recordsToDelete.push_back(rec);
+      }
+    }
+  }
+
+  for(vector<DNSResourceRecord>::const_iterator i=recordsToDelete.begin(); i!=recordsToDelete.end(); ++i){
+    di->backend->removeRecord(*i);
+  }
+
+  // Finally, we clean the cache for this RR
+  PC.purge(rLabel);
+
+}
+
 int PacketHandler::processUpdate(DNSPacket *p) {
+  string msgPrefix="UPDATE from " + p->getRemote() + " for " + p->qdomain + ": ";
+
   //TODO: This is nice, a check on IP, but should be a range
   // The other part is that we'd like to use Domainmetadata to see who we allow to update, includeing TSIG key.
-  if (::arg().contains("allow-updates-from", p->getRemote())) {
-    string msgPrefix="UPDATE from " + p->getRemote() + " for " + p->qdomain + ": ";
-
-    MOADNSParser mdp(p->getString()); //TODO: DNSPacket::parse also does this. We parse the packet twice :(
-    if (mdp.d_header.qdcount != 1) {
-      L<<Logger::Warning<<msgPrefix<<"Zone Count is not 1, sending FormErr"<<endl;
-      return RCode::FormErr;
-    }     
-
-    if (p->qtype.getCode() != QType::SOA) { // RFC2136 2.3 - ZTYPE must be SOA
-      L<<Logger::Warning<<msgPrefix<<": Query Type is not SOA, sending FormErr"<<endl;
-      return RCode::FormErr;
-    }
-
-    if (p->qclass != QClass::IN) {
-      L<<Logger::Warning<<msgPrefix<<": Class is not IN, sending NotAuth"<<endl;
-      return RCode::NotAuth;
-    }
-
-    DomainInfo di;
-    di.backend=0;
-    if(!B.getDomainInfo(p->qdomain, di) || !di.backend) {
-      L<<Logger::Error<<msgPrefix<<"Can't determine backend for domain '"<<p->qdomain<<"'"<<endl;
-      return RCode::NotAuth;
-    }
-
-    if (di.kind == DomainInfo::Slave) { //TODO: We do not support the forwarding to master stuff.. which we should ;-)
-      L<<Logger::Error<<msgPrefix<<"We are slave for the domain and do not support forwarding to master, sending NotImp"<<endl;
-      return RCode::NotImp;
-    }
-    
-    //TODO: we start the transaction, but when we return, we never finish it - WH000PS!
-    if (!di.backend->startTransaction(p->qdomain, -1)) { // Not giving the domain_id means that we do not delete the records.
-      L<<Logger::Error<<msgPrefix<<"Backend for domain "<<p->qdomain<<" does not support transaction. Can't do Update packet."<<endl;
-      return RCode::NotImp;
-    }
-
-    L<<Logger::Notice<<msgPrefix<<"Processing update package for domain "<<di.zone<<", starting transaction."<<endl;
-
-    // RFC2136 uses the same DNS Header as usual. The fieldnames are a little different.
-    // We can use the MOADNSParser to get the correct fields, we only have to use some different variable names.
-    cerr<<"ZOCOUNT:"<<mdp.d_header.qdcount<<"; PRCOUNT:"<<mdp.d_header.ancount<<endl;
-    cerr<<"UPCOUNT:"<<mdp.d_header.nscount<<"; ADCOUNT:"<<mdp.d_header.arcount<<endl;
-    //TODO: we might need to run a look for PR-rrs and UP-rrs seperatly, because an UP might insert a PR record
-    // If we're 100% sure of the order in this look (PR comes before UP), this is not needed.
-    for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
-
-      const DNSRecord *rr = &i->first;
-
-      //TODO: THere mist be a better way. I also wonder what happens if we send '.' as the zone.
-      string rLabel = rr->d_label;
-      int rLabelLen = rLabel.size();
-      if (rLabel[rLabelLen-1] == '.') {
-        rLabelLen--;
-        rLabel.resize(rLabelLen);
-      }
-      DNSResourceRecord rec; // used whenever we get something from the backend.
-      QType rType = QType(rr->d_type);
-
-      cerr<<"Record:"<<rLabel<<"; QClass:"<<rr->d_class<<"; QType:"<<rType.getCode()<<endl;
-      if (!endsOn(rLabel, di.zone)) {
-        L<<Logger::Error<<msgPrefix<<"Received update/record out of zone, sending NotZone."<<endl;
-        return RCode::NotZone;
-      }
-
-      if (rr->d_place == DNSRecord::Answer) {
-        // Section 3.2.5 of RFC2136; Answer records are our PreRequisites records.
-        cerr<<"PreReq Records:"<<rLabel<<endl;
-
-
-        if (rr->d_ttl != 0) // TTL needs to be none 0 in 3.2.[1-3]
-          return RCode::FormErr;
-
-        // Both in 3.2.1 and 3.2.2
-        //TODO: What happens if we pass d_clen = 0 but do fill some content, does the moaparser 'catch' this?
-        if ( (rr->d_class == QClass::NONE || rr->d_class == QClass::ANY) && rr->d_clen != 0)
-          return RCode::FormErr;
-
-        // Sections 3.2.[1-3] search for a record...
-        di.backend->lookup(QType(QType::ANY), rLabel);
-        bool foundRecord=false;
-        while(di.backend->get(rec)) {
-          if ((rType.getCode() != QType::ANY && rec.qtype == rType) || rType.getCode() == QType::ANY) {
-            foundRecord=true;
-          }
-        }
-
-        // Section 3.2.1        
-        if (rr->d_class == QClass::ANY) { 
-          if (!foundRecord) {
-            if (rType.getCode() == QType::ANY) 
-              return RCode::NXDomain;
-            if (rType.getCode() != QType::ANY )
-              return RCode::NXRRSet;
-          }
-        } 
-
-        // Section 3.2.2
-        if (rr->d_class == QClass::NONE) {
-          if (foundRecord) {
-            if (rType.getCode() == QType::ANY)
-              return RCode::YXDomain;
-            if (rType.getCode() != QType::ANY)
-              return RCode::YXRRSet;
-          }
-        }
-
-        // Section 3.2.3
-        if (rr->d_class == p->qclass) { 
-          if (rr->d_class != QClass::IN)
-            return RCode::NotImp; // PowerDNS only has 'IN' records in the backend, so we can't update anything else!
-          if (!foundRecord)
-            return RCode::NXRRSet;
-        } 
-        
-        // Last line of Section 3.2.3
-        if (rr->d_class != QClass::IN && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) 
-          return RCode::FormErr;
-      } 
-
-
-
-      if (rr->d_place == DNSRecord::Nameserver) {
-        cerr<<"Update Records:"<<rLabel<<endl;
-
-
-        //PreScan - Section 3.4.1 of RFC2136
-        
-        // The RFC stats that d_class != ZCLASS, but we only support the IN class.
-        if (rr->d_class != QClass::IN && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) 
-          return RCode::FormErr;
-
-        if (! rType.isSupportedType())
-          return RCode::FormErr;
-
-        if ((rr->d_class == QClass::NONE || rr->d_class == QClass::ANY) && rr->d_ttl != 0)
-          return RCode::FormErr;
-
-        if (rr->d_class == QClass::ANY && rr->d_clen != 0)
-          return RCode::FormErr;
-        
-        // Section 3.4.1.2 is very vague about what to check if the class is ANY or NONE. IMHO these things
-        // contradict each other. I think the essence of this prescan section is to check if we support the
-        // types correctly before applying changes. This last check is 'quite open'
-        if (rType.getCode() == QType::ANY ||
-            rType.getCode() == QType::AXFR || 
-            rType.getCode() == QType::MAILA || 
-            rType.getCode() == QType::MAILB)
-            return RCode::FormErr;
-
-
-        
-        // And finally, after all that checking, Section 3.4.2 of RFC2136
-        vector<DNSResourceRecord> recordsToDelete;
-        vector<pair<DNSResourceRecord, DNSResourceRecord> > recordsToUpdate;
-        cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rType.getCode()<<endl;
-        if (rr->d_class == QClass::IN) { // 3.4.2.2, TODO: Change to rr->d_class == IN ?
-          if (rType.getCode() == QType::SOA) {
-            di.backend->lookup(QType(QType::ANY), rLabel); // we use the lookup because that gives us a Record which we can change and update
-            while (di.backend->get(rec)) {
-              if (rec.qtype.getCode() == QType::SOA) {
-                DNSResourceRecord newRec = rec;
-                newRec.content = rr->d_content->getZoneRepresentation();  //TODO: Check if getZoneRepresentation() returns the correct data.
-                SOAData sdOld, sdUpdate;
-                fillSOAData(rec.content, sdOld);
-                fillSOAData(newRec.content, sdUpdate);
-                if (sdOld.serial <= sdUpdate.serial) { //TODO: Use rfc1982LessThan?
-                  cerr<<"Update Record 1) Content:"<<rr->d_content->getZoneRepresentation()<<endl;
-                  recordsToUpdate.push_back(make_pair(rec, newRec));
-                } else {
-                  L<<Logger::Notice<<msgPrefix<<"Updated serial is older ("<<sdUpdate.serial<<") than the current serial!"<<endl;
-                }
-              }
-            }
-          } else if (rType.getCode() == QType::CNAME) {
-            di.backend->lookup(QType(QType::ANY), rLabel);
-            while (di.backend->get(rec)) {
-              if (rec.qtype.getCode() == QType::CNAME) {
-                DNSResourceRecord newRec = rec;
-                newRec.content = rr->d_content->getZoneRepresentation();
-                cerr<<"Update Record 2) Content:"<<rr->d_content->getZoneRepresentation()<<endl;
-                recordsToUpdate.push_back(make_pair(rec, newRec));
-              }
-            }
-          } else {
-            bool recordUpdated=false;
-            di.backend->lookup(QType(QType::ANY), rLabel);
-            while (di.backend->get(rec)) {
-              if (rec.qtype == rType && rec.content == rr->d_content->getZoneRepresentation()) {
-                DNSResourceRecord newRec = rec;
-                newRec.content = rr->d_content->getZoneRepresentation();
-                cerr<<"Update Record 3) Content:"<<newRec.content<<endl;
-                recordsToUpdate.push_back(make_pair(rec, newRec));
-                recordUpdated=true;
-              }
-            }
-
-            if (recordUpdated)
-              continue;
-
-            //TODO: This copy code is roughly the same as parseResult in resolver.cc, we should create a function to do this.
-            DNSResourceRecord newRec;
-            newRec.qname = rLabel;
-            newRec.qtype = rr->d_type;
-            newRec.ttl = rr->d_ttl;
-            newRec.content = rr->d_content->getZoneRepresentation();
-            newRec.priority = 0;
-        
-            if(!newRec.content.empty() && (newRec.qtype.getCode() == QType::MX || newRec.qtype.getCode() ==QType::NS || newRec.qtype.getCode() ==QType::CNAME))
-              boost::erase_tail(newRec.content, 1);
-
-            if(newRec.qtype.getCode() == QType::MX) {
-              vector<string> parts;
-              stringtok(parts, newRec.content);
-              newRec.priority = atoi(parts[0].c_str());
-              if(parts.size() > 1)
-                newRec.content=parts[1];
-              else
-                newRec.content=".";
-            } else if(newRec.qtype.getCode() == QType::SRV) {
-              newRec.priority = atoi(newRec.content.c_str());
-              vector<pair<string::size_type, string::size_type> > fields;
-              vstringtok(fields, newRec.content, " ");
-              if(fields.size()==4)
-                newRec.content=string(newRec.content.c_str() + fields[1].first, fields[3].second - fields[1].first);
-            }
-
-            newRec.domain_id = di.id;
-
-            cerr<<"Add a new record!"<<endl;
-            di.backend->feedRecord(newRec);
-          }
-        } 
-
-        if (rr->d_class == QClass::ANY) { //Section 3.4.2.3
-          if (rType.getCode() == QType::ANY) {
-            if (rLabel == p->qdomain) {
-              di.backend->list(di.zone, di.id);
-              while (di.backend->get(rec)) {
-                if (rLabel == p->qdomain && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
-                  continue;
-    
-                cerr<<"Remove record 1)"<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
-                recordsToDelete.push_back(rec);
-              }
-            } else {
-              di.backend->lookup(QType(QType::ANY), rLabel);
-              while (di.backend->get(rec)) {
-                cerr<<"Remove record 2)"<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
-                recordsToDelete.push_back(rec);
-              }
-            }
-          } else { //rtype != any
-            di.backend->lookup(QType(QType::ANY), rLabel);
-            while (di.backend->get(rec)) {
-              if (rLabel == p->qdomain && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
-                continue;
-
-              if (rType == rec.qtype) {
-                cerr<<"Remove record 3)"<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
-                recordsToDelete.push_back(rec);
-              }
-            }
-          }
-        }
-
-        if (rr->d_class == QClass::NONE) { //Section 3.4.2.4
-          di.backend->lookup(QType(QType::ANY), rLabel);
-          bool skippedNS=true;
-          while(di.backend->get(rec)) {
-            if (rLabel == p->qdomain) {
-              if (rec.qtype.getCode() == QType::SOA)
-                continue;
-              if (rec.qtype.getCode() == QType::NS && !skippedNS) {
-                skippedNS=true;
-                continue;
-              }
-            }
-            if (rec.qtype == rType && rec.content == rr->d_content->getZoneRepresentation()) {
-              cerr<<"Remove record 4) "<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
-              recordsToDelete.push_back(rec);
-            }
-          }
-        }
-
-
-        // finally do all the updates
-        for(vector<DNSResourceRecord>::const_iterator i=recordsToDelete.begin(); i!=recordsToDelete.end(); ++i){
-          PC.purge(i->qname);
-          di.backend->removeRecord(*i);
-        }
-
-        for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
-          PC.purge(i->first.qname);
-          di.backend->updateRecord(i->first, i->second);
-        }
-      }
-    }
-
-
-    if (!di.backend->commitTransaction()) {
-      L<<Logger::Error<<msgPrefix<<"Failed to commit update for domain "<<di.zone<<"!"<<endl;
-      return RCode::ServFail;
-    }
-    L<<Logger::Notice<<msgPrefix<<"Update completed, changed commited."<<endl;
-  } else {
+  if (! ::arg().contains("allow-updates-from", p->getRemote())) {
     if(::arg().mustDo("log-failed-updates")) 
-      L<<Logger::Notice<<"Received an UPDATE opcode from "<<p->getRemote()<<" for "<<p->qdomain<<", but is not listed in allow-updates-from. Sending REFUSED"<<endl;
+      L<<Logger::Notice<<msgPrefix<<"Remote not listed in allow-updates-from. Sending REFUSED"<<endl;
     return RCode::Refused;
   }
 
+   
+  MOADNSParser mdp(p->getString()); //TODO: DNSPacket::parse also does this. We parse the packet twice :(
+  if (mdp.d_header.qdcount != 1) {
+    L<<Logger::Warning<<msgPrefix<<"Zone Count is not 1, sending FormErr"<<endl;
+    return RCode::FormErr;
+  }     
+
+  if (p->qtype.getCode() != QType::SOA) { // RFC2136 2.3 - ZTYPE must be SOA
+    L<<Logger::Warning<<msgPrefix<<": Query Type is not SOA, sending FormErr"<<endl;
+    return RCode::FormErr;
+  }
+
+  if (p->qclass != QClass::IN) {
+    L<<Logger::Warning<<msgPrefix<<": Class is not IN, sending NotAuth"<<endl;
+    return RCode::NotAuth;
+  }
+
+  DomainInfo di;
+  di.backend=0;
+  if(!B.getDomainInfo(p->qdomain, di) || !di.backend) {
+    L<<Logger::Error<<msgPrefix<<"Can't determine backend for domain '"<<p->qdomain<<"'"<<endl;
+    return RCode::NotAuth;
+  }
+
+  if (di.kind == DomainInfo::Slave) { //TODO: We do not support the forwarding to master stuff.. which we should ;-)
+    L<<Logger::Error<<msgPrefix<<"We are slave for the domain and do not support forwarding to master, sending NotImp"<<endl;
+    return RCode::NotImp;
+  }
+  
+  if (!di.backend->startTransaction(p->qdomain, -1)) { // Not giving the domain_id means that we do not delete the records.
+    L<<Logger::Error<<msgPrefix<<"Backend for domain "<<p->qdomain<<" does not support transaction. Can't do Update packet."<<endl;
+    return RCode::NotImp;
+  }
+
+  L<<Logger::Notice<<msgPrefix<<"Processing update package for domain "<<di.zone<<", starting transaction."<<endl;
+
+  // RFC2136 uses the same DNS Header as usual. The fieldnames are a little different.
+  // We can use the MOADNSParser to get the correct fields, we only have to use some different variable names.
+
+  //TODO: we might need to run a look for PR-rrs and UP-rrs seperatly, because an UP might insert a PR record
+  // If we're 100% sure of the order in this look (PR comes before UP), this is not needed.
+  for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
+    const DNSRecord *rr = &i->first;
+    DNSResourceRecord rec; // used whenever we get something from the backend.
+
+    //TODO: Check if this can be done better.
+    //Strip of the last '.'
+    string rLabel = rr->d_label;
+    if (rLabel[rr->d_label.size()-1] == '.') 
+      rLabel.resize(rr->d_label.size()-1);
+
+    cerr<<"Record:"<<rLabel<<"; QClass:"<<rr->d_class<<"; QType:"<<rr->d_type<<endl;
+    if (!endsOn(rLabel, di.zone)) {
+      L<<Logger::Error<<msgPrefix<<"Received update/record out of zone, sending NotZone."<<endl;
+      di.backend->abortTransaction();
+      return RCode::NotZone;
+    }
+
+    if (rr->d_place == DNSRecord::Answer) {
+      // Section 3.2.5 of RFC2136; Answer records are our PreRequisites records.
+      cerr<<"PreReq Records:"<<rLabel<<endl;
+      int res = updatePrerequisitesCheck(rr, &di);
+      if (res>0) {
+        L<<Logger::Error<<msgPrefix<<"Failed PreRequisites check, returning "<<res<<endl;
+        di.backend->abortTransaction();
+        return res;
+      }
+    } 
+
+    //  Update Records
+    if (rr->d_place == DNSRecord::Nameserver) {
+      int res = updatePrescanCheck(rr);
+      if (res>0) {
+        L<<Logger::Error<<msgPrefix<<"Failed prescan check, returning "<<res<<endl;
+        di.backend->abortTransaction();
+        return res;
+      }
+
+      try {
+        performUpdate(rr, &di);
+      }
+      catch (AhuException &e) {
+        L<<Logger::Error<<msgPrefix<<"Caught AhuException: "<<e.reason<<"; Sending ServFail!"<<endl;
+        di.backend->abortTransaction();
+        return RCode::ServFail;
+      }
+      catch (...) {
+        L<<Logger::Error<<msgPrefix<<"Caught unknown exception when performing update. Sending ServFail!"<<endl;
+        di.backend->abortTransaction();
+        return RCode::ServFail;
+      }
+    }
+  }
+
+
+  if (!di.backend->commitTransaction()) {
+    L<<Logger::Error<<msgPrefix<<"Failed to commit update for domain "<<di.zone<<"!"<<endl;
+    return RCode::ServFail;
+  }
+  L<<Logger::Notice<<msgPrefix<<"Update completed, changed commited."<<endl;
   return RCode::NoError; //rfc 2136 3.4.2.5
 }
 

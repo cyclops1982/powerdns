@@ -5,7 +5,7 @@ use Net::DNS;
 use Net::DNS::Update;
 
 my $update = Net::DNS::Update->new('test.dyndns');
-$update->push(prerequisite => yxdomain('host-11.test.dyndns'));
+$update->push(prerequisite => nxdomain('host-11.test.dyndns'));
 $update->push(update => rr_add('host-11.test.dyndns 2600 A 127.0.0.111'));
 
 my $res = Net::DNS::Resolver->new;

@@ -71,6 +71,7 @@ public:
 
   bool operator!=(const QType &) const; //!< not equal operator
   bool operator==(const QType &) const; //!< equality operator
+  bool operator==(const uint16_t) const; //!< equality operator
 
   const string getName() const; //!< Get a string representation of this type
   uint16_t getCode() const; //!< Get the integer representation of this type

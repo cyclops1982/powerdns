@@ -83,6 +83,9 @@ public:
   int trySuperMasterSynchronous(DNSPacket *p);
 
 private:
+  int updatePrerequisitesCheck(const DNSRecord *rr, DomainInfo *di);
+  void performUpdate(const DNSRecord *rr, DomainInfo *di);
+  int updatePrescanCheck(const DNSRecord *rr);
   int trySuperMaster(DNSPacket *p);
   int processNotify(DNSPacket *);
   int processUpdate(DNSPacket *p);

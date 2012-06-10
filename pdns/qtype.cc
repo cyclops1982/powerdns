@@ -152,6 +152,13 @@ bool QType::operator==(const QType &comp) const
   return(comp.code==code);
 }
 
+bool QType::operator==(const uint16_t comp) const
+{
+  return(comp==code);
+}
+
+
+
 QType &QType::operator=(const string &s)
 {
   code=chartocode(s.c_str());
