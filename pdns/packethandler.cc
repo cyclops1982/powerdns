@@ -790,7 +790,6 @@ int PacketHandler::updatePrerequisitesCheck(const DNSRecord *rr, DomainInfo *di)
     return RCode::FormErr;
 
   // Both in 3.2.1 and 3.2.2
-  //TODO: What happens if we pass d_clen = 0 but do fill some content, does the moaparser 'catch' this?
   if ( (rr->d_class == QClass::NONE || rr->d_class == QClass::ANY) && rr->d_clen != 0)
     return RCode::FormErr;
 
@@ -865,7 +864,8 @@ int PacketHandler::updatePrescanCheck(const DNSRecord *rr) {
 
 // Implements section 3.4.2 of RFC2136
 void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
-  cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rr->d_type<<endl;
+  //TODO: Add DLOG/verbose logging to this, so we know what is actually performed.
+  //cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rr->d_type<<endl;
   DNSResourceRecord rec;
 
   string rLabel = rr->d_label;
@@ -884,12 +884,10 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
           SOAData sdOld, sdUpdate;
           fillSOAData(rec.content, sdOld);
           fillSOAData(newRec.content, sdUpdate);
-          if (sdOld.serial <= sdUpdate.serial) { //TODO: Use rfc1982LessThan?
-            cerr<<"Update Record 1) Content:"<<rr->d_content->getZoneRepresentation()<<endl;
+          if (sdOld.serial <= sdUpdate.serial) //TODO: Use rfc1982LessThan?
             recordsToUpdate.push_back(make_pair(rec, newRec));
-          } else {
+          else
             L<<Logger::Notice<<"Updated serial is older ("<<sdUpdate.serial<<") than the current serial!"<<endl;
-          }
         }
       }
     } else if (rr->d_type == QType::CNAME) {
@@ -899,7 +897,6 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
           DNSResourceRecord newRec = rec;
           newRec.content = rr->d_content->getZoneRepresentation();
           boost::erase_tail(newRec.content, 1); // strip of the last '.'
-          cerr<<"Update Record 2) Content:"<<rr->d_content->getZoneRepresentation()<<endl;
           recordsToUpdate.push_back(make_pair(rec, newRec));
         }
       }
@@ -933,10 +930,10 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
 
       newRec.domain_id = di->id;
 
-      cerr<<"Add a new record!"<<endl;
       di->backend->feedRecord(newRec);      
     }
 
+    // Perform updates on the backend
     for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
       di->backend->updateRecord(i->first, i->second);
     }
@@ -953,15 +950,12 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
           if (rLabel == di->zone && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
             continue;
 
-          cerr<<"Remove record 1)"<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
           recordsToDelete.push_back(rec);
         }
       } else {
         di->backend->lookup(QType(QType::ANY), rLabel);
-        while (di->backend->get(rec)) {
-          cerr<<"Remove record 2)"<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
+        while (di->backend->get(rec))
           recordsToDelete.push_back(rec);
-        }
       }
     } else { //rtype != any
       di->backend->lookup(QType(QType::ANY), rLabel);
@@ -969,10 +963,8 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
         if (rLabel == di->zone && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
           continue;
 
-        if (rr->d_type == rec.qtype.getCode()) {
-          cerr<<"Remove record 3)"<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
+        if (rr->d_type == rec.qtype.getCode())
           recordsToDelete.push_back(rec);
-        }
       }
     }
   }
@@ -991,23 +983,25 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
         }
       }
       if (rec.qtype == rr->d_type && rec.content == rr->d_content->getZoneRepresentation()) {
-        cerr<<"Remove record 4) "<<rec.qname<<" with type "<<rec.qtype.getCode()<<endl;
         recordsToDelete.push_back(rec);
       }
     }
   }
 
+  // Perform removes on the backend.
   for(vector<DNSResourceRecord>::const_iterator i=recordsToDelete.begin(); i!=recordsToDelete.end(); ++i){
     di->backend->removeRecord(*i);
   }
 
   // Finally, we clean the cache for this RR
+  //TODO: even if there's no update, we clean the cache.
   PC.purge(rLabel);
 
 }
 
 int PacketHandler::processUpdate(DNSPacket *p) {
   string msgPrefix="UPDATE from " + p->getRemote() + " for " + p->qdomain + ": ";
+  L<<Logger::Notice<<msgPrefix<<"Processing started."<<endl;
 
   //TODO: This is nice, a check on IP, but should be a range
   // The other part is that we'd like to use Domainmetadata to see who we allow to update, includeing TSIG key.
@@ -1018,6 +1012,9 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   }
 
    
+  // RFC2136 uses the same DNS Header and Message as defined in RFC1035.
+  // This means we can use the MOADNSParser to parse the incoming packet. The result is that we have some different 
+  // variable names during the use of our MOADNSParser.
   MOADNSParser mdp(p->getString()); //TODO: DNSPacket::parse also does this. We parse the packet twice :(
   if (mdp.d_header.qdcount != 1) {
     L<<Logger::Warning<<msgPrefix<<"Zone Count is not 1, sending FormErr"<<endl;
@@ -1045,39 +1042,32 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     L<<Logger::Error<<msgPrefix<<"We are slave for the domain and do not support forwarding to master, sending NotImp"<<endl;
     return RCode::NotImp;
   }
-  
+
+  L<<Logger::Notice<<msgPrefix<<"starting transaction."<<endl;
   if (!di.backend->startTransaction(p->qdomain, -1)) { // Not giving the domain_id means that we do not delete the records.
     L<<Logger::Error<<msgPrefix<<"Backend for domain "<<p->qdomain<<" does not support transaction. Can't do Update packet."<<endl;
     return RCode::NotImp;
   }
 
-  L<<Logger::Notice<<msgPrefix<<"Processing update package for domain "<<di.zone<<", starting transaction."<<endl;
-
-  // RFC2136 uses the same DNS Header as usual. The fieldnames are a little different.
-  // We can use the MOADNSParser to get the correct fields, we only have to use some different variable names.
-
-  //TODO: we might need to run a look for PR-rrs and UP-rrs seperatly, because an UP might insert a PR record
-  // If we're 100% sure of the order in this look (PR comes before UP), this is not needed.
+  // All DNSRecord in the message are either Update or PreRequisites.
   for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
     const DNSRecord *rr = &i->first;
     DNSResourceRecord rec; // used whenever we get something from the backend.
 
-    //TODO: Check if this can be done better.
     //Strip of the last '.'
     string rLabel = rr->d_label;
     if (rLabel[rr->d_label.size()-1] == '.') 
       rLabel.resize(rr->d_label.size()-1);
 
-    cerr<<"Record:"<<rLabel<<"; QClass:"<<rr->d_class<<"; QType:"<<rr->d_type<<endl;
+    //cerr<<"Record:"<<rLabel<<"; QClass:"<<rr->d_class<<"; QType:"<<rr->d_type<<endl;
     if (!endsOn(rLabel, di.zone)) {
       L<<Logger::Error<<msgPrefix<<"Received update/record out of zone, sending NotZone."<<endl;
       di.backend->abortTransaction();
       return RCode::NotZone;
     }
 
+    // Section 3.2.5 of RFC2136; Answer records are our PreRequisites records.
     if (rr->d_place == DNSRecord::Answer) {
-      // Section 3.2.5 of RFC2136; Answer records are our PreRequisites records.
-      cerr<<"PreReq Records:"<<rLabel<<endl;
       int res = updatePrerequisitesCheck(rr, &di);
       if (res>0) {
         L<<Logger::Error<<msgPrefix<<"Failed PreRequisites check, returning "<<res<<endl;
@@ -1086,7 +1076,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
       }
     } 
 
-    //  Update Records
+    //  Section 3.4.2 of RFC2136; Nameserver records are our Update records.
     if (rr->d_place == DNSRecord::Nameserver) {
       int res = updatePrescanCheck(rr);
       if (res>0) {
