@@ -1,5 +1,0 @@
-#!/bin/sh
-cleandig host-11.test.dyndns ANY
-$testname/sendupdate.pl $nameserver $port
-cleandig host-11.test.dyndns ANY
-

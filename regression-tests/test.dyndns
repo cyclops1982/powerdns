@@ -23,8 +23,8 @@ host-4			IN	A	127.0.0.104
 host-5			IN	A	127.0.0.105
 host-6			IN	A	127.0.0.106
 host-7			IN	A	127.0.0.107
-host-8			IN	A	127.0.0.108
-host-8			IN	TXT	"Should be gone after a while"
+delete-add		IN	A	127.0.0.108
+delete-add		IN	TXT	"Should be gone after a while"
 host-9			IN	A	127.0.0.109
 host-9			IN	TXT	"Should always stay"
 host-10			IN	A	127.0.0.110

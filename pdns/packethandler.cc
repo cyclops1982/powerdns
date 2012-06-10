@@ -800,8 +800,9 @@ int PacketHandler::updatePrerequisitesCheck(const DNSRecord *rr, DomainInfo *di)
 
   // Sections 3.2.[1-3] search for a record...
   string rLabel = rr->d_label;
-  if (rLabel[rr->d_label.size()-1] == '.')
-    rLabel.resize(rr->d_label.size()-1);
+  int labelLen = rLabel.size();
+  if (rLabel[labelLen-1] == '.')
+    rLabel.resize(labelLen-1);
 
   bool foundRecord=false;
   DNSResourceRecord rec;
@@ -857,11 +858,13 @@ int PacketHandler::updatePrescanCheck(const DNSRecord *rr) {
   // contradict each other. I think the essence of this prescan section is to check if we support the
   // types correctly before applying changes. This last check is 'quite open'
   //TODO: Add other metadata query types, via a 'isMetadataQueryType'
-  if (qtype.getCode() == QType::ANY ||
-      qtype.getCode() == QType::AXFR || 
+  if (qtype.getCode() == QType::AXFR || 
       qtype.getCode() == QType::MAILA || 
       qtype.getCode() == QType::MAILB)
       return RCode::FormErr;
+
+  if (rr->d_class != QClass::ANY && qtype.getCode() == QType::ANY)
+    return RCode::FormErr;
 
   return RCode::NoError;
 }
@@ -873,7 +876,7 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
 
   string rLabel = rr->d_label;
   if (rLabel[rr->d_label.size()-1] == '.')
-    rLabel.resize(rr->d_label.size());
+    rLabel.resize(rr->d_label.size()-1);
 
   if (rr->d_class == QClass::IN) { // 3.4.2.2, Add/update records.
     vector<pair<DNSResourceRecord, DNSResourceRecord> > recordsToUpdate;

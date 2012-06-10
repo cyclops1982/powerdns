@@ -1,0 +1,5 @@
+#!/bin/sh
+cleandig delete-add.test.dyndns ANY
+$testname/deleterecord.pl $nameserver $port
+$testname/addrecord.pl $nameserver $port
+cleandig delete-add.test.dyndns ANY

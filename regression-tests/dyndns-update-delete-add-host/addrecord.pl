@@ -5,7 +5,9 @@ use Net::DNS;
 use Net::DNS::Update;
 
 my $update = Net::DNS::Update->new('test.dyndns');
-$update->push(update => rr_add('host-3.test.dyndns. 120 A 127.0.0.125'));
+$update->push(prerequisite => yxdomain('delete-add.test.dyndns A'));
+$update->push(update => rr_add('delete-add.test.dyndns. 3600 A 127.0.0.108'));
+
 
 my $res = Net::DNS::Resolver->new;
 $res->nameservers($ARGV[0]);
