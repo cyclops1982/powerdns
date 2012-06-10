@@ -1,0 +1,14 @@
+0	cname1.test.dyndns.	IN	CNAME	3600	host-1.test.dyndns.
+0	host-1.test.dyndns.	IN	A	3600	127.0.0.101
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Reply to question for qname='cname1.test.dyndns.', qtype=ANY
+RCODE: NOERROR
+0	cname1.test.dyndns.	IN	CNAME	3600	host-2.test.dyndns.
+0	host-2.test.dyndns.	IN	A	3600	127.0.0.102
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Reply to question for qname='cname1.test.dyndns.', qtype=ANY
+RCODE: NOERROR
+0	cname1.test.dyndns.	IN	CNAME	3600	host-1.test.dyndns.
+0	host-1.test.dyndns.	IN	A	3600	127.0.0.101
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Reply to question for qname='cname1.test.dyndns.', qtype=ANY

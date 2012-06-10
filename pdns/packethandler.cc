@@ -904,6 +904,7 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
         if (rec.qtype.getCode() == QType::CNAME) {
           DNSResourceRecord newRec = rec;
           newRec.content = rr->d_content->getZoneRepresentation();
+          boost::erase_tail(newRec.content, 1); // strip of the last '.'
           cerr<<"Update Record 2) Content:"<<rr->d_content->getZoneRepresentation()<<endl;
           recordsToUpdate.push_back(make_pair(rec, newRec));
         }

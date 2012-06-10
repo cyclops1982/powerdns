@@ -18,15 +18,7 @@ cname2			IN	CNAME	host-2.test.dyndns.
 txt			IN	TXT	"This is some text"
 host-1			IN	A	127.0.0.101
 host-2			IN	A	127.0.0.102
-host-3			IN	A	127.0.0.103
-host-4			IN	A	127.0.0.104
-host-5			IN	A	127.0.0.105
-host-6			IN	A	127.0.0.106
-host-7			IN	A	127.0.0.107
 replace			IN	A	127.0.0.1
 delete-add		IN	A	127.0.0.108
 delete-add		IN	TXT	"Should be gone after a while"
-host-9			IN	A	127.0.0.109
-host-9			IN	TXT	"Should always stay"
-host-10			IN	A	127.0.0.110
 *.wild			IN	A	127.0.1.255

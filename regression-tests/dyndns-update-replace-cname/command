@@ -1,0 +1,6 @@
+#!/bin/sh
+cleandig cname1.test.dyndns ANY
+$testname/replace1.pl $nameserver $port
+cleandig cname1.test.dyndns ANY
+$testname/replace2.pl $nameserver $port
+cleandig cname1.test.dyndns ANY
