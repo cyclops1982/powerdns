@@ -1,1 +1,2 @@
-This test performs a delete/add dyndns query with prerequisite on a A-record.
+A test for RFC2136 which checks section 3.4.2.2 - Replacing a record.
+
