@@ -70,6 +70,7 @@ class DNSResourceRecord
 {
 public:
   DNSResourceRecord() : qclass(1), priority(0), last_modified(0), d_place(ANSWER), auth(1), scopeMask(0) {};
+  DNSResourceRecord(const struct DNSRecord&);
   ~DNSResourceRecord(){};
 
   // data

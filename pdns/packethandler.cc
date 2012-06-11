@@ -915,33 +915,7 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
 
 
       if (!recordFound) {
-        //TODO: The method to convert this is in resolver.cc, so should be re-used.
-        DNSResourceRecord newRec;
-        newRec.qname = rLabel;
-        newRec.qtype = rr->d_type;
-        newRec.ttl = rr->d_ttl;
-        newRec.content = rr->d_content->getZoneRepresentation();
-        newRec.priority = 0;
-  
-        if(!newRec.content.empty() && (newRec.qtype.getCode() == QType::MX || newRec.qtype.getCode() ==QType::NS || newRec.qtype.getCode() ==QType::CNAME))
-          boost::erase_tail(newRec.content, 1);
-
-        if(newRec.qtype.getCode() == QType::MX) {
-          vector<string> parts;
-          stringtok(parts, newRec.content);
-          newRec.priority = atoi(parts[0].c_str());
-          if(parts.size() > 1)
-            newRec.content=parts[1];
-          else
-            newRec.content=".";
-        } else if(newRec.qtype.getCode() == QType::SRV) {
-          newRec.priority = atoi(newRec.content.c_str());
-          vector<pair<string::size_type, string::size_type> > fields;
-          vstringtok(fields, newRec.content, " ");
-          if(fields.size()==4)
-            newRec.content=string(newRec.content.c_str() + fields[1].first, fields[3].second - fields[1].first);
-        }
-
+        DNSResourceRecord newRec(*rr);
         newRec.domain_id = di->id;
 
         di->backend->feedRecord(newRec);
