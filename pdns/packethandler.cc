@@ -874,13 +874,13 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
 
   if (rr->d_class == QClass::IN) { // 3.4.2.2, Add/update records.
     vector<pair<DNSResourceRecord, DNSResourceRecord> > recordsToUpdate;
-
     if (rr->d_type == QType::SOA) {
-      di->backend->lookup(QType(QType::ANY), rLabel); // we use the lookup because that gives us a Record which we can change and update
+      di->backend->lookup(QType(QType::ANY), rLabel);
       while (di->backend->get(rec)) {
         if (rec.qtype.getCode() == QType::SOA) {
           DNSResourceRecord newRec = rec;
           newRec.content = rr->d_content->getZoneRepresentation();  //TODO: Check if getZoneRepresentation() returns the correct data.
+          newRec.ttl = rr->d_ttl;
           SOAData sdOld, sdUpdate;
           fillSOAData(rec.content, sdOld);
           fillSOAData(newRec.content, sdUpdate);
@@ -895,42 +895,57 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
       while (di->backend->get(rec)) {
         if (rec.qtype.getCode() == QType::CNAME) {
           DNSResourceRecord newRec = rec;
+          newRec.ttl = rr->d_ttl;
           newRec.content = rr->d_content->getZoneRepresentation();
           boost::erase_tail(newRec.content, 1); // strip of the last '.'
           recordsToUpdate.push_back(make_pair(rec, newRec));
         }
       }
-    } else { // if it's not a SOA or CNAME, we add the record.
-      //TODO: The method to convert this is in resolver.cc, so should be re-used.
-      DNSResourceRecord newRec;
-      newRec.qname = rLabel;
-      newRec.qtype = rr->d_type;
-      newRec.ttl = rr->d_ttl;
-      newRec.content = rr->d_content->getZoneRepresentation();
-      newRec.priority = 0;
+    } else {
+      bool recordFound=false;
+      di->backend->lookup(QType(QType::ANY), rLabel);
+      while (di->backend->get(rec)) {
+        if (rec.qtype == rr->d_type && rec.content == rr->d_content->getZoneRepresentation()) {
+          DNSResourceRecord newRec = rec;
+          newRec.ttl = rr->d_ttl;
+          recordsToUpdate.push_back(make_pair(rec, newRec));
+          recordFound=true;
+        }
+      }  
+
+
+      if (!recordFound) {
+        //TODO: The method to convert this is in resolver.cc, so should be re-used.
+        DNSResourceRecord newRec;
+        newRec.qname = rLabel;
+        newRec.qtype = rr->d_type;
+        newRec.ttl = rr->d_ttl;
+        newRec.content = rr->d_content->getZoneRepresentation();
+        newRec.priority = 0;
   
-      if(!newRec.content.empty() && (newRec.qtype.getCode() == QType::MX || newRec.qtype.getCode() ==QType::NS || newRec.qtype.getCode() ==QType::CNAME))
-        boost::erase_tail(newRec.content, 1);
+        if(!newRec.content.empty() && (newRec.qtype.getCode() == QType::MX || newRec.qtype.getCode() ==QType::NS || newRec.qtype.getCode() ==QType::CNAME))
+          boost::erase_tail(newRec.content, 1);
 
-      if(newRec.qtype.getCode() == QType::MX) {
-        vector<string> parts;
-        stringtok(parts, newRec.content);
-        newRec.priority = atoi(parts[0].c_str());
-        if(parts.size() > 1)
-          newRec.content=parts[1];
-        else
-          newRec.content=".";
-      } else if(newRec.qtype.getCode() == QType::SRV) {
-        newRec.priority = atoi(newRec.content.c_str());
-        vector<pair<string::size_type, string::size_type> > fields;
-        vstringtok(fields, newRec.content, " ");
-        if(fields.size()==4)
-          newRec.content=string(newRec.content.c_str() + fields[1].first, fields[3].second - fields[1].first);
+        if(newRec.qtype.getCode() == QType::MX) {
+          vector<string> parts;
+          stringtok(parts, newRec.content);
+          newRec.priority = atoi(parts[0].c_str());
+          if(parts.size() > 1)
+            newRec.content=parts[1];
+          else
+            newRec.content=".";
+        } else if(newRec.qtype.getCode() == QType::SRV) {
+          newRec.priority = atoi(newRec.content.c_str());
+          vector<pair<string::size_type, string::size_type> > fields;
+          vstringtok(fields, newRec.content, " ");
+          if(fields.size()==4)
+            newRec.content=string(newRec.content.c_str() + fields[1].first, fields[3].second - fields[1].first);
+        }
+
+        newRec.domain_id = di->id;
+
+        di->backend->feedRecord(newRec);
       }
-
-      newRec.domain_id = di->id;
-
-      di->backend->feedRecord(newRec);      
     }
 
     // Perform updates on the backend

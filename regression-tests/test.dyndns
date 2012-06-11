@@ -21,4 +21,5 @@ host-2			IN	A	127.0.0.102
 replace			IN	A	127.0.0.1
 delete-add		IN	A	127.0.0.108
 delete-add		IN	TXT	"Should be gone after a while"
+ttl			IN	A	127.0.0.1
 *.wild			IN	A	127.0.1.255

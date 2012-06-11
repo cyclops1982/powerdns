@@ -783,7 +783,6 @@ bool GSQLBackend::feedRecord(const DNSResourceRecord &r)
 
 
 bool GSQLBackend::removeRecord(const DNSResourceRecord &r) {
-  //delete from records where domain_id=%d and name='%s' and type='%s' and content='%s'
   string output = (boost::format(d_DeleteRecordQuery) % r.domain_id % sqlEscape(r.qname) % sqlEscape(r.qtype.getName()) % sqlEscape(r.content)).str();
 
 
@@ -798,8 +797,7 @@ bool GSQLBackend::removeRecord(const DNSResourceRecord &r) {
 }
 
 bool GSQLBackend::updateRecord(const DNSResourceRecord &oldR, const DNSResourceRecord &r) {
-  //update records set content='%s' where name='%s' and type='%s' and ttl=%d and domain_id='%d'
-  string output = (boost::format(d_UpdateContentQuery) %sqlEscape(r.content) % sqlEscape(oldR.qname) % sqlEscape(oldR.qtype.getName()) % oldR.ttl % oldR.domain_id).str();
+  string output = (boost::format(d_UpdateContentQuery) % sqlEscape(r.content) % r.ttl % sqlEscape(oldR.qname) % sqlEscape(oldR.qtype.getName()) % oldR.ttl % oldR.domain_id).str();
 
   try {
     d_db->doCommand(output.c_str());
