@@ -196,7 +196,7 @@ __EOF__
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gpgsql \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=0 --no-config --allow-updates-from="127.0.0.1" \
 				--gpgsql-dbname="$GPGSQLDB" \
 				--gpgsql-user="$GPGSQLUSER" &
 			skipreasons=nodnssec
@@ -212,7 +212,7 @@ __EOF__
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gsqlite3 \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=0 --no-config --allow-updates-from="127.0.0.1" \
 				--gsqlite3-database=pdns.sqlite3 &
 			skipreasons=nodnssec
 
@@ -259,7 +259,7 @@ __EOF__
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gsqlite3 --gsqlite3-dnssec \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=0 --no-config --allow-updates-from="127.0.0.1" \
 				--gsqlite3-database=pdns.sqlite3 &
 			if [ $context = gsqlite3-nsec3 ]
 			then
