@@ -1,0 +1,8 @@
+#!/bin/sh
+cleandig cname1.test.dyndns SOA 
+$testname/replace1.pl $nameserver $port
+cleandig cname1.test.dyndns SOA
+$testname/replace2.pl $nameserver $port
+cleandig cname1.test.dyndns SOA
+$testname/replace3.pl $nameserver $port
+cleandig cname1.test.dyndns SOA
