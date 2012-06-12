@@ -23,6 +23,7 @@
 
 
 DNSResourceRecord::DNSResourceRecord(const DNSRecord &p) {
+  auth=true;
   qname = p.d_label;
   if(!qname.empty())
     boost::erase_tail(qname, 1); // strip .
