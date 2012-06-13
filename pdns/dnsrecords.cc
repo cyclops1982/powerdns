@@ -20,19 +20,8 @@
 #include "dnsrecords.hh"
 #include <boost/foreach.hpp>
 
-
-
-DNSResourceRecord::DNSResourceRecord(const DNSRecord &p) {
-  auth=true;
-  qname = p.d_label;
-  if(!qname.empty())
-    boost::erase_tail(qname, 1); // strip .
-  
-  qtype = p.d_type;
-  ttl = p.d_ttl;
-  content = p.d_content->getZoneRepresentation();
-  priority = 0;
-    
+void DNSResourceRecord::setContent(const string &cont) {
+  content = cont;
   if(!content.empty() && (qtype==QType::MX || qtype==QType::NS || qtype==QType::CNAME))
     boost::erase_tail(content, 1);
 
@@ -51,6 +40,39 @@ DNSResourceRecord::DNSResourceRecord(const DNSRecord &p) {
     if(fields.size()==4)
       content=string(content.c_str() + fields[1].first, fields[3].second - fields[1].first);
   }
+}
+
+string DNSResourceRecord::getZoneRepresentation() {
+  ostringstream ret;
+  switch(qtype.getCode()) {
+    case QType::MX:
+      ret<<priority;
+      ret<<" "<<content<<".";
+    break;
+    case QType::SRV:
+      ret<<"TODO-SRV-RECORD-HERE!";
+    break;
+    case QType::CNAME:
+    case QType::NS:
+      ret<<content<<".";
+    break;
+    default:
+      ret<<content;
+    break;
+  }
+  return ret.str();
+}
+
+DNSResourceRecord::DNSResourceRecord(const DNSRecord &p) {
+  auth=true;
+  qname = p.d_label;
+  if(!qname.empty())
+    boost::erase_tail(qname, 1); // strip .
+  
+  qtype = p.d_type;
+  ttl = p.d_ttl;
+  priority=0;
+  setContent(p.d_content->getZoneRepresentation());
 }
 
 boilerplate_conv(A, ns_t_a, conv.xfrIP(d_ip));

@@ -879,7 +879,7 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
       while (di->backend->get(rec)) {
         if (rec.qtype.getCode() == QType::SOA) {
           DNSResourceRecord newRec = rec;
-          newRec.content = rr->d_content->getZoneRepresentation();  //TODO: Check if getZoneRepresentation() returns the correct data.
+          newRec.setContent(rr->d_content->getZoneRepresentation());
           newRec.ttl = rr->d_ttl;
           SOAData sdOld, sdUpdate;
           fillSOAData(rec.content, sdOld);
@@ -896,8 +896,7 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
         if (rec.qtype.getCode() == QType::CNAME) {
           DNSResourceRecord newRec = rec;
           newRec.ttl = rr->d_ttl;
-          newRec.content = rr->d_content->getZoneRepresentation();
-          boost::erase_tail(newRec.content, 1); // strip of the last '.'
+          newRec.setContent(rr->d_content->getZoneRepresentation());
           recordsToUpdate.push_back(make_pair(rec, newRec));
         }
       }
@@ -905,9 +904,11 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
       bool recordFound=false;
       di->backend->lookup(QType(QType::ANY), rLabel);
       while (di->backend->get(rec)) {
-        if (rec.qtype == rr->d_type && rec.content == rr->d_content->getZoneRepresentation()) {
+        string content = rr->d_content->getZoneRepresentation();
+        if (rec.qtype == rr->d_type && rec.getZoneRepresentation() == content) {
           DNSResourceRecord newRec = rec;
           newRec.ttl = rr->d_ttl;
+          newRec.setContent(content);
           recordsToUpdate.push_back(make_pair(rec, newRec));
           recordFound=true;
         }
