@@ -1,0 +1,6 @@
+#!/bin/sh
+cleandig test.dyndns MX 
+$testname/add.pl $nameserver $port
+cleandig test.dyndns MX
+$testname/delete.pl $nameserver $port
+cleandig test.dyndns MX

@@ -972,7 +972,9 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
           continue;
         }
       }
-      if (rec.qtype == rr->d_type && rec.content == rr->d_content->getZoneRepresentation()) {
+      cerr<<"rec.getzone: "<<rec.getZoneRepresentation()<<endl;
+      cerr<<"rr.cont.getzone: "<<rr->d_content->getZoneRepresentation()<<endl;
+      if (rec.qtype == rr->d_type && rec.getZoneRepresentation() == rr->d_content->getZoneRepresentation()) {
         recordsToDelete.push_back(rec);
       }
     }
@@ -1005,14 +1007,14 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   // RFC2136 uses the same DNS Header and Message as defined in RFC1035.
   // This means we can use the MOADNSParser to parse the incoming packet. The result is that we have some different 
   // variable names during the use of our MOADNSParser.
-  MOADNSParser mdp(p->getString()); //TODO: DNSPacket::parse also does this. We parse the packet twice :(
+  MOADNSParser mdp(p->d_rawpacket);
   if (mdp.d_header.qdcount != 1) {
     L<<Logger::Warning<<msgPrefix<<"Zone Count is not 1, sending FormErr"<<endl;
     return RCode::FormErr;
   }     
 
   if (p->qtype.getCode() != QType::SOA) { // RFC2136 2.3 - ZTYPE must be SOA
-    L<<Logger::Warning<<msgPrefix<<": Query Type is not SOA, sending FormErr"<<endl;
+    L<<Logger::Warning<<msgPrefix<<": Query ZTYPE is not SOA, sending FormErr"<<endl;
     return RCode::FormErr;
   }
 
@@ -1049,7 +1051,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     if (rLabel[rr->d_label.size()-1] == '.') 
       rLabel.resize(rr->d_label.size()-1);
 
-    //cerr<<"Record:"<<rLabel<<"; QClass:"<<rr->d_class<<"; QType:"<<rr->d_type<<endl;
+    cerr<<"Record:"<<rLabel<<"; QClass:"<<rr->d_class<<"; QType:"<<rr->d_type<<endl;
     if (!endsOn(rLabel, di.zone)) {
       L<<Logger::Error<<msgPrefix<<"Received update/record out of zone, sending NotZone."<<endl;
       di.backend->abortTransaction();
