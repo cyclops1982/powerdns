@@ -201,7 +201,7 @@ void MOADNSParser::init(const char *packet, unsigned int len)
   
   memcpy(&d_header, packet, sizeof(dnsheader));
 
-  if(d_header.opcode!=0 && d_header.opcode != 4 && d_header.opcode != 5) // notification & update
+  if(d_header.opcode != Opcode::Query && d_header.opcode != Opcode::Notify && d_header.opcode != Opcode::Update)
     throw MOADNSException("Can't parse non-query packet with opcode="+ lexical_cast<string>(d_header.opcode));
 
   d_header.qdcount=ntohs(d_header.qdcount);
