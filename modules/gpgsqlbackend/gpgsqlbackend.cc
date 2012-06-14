@@ -94,7 +94,7 @@ public:
     
     declare(suffix,"update-serial-query","", "update domains set notified_serial=%d where id=%d");
     declare(suffix,"update-lastcheck-query","", "update domains set last_check=%d where id=%d");
-    declare(suffix,"update-query", "Update records query for dyndns", "update records set content='%s', ttl=%d where name='%s' and type='%s' and ttl=%d and domain_id=%d and prio=%d");
+    declare(suffix,"update-query", "Update records query for dyndns", "update records set content='%s', ttl=%d where name='%s' and type='%s' and domain_id=%d and prio=%d");
     declare(suffix,"zone-lastchange-query", "", "select max(change_date) from records where domain_id=%d");
     declare(suffix,"info-all-master-query","", "select id,name,master,last_check,notified_serial,type from domains where type='MASTER'");
     declare(suffix,"delete-zone-query","", "delete from records where domain_id=%d");
