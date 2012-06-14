@@ -1,3 +1,12 @@
+- Habbie's comments:
+	- Update query has TTL, is that needed?
+	- Update postgresql query
+	- Section 3.2.3 - Returning NXRRSet.
+	- Ask for SOA when we need to
+	- use rfc1982lessthan
+	- Rework update section to only do the lookup once.
+
+
 - Backends
 	- Backends that do not support slave operation, cannot perform the tests. There needs to be a way to hand this properly (aka, pdns should not crash but report NotImpl)
 	- BindBackend is something that we would need at release, at the moment it is not up to date.
