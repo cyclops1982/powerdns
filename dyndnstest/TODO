@@ -1,27 +1,28 @@
 - Habbie's comments:
-	- Section 3.2.3 - Returning NXRRSet.
-	- Ask for SOA when we need to
-	- use rfc1982lessthan
-	- Rework update section to only do the lookup once.
-	- PRIO in delete query
-
-- Bugs
-	- Delete on MX record does not work. For some reason the moadnsparser does not parse that packet correctly. d_clen is 0 ?
-
-- Backends
-	- Backends that do not support slave operation, cannot perform the tests. There needs to be a way to hand this properly (aka, pdns should not crash but report NotImpl)
-	- BindBackend is something that we would need at release, at the moment it is not up to date.
+	- Rectify zone
+	- Global setting to enable/disable dyndns and drop packket?
+	- WHERE cause with PRIO. Is this correct?
+	- section 3.2.3 returns NXRRSet.
+	- Rework line 866 and lower (section 3.4.2)
+		- Ask for SOA?
+		- Only do lookup once
+		- Usage of rfc1982 method
+	- Update section before the delete section?
+	- Where we use list() - rewrite because it is wrong - this should also take care of double rLabel == di->zone on line 937/940
+	- QType isSupportedType() loop.
+	- Change test to nsupdate or create update-script with parameters?
 
 - Record testing:
-	- WKS record is not supported (for replace)
 	- SRV record is not supported (because getZoneRepresentation() is not implemented)
+	- BUG:  MX record does not work, because getZoneRepresentation() does not work.
+	- WKS record is not supported (for replace)
 
-- We might need to perform a RectifyZone after an update. This logic is in pdnssec tool and after the AXFR
-	- Centralize the logic
-	- Add it at the end of the packet processing and before the commit to db.
+- Backends
+	- Make sure backends that do not support dyndns return NotImpl.
+	- BindBackend is something that we would need at release, at the moment it is not up to date.
 
 - Permissions
 	- Add support for TSIG (global parameter?)
 	- Add per domain support for IP-range and TSIG.
 
-- Follow up on TODO's in source
+- Forward update packet?
