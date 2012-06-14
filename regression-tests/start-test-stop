@@ -40,7 +40,7 @@ case $context in
 				--no-shuffle --launch=bind --bind-config=./named.conf                \
 				--fancy-records --query-logging --send-root-referral --loglevel=9    \
 				--cache-ttl=0 --no-config &
-			skipreasons=nodnssec
+			skipreasons="nodnssec nodyndns"
 			;;
 		bind-dnssec | bind-dnssec-nsec3 )
 			./bind-dnssec-setup
@@ -59,6 +59,7 @@ case $context in
 				--bind-dnssec-db=./dnssec.sqlite3 \
 				--query-logging --send-root-referral --loglevel=9    \
 				--cache-ttl=0 --no-config &
+			skipreasons=nodyndns
 			;;
 		gmysql-nodnssec)
 			[ -z "$GMYSQLDB" ] && GMYSQLDB=pdnstest
@@ -231,7 +232,7 @@ __EOF__
 				--cache-ttl=0 --no-config \
 				--opendbx-backend=sqlite3 --opendbx-host-read=./ --opendbx-host-write=./ \
 				--opendbx-database=pdns-opendbx.sqlite3 &
-			skipreasons=nodnssec
+			skipreasons="nodnssec nodyndns"
 
 			;;									
 		gsqlite3 | gsqlite3-nsec3)
@@ -274,7 +275,7 @@ __EOF__
 				--query-logging --loglevel=9 --cache-ttl=0 --no-config \
 				--send-root-referral \
 				--tinydns-dbfile=../modules/tinydnsbackend/data.cdb & 
-			skipreasons=nodnssec
+			skipreasons="nodnssec nodyndns"
 			;;
 		*)
 			echo unknown context $context
