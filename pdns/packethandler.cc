@@ -887,7 +887,7 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
           if (sdOld.serial <= sdUpdate.serial) //TODO: Use rfc1982LessThan?
             recordsToUpdate.push_back(make_pair(rec, newRec));
           else
-            L<<Logger::Notice<<"Updated serial is older ("<<sdUpdate.serial<<") than the current serial!"<<endl;
+            L<<Logger::Notice<<"Updated serial is older ("<<sdUpdate.serial<<") than the current serial, ignoring SOA update."<<endl;
         }
       }
     } else if (rr->d_type == QType::CNAME) {
