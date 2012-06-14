@@ -1,0 +1,17 @@
+- Backends
+	- Backends that do not support slave operation, cannot perform the tests. There needs to be a way to hand this properly (aka, pdns should not crash but report NotImpl)
+	- BindBackend is something that we would need at release, at the moment it is not up to date.
+
+- Record testing:
+	- WKS record is not supported (for replace)
+	- SRV record is not supported (because getZoneRepresentation() is not implemented)
+
+- We might need to perform a RectifyZone after an update. This logic is in pdnssec tool and after the AXFR
+	- Centralize the logic
+	- Add it at the end of the packet processing and before the commit to db.
+
+- Permissions
+	- Add support for TSIG (global parameter?)
+	- Add per domain support for IP-range and TSIG.
+
+- Follow up on TODO's in source
