@@ -5,7 +5,7 @@
 	- Ask for SOA when we need to
 	- use rfc1982lessthan
 	- Rework update section to only do the lookup once.
-
+	- PRIO in delete query
 
 - Backends
 	- Backends that do not support slave operation, cannot perform the tests. There needs to be a way to hand this properly (aka, pdns should not crash but report NotImpl)

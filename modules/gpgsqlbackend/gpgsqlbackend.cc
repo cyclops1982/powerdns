@@ -94,11 +94,11 @@ public:
     
     declare(suffix,"update-serial-query","", "update domains set notified_serial=%d where id=%d");
     declare(suffix,"update-lastcheck-query","", "update domains set last_check=%d where id=%d");
-    declare(suffix,"update-query", "Update records query for dyndns", "update records set content='%s', ttl=%d where name='%s' and type='%s' and domain_id=%d and prio=%d");
+    declare(suffix,"update-query", "Update records query for dyndns", "update records set content=E'%s', ttl=%d where name=E'%s' and type=E'%s' and domain_id=%d and prio=%d");
     declare(suffix,"zone-lastchange-query", "", "select max(change_date) from records where domain_id=%d");
     declare(suffix,"info-all-master-query","", "select id,name,master,last_check,notified_serial,type from domains where type='MASTER'");
     declare(suffix,"delete-zone-query","", "delete from records where domain_id=%d");
-    declare(suffix,"delete-record-query", "Delete a record for dyndns", "delete from records where domain_id=%d and name='%s' and type='%s' and content='%s'");
+    declare(suffix,"delete-record-query", "Delete a record for dyndns", "delete from records where domain_id=%d and name=E'%s' and type=E'%s' and content=E'%s'");
 
     declare(suffix,"add-domain-key-query","", "insert into cryptokeys (domain_id, flags, active, content) select id, %d, (%d = 1), '%s' from domains where name=E'%s'");
     declare(suffix,"list-domain-keys-query","", "select cryptokeys.id, flags, case when active then 1 else 0 end as active, content from domains, cryptokeys where domain_id=domains.id and name=E'%s'");
