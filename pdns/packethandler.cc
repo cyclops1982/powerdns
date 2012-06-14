@@ -998,8 +998,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   //TODO: This is nice, a check on IP, but should be a range
   // The other part is that we'd like to use Domainmetadata to see who we allow to update, includeing TSIG key.
   if (! ::arg().contains("allow-updates-from", p->getRemote())) {
-    if(::arg().mustDo("log-failed-updates")) 
-      L<<Logger::Notice<<msgPrefix<<"Remote not listed in allow-updates-from. Sending REFUSED"<<endl;
+    L<<Logger::Notice<<msgPrefix<<"Remote not listed in allow-updates-from. Sending REFUSED"<<endl;
     return RCode::Refused;
   }
 

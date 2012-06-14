@@ -7528,12 +7528,6 @@ doing. Stability is expected to return with 2.9.1, as are the binary builds.
 	    </listitem>
 	    <listitem>
 	      <para>
-		Ability to disable those annoying Windows DNS Dynamic Update messages from appearing in the log. See <function>log-failed-updates</function>
-		in <xref linkend="all-settings"/>.
-	      </para>
-	    </listitem>
-	    <listitem>
-	      <para>
 		Ability to run on IPv6 transport only
 	      </para>
 	    </listitem>
@@ -10346,8 +10340,7 @@ local0.err                        /var/log/pdns.err
     </para>
     <para>
       Logging truly kills performance as answering a question from the cache is an order of magnitude less work than logging a 
-      line about it. Busy sites will prefer to turn <command>log-dns-details</command> and <command>log-failed-updates</command>
-      off.
+      line about it. Busy sites will prefer to turn <command>log-dns-details</command> off.
     </para>
     <sect2 id="packetcache"><title>Packet Cache</title>
       <para>
@@ -13429,10 +13422,6 @@ To enable a Lua script for a particular slave zone, determine the domain_id for 
 	  <varlistentry><term>local-port=...</term>
 	    <listitem><para>
 		The port on which we listen. Only one port possible.
-	      </para></listitem></varlistentry>
-	  <varlistentry><term><anchor id="log-failed-updates"/>log-failed-updates=...</term>
-	    <listitem><para>
-	      If set to 'no', failed Windows Dynamic Updates will not be logged.
 	      </para></listitem></varlistentry>
 	  <varlistentry><term><anchor id="log-dns-details"/>log-dns-details=...</term>
 	    <listitem><para>
