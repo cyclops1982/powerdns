@@ -884,7 +884,7 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
           SOAData sdOld, sdUpdate;
           fillSOAData(rec.content, sdOld);
           fillSOAData(newRec.content, sdUpdate);
-          if (sdOld.serial <= sdUpdate.serial) //TODO: Use rfc1982LessThan?
+          if (rfc1982LessThan(sdOld.serial, sdUpdate.serial)) 
             recordsToUpdate.push_back(make_pair(rec, newRec));
           else
             L<<Logger::Notice<<"Updated serial is older ("<<sdUpdate.serial<<") than the current serial, ignoring SOA update."<<endl;
@@ -1006,7 +1006,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   // RFC2136 uses the same DNS Header and Message as defined in RFC1035.
   // This means we can use the MOADNSParser to parse the incoming packet. The result is that we have some different 
   // variable names during the use of our MOADNSParser.
-  MOADNSParser mdp(p->d_rawpacket);
+  MOADNSParser mdp(p->getString());
   if (mdp.d_header.qdcount != 1) {
     L<<Logger::Warning<<msgPrefix<<"Zone Count is not 1, sending FormErr"<<endl;
     return RCode::FormErr;
