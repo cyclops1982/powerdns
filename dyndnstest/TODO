@@ -1,7 +1,5 @@
 - Habbie's comments:
 	- Rectify zone
-	- Global setting to enable/disable dyndns and drop packket?
-	- WHERE cause with PRIO. Is this correct?
 	- section 3.2.3 returns NXRRSet.
 	- Rework line 866 and lower (section 3.4.2)
 		- Ask for SOA?
@@ -26,3 +24,4 @@
 	- Add per domain support for IP-range and TSIG.
 
 - Forward update packet?
+- Use msgPrefix everywhere.

@@ -887,7 +887,7 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
           if (rfc1982LessThan(sdOld.serial, sdUpdate.serial)) 
             recordsToUpdate.push_back(make_pair(rec, newRec));
           else
-            L<<Logger::Notice<<"Updated serial is older ("<<sdUpdate.serial<<") than the current serial, ignoring SOA update."<<endl;
+            L<<Logger::Notice<<"Serial is older ("<<sdUpdate.serial<<") than the current serial("<<sdOld.serial<<"), ignoring SOA update."<<endl;
         }
       }
     } else if (rr->d_type == QType::CNAME) {
@@ -993,6 +993,9 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
 
 int PacketHandler::processUpdate(DNSPacket *p) {
   string msgPrefix="UPDATE from " + p->getRemote() + " for " + p->qdomain + ": ";
+  if (! ::arg().mustDo("allow-rfc2136"))
+    return RCode::Refused;
+
   L<<Logger::Notice<<msgPrefix<<"Processing started."<<endl;
 
   //TODO: This is nice, a check on IP, but should be a range
