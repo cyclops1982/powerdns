@@ -931,36 +931,20 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
 
 
   vector<DNSResourceRecord> recordsToDelete;
-  //Section 3.4.2.3, Deleting records
+  //Section 3.4.2.3: Delete RRs based on name and (if provided) type, but never delete NS or SOA of the zone.
   if (rr->d_class == QClass::ANY) { 
-    if (rr->d_type == QType::ANY) {
-      if (rLabel == di->zone) {
-        di->backend->list(di->zone, di->id);
-        while (di->backend->get(rec)) {
-          if (rLabel == di->zone && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
-            continue;
+    di->backend->lookup(QType(QType::ANY), rLabel);
+    while (di->backend->get(rec)) {
+      if (rLabel == di->zone && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
+        continue;
 
-          recordsToDelete.push_back(rec);
-        }
-      } else {
-        di->backend->lookup(QType(QType::ANY), rLabel);
-        while (di->backend->get(rec))
-          recordsToDelete.push_back(rec);
-      }
-    } else { //rtype != any
-      di->backend->lookup(QType(QType::ANY), rLabel);
-      while (di->backend->get(rec)) {
-        if (rLabel == di->zone && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
-          continue;
-
-        if (rr->d_type == rec.qtype.getCode())
-          recordsToDelete.push_back(rec);
-      }
+      if (rr->d_type == QType::ANY || rr->d_type == rec.qtype.getCode())
+        recordsToDelete.push_back(rec);
     }
   }
 
   //Section 3.4.2.4, Delete a specific record that matches name, type and rdata, with some specifics for NS/SOA records.
-  if (rr->d_class == QClass::NONE) { 
+  if (rr->d_class == QClass::NONE) {
     di->backend->lookup(QType(QType::ANY), rLabel);
     bool skippedNS=true;
     while(di->backend->get(rec)) {
@@ -1037,6 +1021,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     return RCode::NotImp;
   }
 
+  //TODO: Start a lock here, to make section 3.7 correct
   L<<Logger::Notice<<msgPrefix<<"starting transaction."<<endl;
   if (!di.backend->startTransaction(p->qdomain, -1)) { // Not giving the domain_id means that we do not delete the records.
     L<<Logger::Error<<msgPrefix<<"Backend for domain "<<p->qdomain<<" does not support transaction. Can't do Update packet."<<endl;
