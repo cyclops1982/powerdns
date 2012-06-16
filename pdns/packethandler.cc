@@ -873,7 +873,53 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
     rLabel.resize(rr->d_label.size()-1);
 
   if (rr->d_class == QClass::IN) { // 3.4.2.2, Add/update records.
+    bool foundRecord=false;
     vector<pair<DNSResourceRecord, DNSResourceRecord> > recordsToUpdate;
+    di->backend->lookup(QType(QType::ANY), rLabel);
+    while (di->backend->get(rec)) {
+      if (rr->d_type == QType::SOA && rec.qtype == QType::SOA) {
+        DNSResourceRecord newRec = rec;
+        newRec.setContent(rr->d_content->getZoneRepresentation());
+        newRec.ttl = rr->d_ttl;
+        SOAData sdOld, sdUpdate;
+        fillSOAData(rec.content, sdOld);
+        fillSOAData(newRec.content, sdUpdate);
+        if (rfc1982LessThan(sdOld.serial, sdUpdate.serial)) 
+          recordsToUpdate.push_back(make_pair(rec, newRec));
+        else
+          L<<Logger::Notice<<"Provided serial ("<<sdUpdate.serial<<") is older than the current serial ("<<sdOld.serial<<"), ignoring SOA update."<<endl;
+
+      } else if (rr->d_type == QType::CNAME && rec.qtype == QType::CNAME) {
+        DNSResourceRecord newRec = rec;
+        newRec.ttl = rr->d_ttl;
+        newRec.setContent(rr->d_content->getZoneRepresentation());
+        recordsToUpdate.push_back(make_pair(rec, newRec));
+      } else if (rec.qtype == rr->d_type) {
+        string content = rr->d_content->getZoneRepresentation();
+        if (rec.getZoneRepresentation() == content) {
+          DNSResourceRecord newRec = rec;
+          newRec.ttl = rr->d_ttl;
+          newRec.setContent(content);
+          recordsToUpdate.push_back(make_pair(rec, newRec));
+          foundRecord=true;
+        }
+      }
+    }
+    if (! foundRecord && rr->d_type != QType::SOA && rr->d_type != QType::CNAME) {
+        DNSResourceRecord newRec(*rr);
+        newRec.domain_id = di->id;
+        di->backend->feedRecord(newRec);
+    }
+
+    // Perform updates on the backend
+    for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
+      di->backend->updateRecord(i->first, i->second);
+    }
+
+  } // rr->d_class == QClass::IN
+
+
+    /*
     if (rr->d_type == QType::SOA) {
       di->backend->lookup(QType(QType::ANY), rLabel);
       while (di->backend->get(rec)) {
@@ -926,8 +972,8 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
     // Perform updates on the backend
     for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
       di->backend->updateRecord(i->first, i->second);
-    }
-  } 
+    } 
+  }*/ 
 
 
   vector<DNSResourceRecord> recordsToDelete;
@@ -970,9 +1016,7 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
   }
 
   // Finally, we clean the cache for this RR
-  //TODO: even if there's no update, we clean the cache.
   PC.purge(rLabel);
-
 }
 
 int PacketHandler::processUpdate(DNSPacket *p) {
@@ -1020,6 +1064,18 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     L<<Logger::Error<<msgPrefix<<"We are slave for the domain and do not support forwarding to master, sending NotImp"<<endl;
     return RCode::NotImp;
   }
+  // All DNSRecord in the message are either Update or PreRequisites.
+  for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
+    const DNSRecord *rr = &i->first;
+    string label = stripDot(rr->d_label);
+    
+
+    cerr<<"Record:"<<rr->d_label<<"; QClass:"<<rr->d_class<<"; QType:"<<rr->d_type<<endl;
+    if (!endsOn(label, di.zone)) {
+      L<<Logger::Error<<msgPrefix<<"Received update/record out of zone, sending NotZone."<<endl;
+      return RCode::NotZone;
+    }
+  }
 
   //TODO: Start a lock here, to make section 3.7 correct
   L<<Logger::Notice<<msgPrefix<<"starting transaction."<<endl;
@@ -1028,24 +1084,9 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     return RCode::NotImp;
   }
 
-  // All DNSRecord in the message are either Update or PreRequisites.
   for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
-    const DNSRecord *rr = &i->first;
-    DNSResourceRecord rec; // used whenever we get something from the backend.
-
-    //Strip of the last '.'
-    string rLabel = rr->d_label;
-    if (rLabel[rr->d_label.size()-1] == '.') 
-      rLabel.resize(rr->d_label.size()-1);
-
-    cerr<<"Record:"<<rLabel<<"; QClass:"<<rr->d_class<<"; QType:"<<rr->d_type<<endl;
-    if (!endsOn(rLabel, di.zone)) {
-      L<<Logger::Error<<msgPrefix<<"Received update/record out of zone, sending NotZone."<<endl;
-      di.backend->abortTransaction();
-      return RCode::NotZone;
-    }
-
     // Section 3.2.5 of RFC2136; Answer records are our PreRequisites records.
+    const DNSRecord *rr = &i->first;
     if (rr->d_place == DNSRecord::Answer) {
       int res = updatePrerequisitesCheck(rr, &di);
       if (res>0) {
@@ -1054,8 +1095,12 @@ int PacketHandler::processUpdate(DNSPacket *p) {
         return res;
       }
     } 
+  }
+  // perform section 3.2.something with the RRSet.
 
+  for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
     //  Section 3.4.2 of RFC2136; Nameserver records are our Update records.
+    const DNSRecord *rr = &i->first;
     if (rr->d_place == DNSRecord::Nameserver) {
       int res = updatePrescanCheck(rr);
       if (res>0) {

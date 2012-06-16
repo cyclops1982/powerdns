@@ -1,11 +1,7 @@
 - Habbie's comments:
 	- Rectify zone
 	- section 3.2.3 returns NXRRSet.
-	- Rework line 866 and lower (section 3.4.2)
-		- Ask for SOA?
-		- Only do lookup once
 	- Update section before the delete section?
-	- Where we use list() - rewrite because it is wrong - this should also take care of double rLabel == di->zone on line 937/940
 	- QType isSupportedType() loop.
 	- Change test to nsupdate or create update-script with parameters?
 
