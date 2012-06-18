@@ -63,6 +63,22 @@ string DNSResourceRecord::getZoneRepresentation() {
   return ret.str();
 }
 
+  bool DNSResourceRecord::operator==(const DNSResourceRecord& rhs)
+  {
+    string lcontent=toLower(content);
+    string rcontent=toLower(rhs.content);
+     
+    string llabel=toLower(qname);
+    string rlabel=toLower(rhs.qname);
+      
+    return 
+      tie(llabel, qtype, lcontent, ttl, priority) ==
+      tie(rlabel, rhs.qtype, rcontent, rhs.ttl, rhs.priority);
+  }
+
+
+
+
 DNSResourceRecord::DNSResourceRecord(const DNSRecord &p) {
   auth=true;
   qname = p.d_label;

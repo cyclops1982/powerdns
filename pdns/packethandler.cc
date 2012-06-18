@@ -784,24 +784,16 @@ int PacketHandler::trySuperMasterSynchronous(DNSPacket *p)
   return RCode::NoError;
 }
 
-//Function implements Section 3.2.* of RFC 2136
+// Implement section 3.2.1 and 3.2.2 of RFC2136
 int PacketHandler::updatePrerequisitesCheck(const DNSRecord *rr, DomainInfo *di) {
-  if (rr->d_ttl != 0) // TTL needs to be none 0 in 3.2.[1-3]
+  if (rr->d_ttl != 0)
     return RCode::FormErr;
 
-  // Both in 3.2.1 and 3.2.2
+  // 3.2.1 and 3.2.2 check content length.
   if ( (rr->d_class == QClass::NONE || rr->d_class == QClass::ANY) && rr->d_clen != 0)
     return RCode::FormErr;
 
-  // Last line of Section 3.2.3
-  if (rr->d_class != QClass::IN && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) 
-    return RCode::FormErr;
-
-  // Sections 3.2.[1-3] search for a record...
-  string rLabel = rr->d_label;
-  int labelLen = rLabel.size();
-  if (rLabel[labelLen-1] == '.')
-    rLabel.resize(labelLen-1);
+  string rLabel = stripDot(rr->d_label);
 
   bool foundRecord=false;
   DNSResourceRecord rec;
@@ -827,16 +819,11 @@ int PacketHandler::updatePrerequisitesCheck(const DNSRecord *rr, DomainInfo *di)
       return RCode::YXRRSet;
   }
 
-  // Section 3.2.3
-  if (rr->d_class == QClass::IN && !foundRecord)
-    return RCode::NXRRSet;
-  
-
   return RCode::NoError;
 }
 
 
-// Method implements section 3.4.1 of RFC 2136
+// Method implements section 3.4.1 of RFC2136
 int PacketHandler::updatePrescanCheck(const DNSRecord *rr) {
   // The RFC stats that d_class != ZCLASS, but we only support the IN class.
   if (rr->d_class != QClass::IN && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) 
@@ -1064,11 +1051,11 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     L<<Logger::Error<<msgPrefix<<"We are slave for the domain and do not support forwarding to master, sending NotImp"<<endl;
     return RCode::NotImp;
   }
+
   // All DNSRecord in the message are either Update or PreRequisites.
   for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
     const DNSRecord *rr = &i->first;
     string label = stripDot(rr->d_label);
-    
 
     cerr<<"Record:"<<rr->d_label<<"; QClass:"<<rr->d_class<<"; QType:"<<rr->d_type<<endl;
     if (!endsOn(label, di.zone)) {
@@ -1077,15 +1064,15 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     }
   }
 
-  //TODO: Start a lock here, to make section 3.7 correct
+  //TODO: Start a lock here, to make section 3.7 correct???
   L<<Logger::Notice<<msgPrefix<<"starting transaction."<<endl;
   if (!di.backend->startTransaction(p->qdomain, -1)) { // Not giving the domain_id means that we do not delete the records.
     L<<Logger::Error<<msgPrefix<<"Backend for domain "<<p->qdomain<<" does not support transaction. Can't do Update packet."<<endl;
     return RCode::NotImp;
   }
 
+  // 3.2.1 and 3.2.2 - Prerequisite check 
   for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
-    // Section 3.2.5 of RFC2136; Answer records are our PreRequisites records.
     const DNSRecord *rr = &i->first;
     if (rr->d_place == DNSRecord::Answer) {
       int res = updatePrerequisitesCheck(rr, &di);
@@ -1096,12 +1083,79 @@ int PacketHandler::processUpdate(DNSPacket *p) {
       }
     } 
   }
-  // perform section 3.2.something with the RRSet.
 
+
+
+  //TODO: REWORK TO MAP<pair<string, QType>, vector<DNSResourceRecord> > :'(
+
+  // 3.2.3 - Prerequisite check
+  typedef pair<string, QType> rrSetKey_t;
+  typedef std::multimap<rrSetKey_t, DNSResourceRecord> RRsetMap_t;
+  RRsetMap_t  preReqRRsets;
   for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
-    //  Section 3.4.2 of RFC2136; Nameserver records are our Update records.
+    const DNSRecord *rr = &i->first;
+    cerr<<"3.2.3 -- :"<<rr->d_label<<"; QClass:"<<rr->d_class<<"; QType:"<<rr->d_type<<endl;
+    if (rr->d_place == DNSRecord::Answer) {
+      // Last line of 3.2.3
+      if (rr->d_class != QClass::IN && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) 
+        return RCode::FormErr;
+
+      if (rr->d_class == QClass::IN) {
+        rrSetKey_t key = make_pair(stripDot(rr->d_label), rr->d_type);
+        preReqRRsets.insert(make_pair(key, DNSResourceRecord(*rr)));
+      }
+    }
+  }
+
+  if (preReqRRsets.size() > 0) {
+    RRsetMap_t zoneRRsets;
+    for (RRsetMap_t::const_iterator preRRSet = preReqRRsets.begin(); preRRSet != preReqRRsets.end(); ++preRRSet) {
+     rrSetKey_t rrSet=preRRSet->first;
+
+      di.backend->lookup(QType(QType::ANY), rrSet.first);
+      DNSResourceRecord rec;
+      while (di.backend->get(rec)) {
+        if (rec.qtype == rrSet.second) {
+          bool alreadyHave = false;
+          for (RRsetMap_t::iterator zoneRRset = zoneRRsets.begin(); zoneRRset != zoneRRsets.end(); ++zoneRRset)
+            if (zoneRRset->second == rec)
+              alreadyHave=true;
+          
+          if (!alreadyHave)
+            zoneRRsets.insert(make_pair(rrSet, rec));
+        }
+      }
+    }
+
+    if (zoneRRsets.size() == 0 || zoneRRsets.size() < preReqRRsets.size())
+      return RCode::NXRRSet;
+
+    unsigned int matches=0;
+    for (RRsetMap_t::iterator preRRSet = preReqRRsets.begin(); preRRSet != preReqRRsets.end(); ++preRRSet) {
+      bool found =false;
+      for (RRsetMap_t::iterator zoneRRset = zoneRRsets.begin(); zoneRRset != zoneRRsets.end(); ++zoneRRset) {
+        cout<<"Compare "<<preRRSet->second.qname<<":"<<preRRSet->second.content<<" - "<<zoneRRset->second.qname<<":"<<zoneRRset->second.content<<endl;
+        if (zoneRRset->second == preRRSet->second) {
+          found=true;
+          matches++;
+          break;
+        }
+      }
+      if (!found)
+        return RCode::NXRRSet;
+    }
+
+    if (zoneRRsets.size() != matches)
+      return RCode::NXRRSet;
+
+  }
+
+  
+  // 3.4 - Prescan & Add/Update/Delete records
+  for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
     const DNSRecord *rr = &i->first;
     if (rr->d_place == DNSRecord::Nameserver) {
+      // 3.4.1 - Prescan
       int res = updatePrescanCheck(rr);
       if (res>0) {
         L<<Logger::Error<<msgPrefix<<"Failed prescan check, returning "<<res<<endl;
@@ -1109,6 +1163,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
         return res;
       }
 
+      // 3.4.2 - Update
       try {
         performUpdate(rr, &di);
       }
@@ -1130,7 +1185,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     L<<Logger::Error<<msgPrefix<<"Failed to commit update for domain "<<di.zone<<"!"<<endl;
     return RCode::ServFail;
   }
-  L<<Logger::Notice<<msgPrefix<<"Update completed, changed commited."<<endl;
+  L<<Logger::Notice<<msgPrefix<<"Update completed, changes commited."<<endl;
   return RCode::NoError; //rfc 2136 3.4.2.5
 }
 

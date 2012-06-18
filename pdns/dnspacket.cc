@@ -44,6 +44,7 @@
 #include "base64.hh"
 #include "ednssubnet.hh"
 
+
 bool DNSPacket::s_doEDNSSubnetProcessing;
 
 DNSPacket::DNSPacket() 

@@ -6,10 +6,13 @@ use Net::DNS::Update;
 
 
 # Create the update packet.
-my $update = Net::DNS::Update->new('test.com');
+my $update = Net::DNS::Update->new('test.dyndns.');
 
-$update->push(update => rr_del('server3.test.com.'));
-$update->push(update => rr_add('server3.test.com. 130 A 192.168.1.23'));
+
+$update->push(prerequisite => yxrrset('test.test.dyndns. 600 A 127.0.0.1'));
+$update->push(prerequisite => yxrrset('test.test.dyndns. 600 A 127.0.0.2'));
+$update->push(prerequisite => yxrrset('test.test.dyndns. 600 A 127.0.0.3'));
+
 my $res = Net::DNS::Resolver->new;
 $res->nameservers('127.0.0.2');
 $res->port(5300);

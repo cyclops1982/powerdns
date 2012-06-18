@@ -33,6 +33,8 @@
 #include "qtype.hh"
 #include <time.h>
 #include <sys/types.h>
+
+
 class DNSBackend;
 
 struct SOAData
@@ -117,7 +119,7 @@ public:
       return(content < b.content);
     return false;
   }
-
+  bool operator==(const DNSResourceRecord& rhs);
 };
 
 #ifdef _MSC_VER
