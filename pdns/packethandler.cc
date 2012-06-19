@@ -1086,15 +1086,13 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
 
 
-  //TODO: REWORK TO MAP<pair<string, QType>, vector<DNSResourceRecord> > :'(
-
   // 3.2.3 - Prerequisite check
   typedef pair<string, QType> rrSetKey_t;
-  typedef std::multimap<rrSetKey_t, DNSResourceRecord> RRsetMap_t;
+  typedef vector<DNSResourceRecord> rrVector_t;
+  typedef std::map<rrSetKey_t, rrVector_t> RRsetMap_t;
   RRsetMap_t  preReqRRsets;
   for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
     const DNSRecord *rr = &i->first;
-    cerr<<"3.2.3 -- :"<<rr->d_label<<"; QClass:"<<rr->d_class<<"; QType:"<<rr->d_type<<endl;
     if (rr->d_place == DNSRecord::Answer) {
       // Last line of 3.2.3
       if (rr->d_class != QClass::IN && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) 
@@ -1102,7 +1100,8 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
       if (rr->d_class == QClass::IN) {
         rrSetKey_t key = make_pair(stripDot(rr->d_label), rr->d_type);
-        preReqRRsets.insert(make_pair(key, DNSResourceRecord(*rr)));
+        rrVector_t *vec = &preReqRRsets[key];
+        vec->push_back(DNSResourceRecord(*rr));
       }
     }
   }
@@ -1110,44 +1109,25 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   if (preReqRRsets.size() > 0) {
     RRsetMap_t zoneRRsets;
     for (RRsetMap_t::const_iterator preRRSet = preReqRRsets.begin(); preRRSet != preReqRRsets.end(); ++preRRSet) {
-     rrSetKey_t rrSet=preRRSet->first;
+      rrSetKey_t rrSet=preRRSet->first;
+      rrVector_t vec=preRRSet->second;
 
-      di.backend->lookup(QType(QType::ANY), rrSet.first);
       DNSResourceRecord rec;
+      di.backend->lookup(QType(QType::ANY), rrSet.first);
+      uint16_t recCount=vec.size();
+
       while (di.backend->get(rec)) {
         if (rec.qtype == rrSet.second) {
-          bool alreadyHave = false;
-          for (RRsetMap_t::iterator zoneRRset = zoneRRsets.begin(); zoneRRset != zoneRRsets.end(); ++zoneRRset)
-            if (zoneRRset->second == rec)
-              alreadyHave=true;
-          
-          if (!alreadyHave)
-            zoneRRsets.insert(make_pair(rrSet, rec));
+          for(rrVector_t::iterator rrItem=vec.begin(); rrItem != vec.end(); ++rrItem) {
+            rrItem->ttl = rec.ttl; // TTL is 0 in prerequistes, so we don't compare?
+            if (*rrItem == rec) 
+              recCount--;
+          }
         }
       }
-    }
-
-    if (zoneRRsets.size() == 0 || zoneRRsets.size() < preReqRRsets.size())
-      return RCode::NXRRSet;
-
-    unsigned int matches=0;
-    for (RRsetMap_t::iterator preRRSet = preReqRRsets.begin(); preRRSet != preReqRRsets.end(); ++preRRSet) {
-      bool found =false;
-      for (RRsetMap_t::iterator zoneRRset = zoneRRsets.begin(); zoneRRset != zoneRRsets.end(); ++zoneRRset) {
-        cout<<"Compare "<<preRRSet->second.qname<<":"<<preRRSet->second.content<<" - "<<zoneRRset->second.qname<<":"<<zoneRRset->second.content<<endl;
-        if (zoneRRset->second == preRRSet->second) {
-          found=true;
-          matches++;
-          break;
-        }
-      }
-      if (!found)
+      if (recCount != 0)
         return RCode::NXRRSet;
     }
-
-    if (zoneRRsets.size() != matches)
-      return RCode::NXRRSet;
-
   }
 
   

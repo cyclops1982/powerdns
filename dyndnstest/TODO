@@ -1,6 +1,5 @@
 - Habbie's comments:
 	- Rectify zone
-	- section 3.2.3 returns NXRRSet.
 	- Update section before the delete section?
 	- QType isSupportedType() loop.
 	- Change test to nsupdate or create update-script with parameters?
