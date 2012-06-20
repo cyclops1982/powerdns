@@ -1,17 +1,17 @@
 Answer:
-;; ->>HEADER<<- opcode: QUERY, status: NXRRSET, id:  21848
+;; ->>HEADER<<- opcode: QUERY, status: NXRRSET ID_REPLACED
 ;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
 ;; QUESTION SECTION:
 ;test.dyndns.			IN	SOA
 
 Answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id:   6821
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
 ;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
 ;; QUESTION SECTION:
 ;test.dyndns.			IN	SOA
 
 Answer:
-;; ->>HEADER<<- opcode: QUERY, status: NXRRSET, id:  55126
+;; ->>HEADER<<- opcode: QUERY, status: NXRRSET ID_REPLACED
 ;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
 ;; QUESTION SECTION:
 ;test.dyndns.			IN	SOA
