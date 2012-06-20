@@ -64,7 +64,7 @@
 #include "iputils.hh"
 #include "mplexer.hh"
 #include "config.h"
-#include "lua-pdns-recursor.hh"
+#include "lua-recursor.hh"
 
 #ifndef RECURSOR
 #include "statbag.hh"
@@ -76,7 +76,7 @@ __thread unsigned int t_id;
 unsigned int g_maxTCPPerClient;
 unsigned int g_networkTimeoutMsec;
 bool g_logCommonErrors;
-__thread shared_ptr<PowerDNSLua>* t_pdl;
+__thread shared_ptr<RecursorLua>* t_pdl;
 __thread RemoteKeeper* t_remotes;
 
 RecursorControlChannel s_rcc; // only active in thread 0
@@ -521,7 +521,7 @@ void startDoResolve(void *p)
     int res;
 
     bool variableAnswer = false;
-    // if there is a PowerDNSLua active, and it 'took' the query in preResolve, we don't launch beginResolve
+    // if there is a RecursorLua active, and it 'took' the query in preResolve, we don't launch beginResolve
     if(!t_pdl->get() || !(*t_pdl)->preresolve(dc->d_remote, g_listenSocketsAddresses[dc->d_socket], dc->d_mdp.d_qname, QType(dc->d_mdp.d_qtype), ret, res, &variableAnswer)) {
        res = sr.beginResolve(dc->d_mdp.d_qname, QType(dc->d_mdp.d_qtype), dc->d_mdp.d_qclass, ret);
 
@@ -554,7 +554,7 @@ void startDoResolve(void *p)
       updateRcodeStats(res);
     
       if(ret.size()) {
-        shuffle(ret);
+        orderAndShuffle(ret);
         
         for(vector<DNSResourceRecord>::const_iterator i=ret.begin(); i!=ret.end(); ++i) {
           pw.startRecord(i->qname, i->qtype.getCode(), i->ttl, i->qclass, (DNSPacketWriter::Place)i->d_place); 
@@ -1501,24 +1501,26 @@ FDMultiplexer* getMultiplexer()
 }
 
   
-void* doReloadLuaScript()
+string* doReloadLuaScript()
 {
   string fname= ::arg()["lua-dns-script"];
   try {
     if(fname.empty()) {
       t_pdl->reset();
       L<<Logger::Error<<t_id<<" Unloaded current lua script"<<endl;
+      return new string("unloaded\n");
     }
     else {
-      *t_pdl = shared_ptr<PowerDNSLua>(new PowerDNSLua(fname));
+      *t_pdl = shared_ptr<RecursorLua>(new RecursorLua(fname));
     }
   }
   catch(std::exception& e) {
     L<<Logger::Error<<t_id<<" Retaining current script, error from '"<<fname<<"': "<< e.what() <<endl;
+    return new string("retaining current script, error from '"+fname+"': "+e.what()+"\n");
   }
     
   L<<Logger::Warning<<t_id<<" (Re)loaded lua script from '"<<fname<<"'"<<endl;
-  return 0;
+  return new string("(re)loaded '"+fname+"'\n");
 }
 
 string doQueueReloadLuaScript(vector<string>::const_iterator begin, vector<string>::const_iterator end)
@@ -1526,9 +1528,7 @@ string doQueueReloadLuaScript(vector<string>::const_iterator begin, vector<strin
   if(begin != end) 
     ::arg().set("lua-dns-script") = *begin;
   
-  broadcastFunction(doReloadLuaScript);
-  
-  return "ok, reload/unload queued\n";
+  return broadcastAccFunction<string>(doReloadLuaScript);
 }  
 
 void* recursorThread(void*);
@@ -1806,11 +1806,11 @@ try
   L<<Logger::Warning<<"Done priming cache with root hints"<<endl;
     
   t_RC->d_followRFC2181=::arg().mustDo("auth-can-lower-ttl");
-  t_pdl = new shared_ptr<PowerDNSLua>();
+  t_pdl = new shared_ptr<RecursorLua>();
   
   try {
     if(!::arg()["lua-dns-script"].empty()) {
-      *t_pdl = shared_ptr<PowerDNSLua>(new PowerDNSLua(::arg()["lua-dns-script"]));
+      *t_pdl = shared_ptr<RecursorLua>(new RecursorLua(::arg()["lua-dns-script"]));
       L<<Logger::Warning<<"Loaded 'lua' script from '"<<::arg()["lua-dns-script"]<<"'"<<endl;
     }
     
