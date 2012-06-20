@@ -1,0 +1,31 @@
+#!/bin/sh
+# cleandig multi.test.dyndns ANY
+nsupdate <<!
+server $nameserver $port
+zone test.dyndns
+prereq yxrrset multi.test.dyndns IN A 127.0.0.1
+prereq yxrrset multi.test.dyndns IN A 127.0.0.2
+send
+answer
+! | sed 's/\, id:.*/ ID_REPLACED/'
+
+nsupdate <<!
+server $nameserver $port
+zone test.dyndns
+prereq yxrrset multi.test.dyndns IN A 127.0.0.1
+prereq yxrrset multi.test.dyndns IN A 127.0.0.2
+prereq yxrrset multi.test.dyndns IN A 127.0.0.3
+send
+answer
+! | sed 's/\, id:.*/ ID_REPLACED/'
+
+nsupdate <<!
+server $nameserver $port
+zone test.dyndns
+prereq yxrrset multi.test.dyndns IN A 127.0.0.1
+prereq yxrrset multi.test.dyndns IN A 127.0.0.2
+prereq yxrrset multi.test.dyndns IN A 127.0.0.3
+prereq yxrrset multi.test.dyndns IN A 127.0.0.3
+send
+answer
+! | sed  's/\, id:.*/ ID_REPLACED/'

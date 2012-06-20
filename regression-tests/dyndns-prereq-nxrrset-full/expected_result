@@ -1,0 +1,18 @@
+Answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXRRSET, id:  21848
+;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;test.dyndns.			IN	SOA
+
+Answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id:   6821
+;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;test.dyndns.			IN	SOA
+
+Answer:
+;; ->>HEADER<<- opcode: QUERY, status: NXRRSET, id:  55126
+;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;test.dyndns.			IN	SOA
+

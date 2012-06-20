@@ -1090,7 +1090,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   typedef pair<string, QType> rrSetKey_t;
   typedef vector<DNSResourceRecord> rrVector_t;
   typedef std::map<rrSetKey_t, rrVector_t> RRsetMap_t;
-  RRsetMap_t  preReqRRsets;
+  RRsetMap_t preReqRRsets;
   for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
     const DNSRecord *rr = &i->first;
     if (rr->d_place == DNSRecord::Answer) {
@@ -1108,24 +1108,24 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
   if (preReqRRsets.size() > 0) {
     RRsetMap_t zoneRRsets;
-    for (RRsetMap_t::const_iterator preRRSet = preReqRRsets.begin(); preRRSet != preReqRRsets.end(); ++preRRSet) {
+    for (RRsetMap_t::iterator preRRSet = preReqRRsets.begin(); preRRSet != preReqRRsets.end(); ++preRRSet) {
       rrSetKey_t rrSet=preRRSet->first;
-      rrVector_t vec=preRRSet->second;
+      rrVector_t *vec = &preRRSet->second;
 
       DNSResourceRecord rec;
       di.backend->lookup(QType(QType::ANY), rrSet.first);
-      uint16_t recCount=vec.size();
-
+      uint16_t foundRR=0, matchRR=0;
       while (di.backend->get(rec)) {
         if (rec.qtype == rrSet.second) {
-          for(rrVector_t::iterator rrItem=vec.begin(); rrItem != vec.end(); ++rrItem) {
+          foundRR++;
+          for(rrVector_t::iterator rrItem=vec->begin(); rrItem != vec->end(); ++rrItem) {
             rrItem->ttl = rec.ttl; // TTL is 0 in prerequistes, so we don't compare?
             if (*rrItem == rec) 
-              recCount--;
+              matchRR++;
           }
         }
       }
-      if (recCount != 0)
+      if (matchRR != foundRR || foundRR != vec->size())
         return RCode::NXRRSet;
     }
   }
