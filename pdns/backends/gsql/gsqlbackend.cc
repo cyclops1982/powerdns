@@ -266,6 +266,7 @@ GSQLBackend::GSQLBackend(const string &mode, const string &suffix)
   d_wildCardANYIDQuery=getArg("wildcard-any-id-query"+authswitch);
   
   d_listQuery=getArg("list-query"+authswitch);
+  d_listSubZone=getArg("list-subzone"+authswitch);
 
   d_MasterOfDomainsZoneQuery=getArg("master-zone-query");
   d_InfoOfDomainsZoneQuery=getArg("info-zone-query");
@@ -780,21 +781,36 @@ bool GSQLBackend::feedRecord(const DNSResourceRecord &r)
   return true; // XXX FIXME this API should not return 'true' I think -ahu 
 }
 
+bool GSQLBackend::listSubZone(const string &zone, int domain_id) {
+  string wildzone = "%." + zone;
+  string output = (boost::format(d_listSubZone) % sqlEscape(zone) % sqlEscape(wildzone) % domain_id).str();
+  try {
+    cerr<<"QUERY"<<output.c_str()<<endl;
+    d_db->doQuery(output.c_str());
+  }
+  catch(SSqlException &e) {
+    throw AhuException("GSQLBackend listSubZone query: "+e.txtReason());
+  }
+  d_qname="";
+  d_count=0;
+  return true;
+}
+
 
 
 bool GSQLBackend::removeRecord(const DNSResourceRecord &r) {
   string output = (boost::format(d_DeleteRecordQuery) % r.domain_id % sqlEscape(r.qname) % sqlEscape(r.qtype.getName()) % sqlEscape(r.content)).str();
 
-
   try {
     d_db->doCommand(output.c_str());
   }
   catch (SSqlException &e) {
-    cerr<<"OEI!"<<e.txtReason()<<endl;
     throw AhuException(e.txtReason());
   }
   return true;
 }
+
+
 
 bool GSQLBackend::updateRecord(const DNSResourceRecord &oldR, const DNSResourceRecord &r) {
   string output = (boost::format(d_UpdateContentQuery) % sqlEscape(r.content) % r.ttl % sqlEscape(oldR.qname) % sqlEscape(oldR.qtype.getName()) % oldR.domain_id % oldR.priority).str();

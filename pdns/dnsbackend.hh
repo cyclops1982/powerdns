@@ -191,6 +191,12 @@ public:
     return false;
   }
 
+  virtual bool listSubZone(const string &zone, int domain_id)
+  {
+    return false;
+  }
+
+
   //! if this returns true, DomainInfo di contains information about the domain
   virtual bool getDomainInfo(const string &domain, DomainInfo &di)
   {

@@ -1,8 +1,8 @@
 - Habbie's comments:
-	- Rectify zone
-	- Update section before the delete section?
+	- Add tests for rectify zone (NS->A && A->NS)
+	- Clean up rectify code. 
 	- QType isSupportedType() loop.
-	- Change test to nsupdate or create update-script with parameters?
+	- Change all test to use nsupdate.
 
 - Record testing:
 	- SRV record is not supported (because getZoneRepresentation() is not implemented)

@@ -25,6 +25,7 @@ public:
   virtual string sqlEscape(const string &name);
   void lookup(const QType &, const string &qdomain, DNSPacket *p=0, int zoneId=-1);
   bool list(const string &target, int domain_id);
+  bool listSubZone(const string &zone, int domain_id); 
   bool get(DNSResourceRecord &r);
   void getAllDomains(vector<DomainInfo> *domains);
   bool isMaster(const string &domain, const string &ip);
@@ -75,6 +76,7 @@ private:
   string d_noWildCardANYIDQuery;
   string d_wildCardANYIDQuery;
   string d_listQuery;
+  string d_listSubZone;
   string d_logprefix;
   
   string d_MasterOfDomainsZoneQuery;

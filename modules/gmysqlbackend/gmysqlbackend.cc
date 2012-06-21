@@ -76,6 +76,7 @@ public:
     declare(suffix,"wildcard-any-id-query-auth","Wildcard ANY with ID query","select content,ttl,prio,type,domain_id,name, auth from records where name like '%s' and domain_id='%d'");
 
     declare(suffix,"list-query-auth","AXFR query", "select content,ttl,prio,type,domain_id,name, auth from records where domain_id='%d' order by name, type");
+    declare(suffix,"list-subzone-auth","Query that returns a sub-zone","select content,ttl,prio,type,domain_id,name,auth from records where (name='%s' OR name like '%s') and domain_id=%d");
     
     declare(suffix,"master-zone-query","Data", "select master from domains where name='%s' and type='SLAVE'");
 

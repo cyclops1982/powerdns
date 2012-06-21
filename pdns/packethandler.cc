@@ -910,7 +910,7 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narr
     for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
       di->backend->updateRecord(i->first, i->second);
     }
-		
+    
     string shorter(rLabel);
     bool auth=true;
     if (shorter != di->zone) {
@@ -948,8 +948,30 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narr
         di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "AAAA");
       }
     }
+    if (auth == false && rr->d_type == QType::NS) {
+      vector<string> qnames;
+      di->backend->listSubZone(rLabel, di->id);
+      DNSResourceRecord rec;
+      while(di->backend->get(rec)) {
+        if (rec.qtype.getCode() != QType::DS)
+          qnames.push_back(rec.qname);
+      }
+      for(vector<string>::const_iterator qname=qnames.begin(); qname != qnames.end(); ++qname) {
+        if(haveNSEC3)  {
+          string hashed;
+          if(!narrow) 
+            hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr->d_iterations, ns3pr->d_salt, *qname)));
+      
+          di->backend->updateDNSSECOrderAndAuthAbsolute(di->id, *qname, hashed, auth);
+          di->backend->nullifyDNSSECOrderNameAndAuth(di->id, *qname, "NS");
+        }
+        else // NSEC
+          di->backend->updateDNSSECOrderAndAuth(di->id, di->zone, *qname, auth);
 
-			
+        di->backend->nullifyDNSSECOrderNameAndAuth(di->id, *qname, "AAAA");
+        di->backend->nullifyDNSSECOrderNameAndAuth(di->id, *qname, "A");
+      }
+    }
   } // rr->d_class == QClass::IN
 
 
@@ -1177,6 +1199,10 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     }
   }
 
+        NSEC3PARAMRecordContent ns3pr;
+        bool narrow; 
+        bool haveNSEC3 = d_dk.getNSEC3PARAM(di.zone, &ns3pr, &narrow);
+ 
   
   // 3.4 - Prescan & Add/Update/Delete records
   for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
@@ -1192,10 +1218,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
       // 3.4.2 - Update
       try {
-        NSEC3PARAMRecordContent ns3pr;
-        bool narrow; 
-        bool haveNSEC3 = d_dk.getNSEC3PARAM(di.zone, &ns3pr, &narrow);
-        performUpdate(rr, &di, narrow, haveNSEC3, &ns3pr);
+       performUpdate(rr, &di, narrow, haveNSEC3, &ns3pr);
       }
       catch (AhuException &e) {
         L<<Logger::Error<<msgPrefix<<"Caught AhuException: "<<e.reason<<"; Sending ServFail!"<<endl;
