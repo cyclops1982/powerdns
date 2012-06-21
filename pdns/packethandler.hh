@@ -85,7 +85,8 @@ public:
 
 private:
   int updatePrerequisitesCheck(const DNSRecord *rr, DomainInfo *di);
-  void performUpdate(const DNSRecord *rr, DomainInfo *di);
+  void performUpdate(const DNSRecord *rr, DomainInfo *di, bool narrow, bool haveNSEC3, const NSEC3PARAMRecordContent *ns3pr);
+
   int updatePrescanCheck(const DNSRecord *rr);
   int trySuperMaster(DNSPacket *p);
   int processNotify(DNSPacket *);

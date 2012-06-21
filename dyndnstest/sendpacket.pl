@@ -8,10 +8,8 @@ use Net::DNS::Update;
 # Create the update packet.
 my $update = Net::DNS::Update->new('test.dyndns.');
 
-
-$update->push(prerequisite => yxrrset('multi.test.dyndns. 600 A 127.0.0.1'));
-$update->push(prerequisite => yxrrset('multi.test.dyndns. 600 A 127.0.0.2'));
-$update->push(prerequisite => yxrrset('multi.test.dyndns. 600 A 127.0.0.3'));
+$update->push(update => rr_add('ns1.delegate.test.dyndns. 3600 A 127.0.0.1'));
+$update->push(update => rr_add('delegate.test.dyndns. 3600 NS ns1.delegate.test.dyndns'));
 
 my $res = Net::DNS::Resolver->new;
 $res->nameservers('127.0.0.2');

@@ -860,14 +860,12 @@ int PacketHandler::updatePrescanCheck(const DNSRecord *rr) {
 }
 
 // Implements section 3.4.2 of RFC2136
-void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
+void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narrow, bool haveNSEC3, const NSEC3PARAMRecordContent *ns3pr) {
   //TODO: Add DLOG/verbose logging to this, so we know what is actually performed.
   //cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rr->d_type<<endl;
   DNSResourceRecord rec;
 
-  string rLabel = rr->d_label;
-  if (rLabel[rr->d_label.size()-1] == '.')
-    rLabel.resize(rr->d_label.size()-1);
+  string rLabel = stripDot(rr->d_label);
 
   if (rr->d_class == QClass::IN) { // 3.4.2.2, Add/update records.
     bool foundRecord=false;
@@ -903,16 +901,55 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di) {
       }
     }
     if (! foundRecord && rr->d_type != QType::SOA && rr->d_type != QType::CNAME) {
-        DNSResourceRecord newRec(*rr);
-        newRec.domain_id = di->id;
-        di->backend->feedRecord(newRec);
+      DNSResourceRecord newRec(*rr);
+      newRec.domain_id = di->id;
+      di->backend->feedRecord(newRec);
     }
 
     // Perform updates on the backend
     for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
       di->backend->updateRecord(i->first, i->second);
     }
+		
+    string shorter(rLabel);
+    bool auth=true;
+    if (shorter != di->zone) {
+      do {
+        if (shorter == di->zone)
+          break;
 
+        di->backend->lookup(QType(QType::NS), shorter);
+        DNSResourceRecord rec;
+        while (di->backend->get(rec)) {
+          auth=false;
+        }
+      } while(chopOff(shorter));
+    }
+    if(haveNSEC3)
+    {
+      string hashed;
+      if(!narrow) 
+        hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr->d_iterations, ns3pr->d_salt, rLabel)));
+      
+      di->backend->updateDNSSECOrderAndAuthAbsolute(di->id, rLabel, hashed, auth);
+      if(!auth || rr->d_type == QType::DS)
+      {
+        di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "NS");
+        di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "A");
+        di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "AAAA");
+      }
+    }
+    else // NSEC
+    {
+      di->backend->updateDNSSECOrderAndAuth(di->id, di->zone, rLabel, auth);
+      if(!auth || rr->d_type == QType::DS)
+      {
+        di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "A");
+        di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "AAAA");
+      }
+    }
+
+			
   } // rr->d_class == QClass::IN
 
 
@@ -1155,7 +1192,10 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
       // 3.4.2 - Update
       try {
-        performUpdate(rr, &di);
+        NSEC3PARAMRecordContent ns3pr;
+        bool narrow; 
+        bool haveNSEC3 = d_dk.getNSEC3PARAM(di.zone, &ns3pr, &narrow);
+        performUpdate(rr, &di, narrow, haveNSEC3, &ns3pr);
       }
       catch (AhuException &e) {
         L<<Logger::Error<<msgPrefix<<"Caught AhuException: "<<e.reason<<"; Sending ServFail!"<<endl;
