@@ -913,7 +913,7 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narr
     
     string shorter(rLabel);
     bool auth=true;
-    if (shorter != di->zone) {
+    if (shorter != di->zone && rr->d_type != QType::DS) {
       do {
         if (shorter == di->zone)
           break;
