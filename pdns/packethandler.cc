@@ -1069,6 +1069,25 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narr
   // Perform removes on the backend.
   for(vector<DNSResourceRecord>::const_iterator i=recordsToDelete.begin(); i!=recordsToDelete.end(); ++i){
     di->backend->removeRecord(*i);
+    if (i->qtype.getCode() == QType::NS && i->qname != di->zone) {
+      vector<string> changeAuth;
+      di->backend->listSubZone(i->qname, di->id);
+      DNSResourceRecord rec;
+      while (di->backend->get(rec)) {
+        changeAuth.push_back(rec.qname);
+      }
+      for (vector<string>::const_iterator qname=changeAuth.begin(); qname!=changeAuth.end(); ++qname) {
+        if(haveNSEC3)  {
+          string hashed;
+          if(!narrow) 
+            hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr->d_iterations, ns3pr->d_salt, *qname)));
+      
+          di->backend->updateDNSSECOrderAndAuthAbsolute(di->id, *qname, hashed, true);
+        }
+        else // NSEC
+          di->backend->updateDNSSECOrderAndAuth(di->id, di->zone, *qname, true);
+      }
+    }
   }
 
   // Finally, we clean the cache for this RR
