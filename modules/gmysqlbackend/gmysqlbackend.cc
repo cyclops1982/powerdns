@@ -63,6 +63,7 @@ public:
     declare(suffix,"wildcard-any-id-query","Wildcard ANY with ID query","select content,ttl,prio,type,domain_id,name from records where name like '%s' and domain_id='%d'");
 
     declare(suffix,"list-query","AXFR query", "select content,ttl,prio,type,domain_id,name from records where domain_id='%d'");
+    declare(suffix,"list-subzone","Query that returns a sub-zone","select content,ttl,prio,type,domain_id,name from records where (name='%s' OR name like '%s') and domain_id=%d");
   
     // and now with auth
     declare(suffix,"basic-query-auth","Basic query","select content,ttl,prio,type,domain_id,name, auth from records where type='%s' and name='%s'");
