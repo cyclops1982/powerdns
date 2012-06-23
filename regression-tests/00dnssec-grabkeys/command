@@ -3,11 +3,10 @@ set pipefail
 rm -f trustedkeys
 rm -f unbound-host.conf
 
-if [ `command -v drill` ]
+if [ ! `command -v drill` ]
 then
 	echo You are missing drill, please install;
 fi
-
 
 for zone in $(grep zone named.conf  | cut -f2 -d\")
 do
