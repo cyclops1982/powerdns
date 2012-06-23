@@ -1213,17 +1213,20 @@ int PacketHandler::processUpdate(DNSPacket *p) {
           }
         }
       }
-      if (matchRR != foundRR || foundRR != vec->size())
+      if (matchRR != foundRR || foundRR != vec->size()) {
+        L<<Logger::Error<<msgPrefix<<"Failed PreRequisites check, returning NXRRSet"<<endl;
+        di.backend->abortTransaction();
         return RCode::NXRRSet;
+      }
     }
   }
 
-        NSEC3PARAMRecordContent ns3pr;
-        bool narrow; 
-        bool haveNSEC3 = d_dk.getNSEC3PARAM(di.zone, &ns3pr, &narrow);
- 
-  
+
+
   // 3.4 - Prescan & Add/Update/Delete records
+  NSEC3PARAMRecordContent ns3pr;
+  bool narrow; 
+  bool haveNSEC3 = d_dk.getNSEC3PARAM(di.zone, &ns3pr, &narrow);
   for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
     const DNSRecord *rr = &i->first;
     if (rr->d_place == DNSRecord::Nameserver) {
