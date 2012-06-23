@@ -5,7 +5,6 @@
 	- Change all test to use nsupdate.
 
 - Record testing:
-	- BUG:  MX record does not work, because getZoneRepresentation() does not work.
 	- WKS record is not supported (for replace)
 	- test if axfr works
 
