@@ -37,20 +37,20 @@ void DNSResourceRecord::setContent(const string &cont) {
     priority = atoi(content.c_str());
     vector<pair<string::size_type, string::size_type> > fields;
     vstringtok(fields, content, " ");
-    if(fields.size()==4)
+    if(fields.size()==4) {
       content=string(content.c_str() + fields[1].first, fields[3].second - fields[1].first);
+      content=stripDot(content);
+    }
   }
 }
 
 string DNSResourceRecord::getZoneRepresentation() {
   ostringstream ret;
   switch(qtype.getCode()) {
+    case QType::SRV:
     case QType::MX:
       ret<<priority;
       ret<<" "<<content<<".";
-    break;
-    case QType::SRV:
-      ret<<"TODO-SRV-RECORD-HERE!";
     break;
     case QType::CNAME:
     case QType::NS:

@@ -901,6 +901,7 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narr
       }
     }
     if (! foundRecord && rr->d_type != QType::SOA && rr->d_type != QType::CNAME) {
+      cerr<<rr->d_content->getZoneRepresentation()<<endl;
       DNSResourceRecord newRec(*rr);
       newRec.domain_id = di->id;
       di->backend->feedRecord(newRec);

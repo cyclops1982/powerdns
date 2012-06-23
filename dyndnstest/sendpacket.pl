@@ -7,9 +7,7 @@ use Net::DNS::Update;
 
 # Create the update packet.
 my $update = Net::DNS::Update->new('test.dyndns.');
-
-$update->push(update => rr_add('ns1.delegate.test.dyndns. 3600 A 127.0.0.1'));
-$update->push(update => rr_add('delegate.test.dyndns. 3600 NS ns1.delegate.test.dyndns'));
+$update->push(update => rr_add('srv3.test.dyndns. 3700 SRV 1 100 389 server.'));
 
 my $res = Net::DNS::Resolver->new;
 $res->nameservers('127.0.0.2');
