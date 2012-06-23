@@ -1,5 +1,5 @@
 #!/bin/sh
-# cleandig multi.test.dyndns ANY
+cleandig multi.test.dyndns ANY
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
 zone test.dyndns

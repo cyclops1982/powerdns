@@ -148,7 +148,8 @@ shared_ptr<DNSRecordContent> DNSRecordContent::unserialize(const string& qname, 
 DNSRecordContent* DNSRecordContent::mastermake(const DNSRecord &dr, PacketReader& pr, uint16_t oc) {
   // For opcode UPDATE and where the DNSRecord is an answer record, we don't care about content, because this is
   // not used within the prerequisite section of RFC2136, so - we can simply use unknownrecordcontent.
-  if (oc == Opcode::Update && dr.d_place == DNSRecord::Answer)
+  // Unless we have something for section 3.2.3, which (as usual) is the exception.
+  if (oc == Opcode::Update && dr.d_place == DNSRecord::Answer && dr.d_class != 1)
     return new UnknownRecordContent(dr, pr);
   
   uint16_t searchclass = (dr.d_type == QType::OPT) ? 1 : dr.d_class; // class is invalid for OPT
