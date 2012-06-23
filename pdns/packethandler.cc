@@ -1059,8 +1059,7 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narr
           continue;
         }
       }
-      cerr<<"rec.getzone: "<<rec.getZoneRepresentation()<<endl;
-      cerr<<"rr.cont.getzone: "<<rr->d_content->getZoneRepresentation()<<endl;
+      
       if (rec.qtype == rr->d_type && rec.getZoneRepresentation() == rr->d_content->getZoneRepresentation()) {
         recordsToDelete.push_back(rec);
       }
@@ -1208,7 +1207,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
         if (rec.qtype == rrSet.second) {
           foundRR++;
           for(rrVector_t::iterator rrItem=vec->begin(); rrItem != vec->end(); ++rrItem) {
-            rrItem->ttl = rec.ttl; // TTL is 0 in prerequistes, so we don't compare?
+            rrItem->ttl = rec.ttl; // The compare one line below also compares TTL, so we make them equal because TTL is not user within prerequisite checks.
             if (*rrItem == rec) 
               matchRR++;
           }

@@ -5,9 +5,9 @@
 	- Change all test to use nsupdate.
 
 - Record testing:
-	- SRV record is not supported (because getZoneRepresentation() is not implemented)
 	- BUG:  MX record does not work, because getZoneRepresentation() does not work.
 	- WKS record is not supported (for replace)
+	- test if axfr works
 
 - Backends
 	- Make sure backends that do not support dyndns return NotImpl.
