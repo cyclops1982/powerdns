@@ -1,5 +1,4 @@
 - Habbie's comments:
-	- Add test to see if domain is secure, before doing all the dnssec stuff ?
 	- Clean up rectify code. 
 	- QType isSupportedType() loop.
 	- Change all test to use nsupdate.
