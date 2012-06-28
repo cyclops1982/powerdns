@@ -39,7 +39,6 @@ ArgvMap &arg()
 void declareArguments()
 {
   ::arg().set("local-port","The port on which we listen")="53";
-  ::arg().set("allow-updates-from", "IP address for which we allow an RFC2136 Dynamic DNS Update message")="";
   ::arg().setSwitch("log-dns-details","If PDNS should log DNS non-erroneous details")="";
   ::arg().setSwitch("log-dns-queries","If PDNS should log all incoming DNS queries")="no";
   ::arg().set("urlredirector","Where we send hosts to that need to be url redirected")="127.0.0.1";
@@ -93,7 +92,8 @@ void declareArguments()
   
   ::arg().setSwitch("slave","Act as a slave")="no";
   ::arg().setSwitch("master","Act as a master")="no";
-  ::arg().setSwitch("allow-rfc2136","Enable/Disable RFC2136 (Dynamic DNS) support")="no";
+  ::arg().setSwitch("disable-rfc2136","Enable/Disable RFC2136 (Dynamic DNS) support. Default is no.")="no";
+  ::arg().setSwitch("allow-rfc2136-from","A global setting to allow RFC2136 from these IP ranges.")="";
   ::arg().setSwitch("guardian","Run within a guardian process")="no";
   ::arg().setSwitch("strict-rfc-axfrs","Perform strictly rfc compliant axfrs (very slow)")="no";
   ::arg().setSwitch("send-root-referral","Send out old-fashioned root-referral instead of ServFail in case of no authority")="no";

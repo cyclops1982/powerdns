@@ -1095,20 +1095,29 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narr
 }
 
 int PacketHandler::processUpdate(DNSPacket *p) {
-  string msgPrefix="UPDATE from " + p->getRemote() + " for " + p->qdomain + ": ";
-  if (! ::arg().mustDo("allow-rfc2136"))
+  
+  if (::arg().mustDo("disable-rfc2136"))
     return RCode::Refused;
-
+  
+  string msgPrefix="UPDATE from " + p->getRemote() + " for " + p->qdomain + ": ";
   L<<Logger::Notice<<msgPrefix<<"Processing started."<<endl;
 
-  //TODO: This is nice, a check on IP, but should be a range
-  // The other part is that we'd like to use Domainmetadata to see who we allow to update, includeing TSIG key.
-  if (! ::arg().contains("allow-updates-from", p->getRemote())) {
-    L<<Logger::Notice<<msgPrefix<<"Remote not listed in allow-updates-from. Sending REFUSED"<<endl;
+  
+  vector<string> allowedRanges;
+  B.getDomainMetadata(p->qdomain, "ALLOW-2136-RANGE", allowedRanges); //TODO: change the name? But we only have 16 chars :(
+  if (! ::arg()["allow-rfc2136-from"].empty()) 
+    stringtok(allowedRanges, ::arg()["allow-rfc2136-from"], ", \t" );
+
+  NetmaskGroup ng;
+  for(vector<string>::const_iterator i=allowedRanges.begin(); i != allowedRanges.end(); i++)
+    ng.addMask(*i);
+    
+  if ( ! ng.match(&p->d_remote)) {
+    L<<Logger::Error<<msgPrefix<<"Remote not listed in allow-rfc2136-from or domainmetadata table. Sending REFUSED"<<endl;
     return RCode::Refused;
   }
 
-   
+
   // RFC2136 uses the same DNS Header and Message as defined in RFC1035.
   // This means we can use the MOADNSParser to parse the incoming packet. The result is that we have some different 
   // variable names during the use of our MOADNSParser.
@@ -1119,12 +1128,12 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   }     
 
   if (p->qtype.getCode() != QType::SOA) { // RFC2136 2.3 - ZTYPE must be SOA
-    L<<Logger::Warning<<msgPrefix<<": Query ZTYPE is not SOA, sending FormErr"<<endl;
+    L<<Logger::Warning<<msgPrefix<<"Query ZTYPE is not SOA, sending FormErr"<<endl;
     return RCode::FormErr;
   }
 
   if (p->qclass != QClass::IN) {
-    L<<Logger::Warning<<msgPrefix<<": Class is not IN, sending NotAuth"<<endl;
+    L<<Logger::Warning<<msgPrefix<<"Class is not IN, sending NotAuth"<<endl;
     return RCode::NotAuth;
   }
 
@@ -1145,7 +1154,6 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     const DNSRecord *rr = &i->first;
     string label = stripDot(rr->d_label);
 
-    cerr<<"Record:"<<rr->d_label<<"; QClass:"<<rr->d_class<<"; QType:"<<rr->d_type<<endl;
     if (!endsOn(label, di.zone)) {
       L<<Logger::Error<<msgPrefix<<"Received update/record out of zone, sending NotZone."<<endl;
       return RCode::NotZone;
