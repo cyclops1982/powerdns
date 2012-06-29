@@ -1104,16 +1104,16 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
   // Check permissions - IP based
   vector<string> allowedRanges;
-  B.getDomainMetadata(p->qdomain, "ALLOW-2136-RANGE", allowedRanges); //TODO: change the name? But we only have 16 chars :(
-  if (! ::arg()["allow-rfc2136-from"].empty()) 
-    stringtok(allowedRanges, ::arg()["allow-rfc2136-from"], ", \t" );
+  B.getDomainMetadata(p->qdomain, "ALLOW-2136-from", allowedRanges); //TODO: change the name? But we only have 16 chars :(
+  if (! ::arg()["allow-2136-from"].empty()) 
+    stringtok(allowedRanges, ::arg()["allow-2136-from"], ", \t" );
 
   NetmaskGroup ng;
   for(vector<string>::const_iterator i=allowedRanges.begin(); i != allowedRanges.end(); i++)
     ng.addMask(*i);
     
   if ( ! ng.match(&p->d_remote)) {
-    L<<Logger::Error<<msgPrefix<<"Remote not listed in allow-rfc2136-from or domainmetadata. Sending REFUSED"<<endl;
+    L<<Logger::Error<<msgPrefix<<"Remote not listed in allow-2136-from or domainmetadata. Sending REFUSED"<<endl;
     return RCode::Refused;
   }
 
@@ -1134,7 +1134,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     }
 
     if (!validKey) {
-      L<<Logger::Error<<msgPrefix<<"TSIG key required, but does not match. Sending REFUSED"<<endl;
+      L<<Logger::Error<<msgPrefix<<"TSIG key required, but no matching key found in domainmetadata. Sending REFUSED"<<endl;
       return RCode::Refused;
     }
   }
