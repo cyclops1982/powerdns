@@ -18,6 +18,7 @@
 #include "packetcache.hh"
 #include "utility.hh"
 #include "base32.hh"
+#include "base64.hh"
 #include <string>
 #include <sys/types.h>
 #include <boost/algorithm/string.hpp>
@@ -1102,7 +1103,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   string msgPrefix="UPDATE from " + p->getRemote() + " for " + p->qdomain + ": ";
   L<<Logger::Notice<<msgPrefix<<"Processing started."<<endl;
 
-  
+  // Check permissions 
   vector<string> allowedRanges;
   B.getDomainMetadata(p->qdomain, "ALLOW-2136-RANGE", allowedRanges); //TODO: change the name? But we only have 16 chars :(
   if (! ::arg()["allow-rfc2136-from"].empty()) 
@@ -1117,6 +1118,26 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     return RCode::Refused;
   }
 
+
+  vector<string> tsigKeys;
+  B.getDomainMetadata(p->qdomain, "TSIG-ALLOW-2136", tsigKeys);
+  if (tsigKeys.size() > 0) {
+    bool validKey = false;
+    
+    TSIGRecordContent trc;
+    string inputkey, message, secret64, secret;
+    p->getTSIGDetails(&trc,  &inputkey, &message);
+
+    for(vector<string>::const_iterator key=tsigKeys.begin(); key != tsigKeys.end(); key++) {
+      if (inputkey == *key) // because checkForCorrectTSIG has already been performed earlier on, if the names of the ky match with the domain given. THis is valid.
+        validKey=true;
+    }
+
+    if (!validKey) {
+      L<<Logger::Error<<msgPrefix<<"TSIG key required, but does not match. Sending REFUSED"<<endl;
+      return RCode::Refused;
+    }
+  }
 
   // RFC2136 uses the same DNS Header and Message as defined in RFC1035.
   // This means we can use the MOADNSParser to parse the incoming packet. The result is that we have some different 
@@ -1152,6 +1173,9 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   // All DNSRecord in the message are either Update or PreRequisites.
   for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
     const DNSRecord *rr = &i->first;
+    if (! (rr->d_place == DNSRecord::Answer || rr->d_place == DNSRecord::Nameserver)) // Skip this check for other field types (like the TSIG) 
+      continue;
+
     string label = stripDot(rr->d_label);
 
     if (!endsOn(label, di.zone)) {
