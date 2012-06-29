@@ -1096,14 +1096,13 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narr
 }
 
 int PacketHandler::processUpdate(DNSPacket *p) {
-  
   if (::arg().mustDo("disable-rfc2136"))
     return RCode::Refused;
   
   string msgPrefix="UPDATE from " + p->getRemote() + " for " + p->qdomain + ": ";
   L<<Logger::Notice<<msgPrefix<<"Processing started."<<endl;
 
-  // Check permissions 
+  // Check permissions - IP based
   vector<string> allowedRanges;
   B.getDomainMetadata(p->qdomain, "ALLOW-2136-RANGE", allowedRanges); //TODO: change the name? But we only have 16 chars :(
   if (! ::arg()["allow-rfc2136-from"].empty()) 
@@ -1114,18 +1113,19 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     ng.addMask(*i);
     
   if ( ! ng.match(&p->d_remote)) {
-    L<<Logger::Error<<msgPrefix<<"Remote not listed in allow-rfc2136-from or domainmetadata table. Sending REFUSED"<<endl;
+    L<<Logger::Error<<msgPrefix<<"Remote not listed in allow-rfc2136-from or domainmetadata. Sending REFUSED"<<endl;
     return RCode::Refused;
   }
 
 
+  // Check permissions - TSIG based.
   vector<string> tsigKeys;
   B.getDomainMetadata(p->qdomain, "TSIG-ALLOW-2136", tsigKeys);
   if (tsigKeys.size() > 0) {
     bool validKey = false;
     
     TSIGRecordContent trc;
-    string inputkey, message, secret64, secret;
+    string inputkey, message;
     p->getTSIGDetails(&trc,  &inputkey, &message);
 
     for(vector<string>::const_iterator key=tsigKeys.begin(); key != tsigKeys.end(); key++) {
@@ -1138,6 +1138,9 @@ int PacketHandler::processUpdate(DNSPacket *p) {
       return RCode::Refused;
     }
   }
+
+  if (tsigKeys.size() == 0 && p->d_havetsig)
+    L<<Logger::Warning<<msgPrefix<<"TSIG is provided, but domain is not secured with TSIG. Processing continues"<<endl;
 
   // RFC2136 uses the same DNS Header and Message as defined in RFC1035.
   // This means we can use the MOADNSParser to parse the incoming packet. The result is that we have some different 
@@ -1170,10 +1173,12 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     return RCode::NotImp;
   }
 
-  // All DNSRecord in the message are either Update or PreRequisites.
+  // Check if all the records provided are within the zone 
   for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
     const DNSRecord *rr = &i->first;
-    if (! (rr->d_place == DNSRecord::Answer || rr->d_place == DNSRecord::Nameserver)) // Skip this check for other field types (like the TSIG) 
+    // Skip this check for other field types (like the TSIG -  which is in the additional section)
+    // For a TSIG, the label is the dnskey.
+    if (! (rr->d_place == DNSRecord::Answer || rr->d_place == DNSRecord::Nameserver)) 
       continue;
 
     string label = stripDot(rr->d_label);
@@ -1610,7 +1615,12 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
       r=p->replyPacket();  // generate an empty reply packet
       if(d_logDNSDetails)
         L<<Logger::Error<<"Received a TSIG signed message with a non-validating key"<<endl;
-      r->setRcode(RCode::NotAuth);
+
+      // RFC3007 describes that a non-secure message should be sending Refused for DNS Updates
+      if (p->d.opcode == Opcode::Update)
+        r->setRcode(RCode::Refused); 
+      else 
+        r->setRcode(RCode::NotAuth);
       return r;
     }
     p->setTSIGDetails(trc, keyname, secret, trc.d_mac); // this will get copied by replyPacket()

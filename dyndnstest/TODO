@@ -1,19 +1,14 @@
 - Habbie's comments:
-	- Clean up rectify code. 
 	- QType isSupportedType() loop.
 	- Change all test to use nsupdate.
 
 - Record testing:
 	- WKS record is not supported (for replace)
-	- test if axfr works
+	- test if axfr still works
 
 - Backends
 	- Make sure backends that do not support dyndns return NotImpl.
 	- BindBackend is something that we would need at release, at the moment it is not up to date.
-
-- Permissions
-	- Add support for TSIG (global parameter?)
-	- Add per domain support for IP-range and TSIG.
 
 - Forward update packet?
 - Use msgPrefix everywhere.
