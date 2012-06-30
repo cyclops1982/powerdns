@@ -1104,7 +1104,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
   // Check permissions - IP based
   vector<string> allowedRanges;
-  B.getDomainMetadata(p->qdomain, "ALLOW-2136-from", allowedRanges); //TODO: change the name? But we only have 16 chars :(
+  B.getDomainMetadata(p->qdomain, "ALLOW-2136-FROM", allowedRanges); //TODO: change the name? But we only have 16 chars :(
   if (! ::arg()["allow-2136-from"].empty()) 
     stringtok(allowedRanges, ::arg()["allow-2136-from"], ", \t" );
 
@@ -1126,7 +1126,10 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     
     TSIGRecordContent trc;
     string inputkey, message;
-    p->getTSIGDetails(&trc,  &inputkey, &message);
+    if (! p->getTSIGDetails(&trc,  &inputkey, &message)) {
+      L<<Logger::Error<<msgPrefix<<"TSIG key required, but packet does not contain key. Sending REFUSED"<<endl;
+      return RCode::Refused;
+    }
 
     for(vector<string>::const_iterator key=tsigKeys.begin(); key != tsigKeys.end(); key++) {
       if (inputkey == *key) // because checkForCorrectTSIG has already been performed earlier on, if the names of the ky match with the domain given. THis is valid.
@@ -1134,7 +1137,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     }
 
     if (!validKey) {
-      L<<Logger::Error<<msgPrefix<<"TSIG key required, but no matching key found in domainmetadata. Sending REFUSED"<<endl;
+      L<<Logger::Error<<msgPrefix<<"TSIG key ("<<inputkey<<") required, but no matching key found in domainmetadata, tried "<<tsigKeys.size()<<". Sending REFUSED"<<endl;
       return RCode::Refused;
     }
   }
