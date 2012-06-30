@@ -4,7 +4,7 @@
 
 - Record testing:
 	- WKS record is not supported (for replace)
-	- test if axfr still works
+	- test if axfr still works (with TSIG)
 
 - Backends
 	- Make sure backends that do not support dyndns return NotImpl.
