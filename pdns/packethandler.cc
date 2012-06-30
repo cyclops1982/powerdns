@@ -1100,7 +1100,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     return RCode::Refused;
   
   string msgPrefix="UPDATE from " + p->getRemote() + " for " + p->qdomain + ": ";
-  L<<Logger::Notice<<msgPrefix<<"Processing started."<<endl;
+  L<<Logger::Info<<msgPrefix<<"Processing started."<<endl;
 
   // Check permissions - IP based
   vector<string> allowedRanges;
@@ -1193,7 +1193,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   }
 
   //TODO: Start a lock here, to make section 3.7 correct???
-  L<<Logger::Notice<<msgPrefix<<"starting transaction."<<endl;
+  L<<Logger::Info<<msgPrefix<<"starting transaction."<<endl;
   if (!di.backend->startTransaction(p->qdomain, -1)) { // Not giving the domain_id means that we do not delete the records.
     L<<Logger::Error<<msgPrefix<<"Backend for domain "<<p->qdomain<<" does not support transaction. Can't do Update packet."<<endl;
     return RCode::NotImp;
@@ -1300,7 +1300,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     L<<Logger::Error<<msgPrefix<<"Failed to commit update for domain "<<di.zone<<"!"<<endl;
     return RCode::ServFail;
   }
-  L<<Logger::Notice<<msgPrefix<<"Update completed, changes commited."<<endl;
+  L<<Logger::Info<<msgPrefix<<"Update completed, changes commited."<<endl;
   return RCode::NoError; //rfc 2136 3.4.2.5
 }
 
