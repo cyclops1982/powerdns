@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cleandig host-255.test.dyndns ANY
+cleandig host-255.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
@@ -10,7 +10,6 @@ update delete host-1.test.dyndns
 send
 answer
 !
-
 
 cleandig host-1.test.dyndns ANY
 
@@ -23,7 +22,7 @@ send
 answer
 !
 
-cleandig host-1.test.dyndns ANY
+cleandig host-1.test.dyndns ANY 
 
 
 cleandig host-2.test.dyndns ANY
