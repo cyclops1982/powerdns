@@ -1317,10 +1317,20 @@ int PacketHandler::processUpdate(DNSPacket *p) {
       newRec = rec;
       SOAData soa2Update;
       fillSOAData(rec.content, soa2Update);
-      soa2Update.serial++;
+      time_t now = time(0);
+      struct tm tm;
+      localtime_r(&now, &tm);
+      boost::format fmt("%04d%02d%02d%02d");
+      string newserdate=(fmt % (tm.tm_year+1900) % (tm.tm_mon +1 )% tm.tm_mday % 1).str();
+      uint32_t newser = atol(newserdate.c_str());
+      if (newser <= soa2Update.serial)
+        soa2Update.serial++;
+      else
+        soa2Update.serial = newser;
       newRec.content = serializeSOAData(soa2Update);
     }
     di.backend->updateRecord(rec, newRec);
+    PC.purge(newRec.qname);
   }
 
   if (!di.backend->commitTransaction()) {
