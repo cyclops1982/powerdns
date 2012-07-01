@@ -861,11 +861,11 @@ int PacketHandler::updatePrescanCheck(const DNSRecord *rr) {
 }
 
 // Implements section 3.4.2 of RFC2136
-bool PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narrow, bool haveNSEC3, const NSEC3PARAMRecordContent *ns3pr) {
+uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narrow, bool haveNSEC3, const NSEC3PARAMRecordContent *ns3pr) {
   //TODO: Add DLOG/verbose logging to this, so we know what is actually performed.
   //cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rr->d_type<<endl;
   DNSResourceRecord rec;
-  bool updatedZone = false;
+  uint16_t updatedRecords = 0;
   bool updatedSoa = false;
 
   string rLabel = stripDot(rr->d_label);
@@ -909,16 +909,16 @@ bool PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narr
       DNSResourceRecord newRec(*rr);
       newRec.domain_id = di->id;
       di->backend->feedRecord(newRec);
-      updatedZone = true;
+      updatedRecords++;
     }
 
     // Perform updates on the backend
     for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
       di->backend->updateRecord(i->first, i->second);
-      updatedZone = true;
+      updatedRecords++;
     }
     
-    if (updatedZone) {
+    if (updatedRecords > 0) {
       string shorter(rLabel);
       bool auth=true;
       if (shorter != di->zone && rr->d_type != QType::DS) {
@@ -1077,7 +1077,8 @@ bool PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narr
   // Perform removes on the backend.
   for(vector<DNSResourceRecord>::const_iterator i=recordsToDelete.begin(); i!=recordsToDelete.end(); ++i){
     di->backend->removeRecord(*i);
-    updatedZone = true;
+    updatedRecords++;
+
     if (i->qtype.getCode() == QType::NS && i->qname != di->zone) {
       vector<string> changeAuth;
       di->backend->listSubZone(i->qname, di->id);
@@ -1102,7 +1103,7 @@ bool PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narr
   // Finally, we clean the cache for this RR
   PC.purge(rLabel);
 
-  if (updatedZone && !updatedSoa) { // Change the SOA serial, unless we did that ourselfs.
+  if (updatedRecords > 0 && !updatedSoa) { // Change the SOA serial, unless we did that ourselfs.
     return true;
   }
   return false;
@@ -1275,7 +1276,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
 
   // 3.4 - Prescan & Add/Update/Delete records
-  bool updateSerial = false;
+  uint16_t updateRecords = 0;
   NSEC3PARAMRecordContent ns3pr;
   bool narrow; 
   bool haveNSEC3 = d_dk.getNSEC3PARAM(di.zone, &ns3pr, &narrow);
@@ -1292,8 +1293,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
       // 3.4.2 - Update
       try {
-        if (performUpdate(rr, &di, narrow, haveNSEC3, &ns3pr))
-          updateSerial = true;
+        updateRecords += performUpdate(rr, &di, narrow, haveNSEC3, &ns3pr);
       }
       catch (AhuException &e) {
         L<<Logger::Error<<msgPrefix<<"Caught AhuException: "<<e.reason<<"; Sending ServFail!"<<endl;
@@ -1309,7 +1309,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   }
 
 
-  if (updateSerial) {
+  if (updateRecords > 0) {
     DNSResourceRecord rec, newRec;
     di.backend->lookup(QType(QType::SOA), di.zone);
     while (di.backend->get(rec)) {
@@ -1326,7 +1326,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     L<<Logger::Error<<msgPrefix<<"Failed to commit update for domain "<<di.zone<<"!"<<endl;
     return RCode::ServFail;
   }
-  L<<Logger::Info<<msgPrefix<<"Update completed, changes commited."<<endl;
+  L<<Logger::Info<<msgPrefix<<"Update completed, "<<updateRecords<<" changed records commited."<<endl;
   return RCode::NoError; //rfc 2136 3.4.2.5
 }
 
