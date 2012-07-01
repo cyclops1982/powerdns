@@ -861,12 +861,11 @@ int PacketHandler::updatePrescanCheck(const DNSRecord *rr) {
 }
 
 // Implements section 3.4.2 of RFC2136
-uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narrow, bool haveNSEC3, const NSEC3PARAMRecordContent *ns3pr) {
+uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narrow, bool haveNSEC3, const NSEC3PARAMRecordContent *ns3pr, bool *updatedSerial) {
   //TODO: Add DLOG/verbose logging to this, so we know what is actually performed.
   //cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rr->d_type<<endl;
   DNSResourceRecord rec;
   uint16_t updatedRecords = 0;
-  bool updatedSoa = false;
 
   string rLabel = stripDot(rr->d_label);
 
@@ -884,7 +883,7 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
         fillSOAData(newRec.content, sdUpdate);
         if (rfc1982LessThan(sdOld.serial, sdUpdate.serial)) {
           recordsToUpdate.push_back(make_pair(rec, newRec));
-          updatedSoa = true;
+          *updatedSerial = true;
         }
         else
           L<<Logger::Notice<<"Provided serial ("<<sdUpdate.serial<<") is older than the current serial ("<<sdOld.serial<<"), ignoring SOA update."<<endl;
@@ -1103,7 +1102,8 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
   // Finally, we clean the cache for this RR
   PC.purge(rLabel);
 
-  if (updatedRecords > 0 && !updatedSoa) // Change the SOA serial, unless we did that ourselfs.
+  return updatedRecords;
+  if (updatedRecords > 0 && updatedSerial) // Change the SOA serial, unless we did that ourselfs.
     return updatedRecords;
 
   return 0;
@@ -1277,6 +1277,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
   // 3.4 - Prescan & Add/Update/Delete records
   uint16_t updateRecords = 0;
+  bool updatedSerial=false;
   NSEC3PARAMRecordContent ns3pr;
   bool narrow; 
   bool haveNSEC3 = d_dk.getNSEC3PARAM(di.zone, &ns3pr, &narrow);
@@ -1293,7 +1294,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
       // 3.4.2 - Update
       try {
-        updateRecords += performUpdate(rr, &di, narrow, haveNSEC3, &ns3pr);
+        updateRecords += performUpdate(rr, &di, narrow, haveNSEC3, &ns3pr, &updatedSerial);
       }
       catch (AhuException &e) {
         L<<Logger::Error<<msgPrefix<<"Caught AhuException: "<<e.reason<<"; Sending ServFail!"<<endl;
@@ -1309,7 +1310,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   }
 
   // Section 3.6 - Update the soa
-  if (updateRecords > 0) {
+  if (updateRecords > 0 && !updatedSerial) {
     DNSResourceRecord rec, newRec;
     di.backend->lookup(QType(QType::SOA), di.zone);
     while (di.backend->get(rec)) {
