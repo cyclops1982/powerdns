@@ -1103,10 +1103,10 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
   // Finally, we clean the cache for this RR
   PC.purge(rLabel);
 
-  if (updatedRecords > 0 && !updatedSoa) { // Change the SOA serial, unless we did that ourselfs.
-    return true;
-  }
-  return false;
+  if (updatedRecords > 0 && !updatedSoa) // Change the SOA serial, unless we did that ourselfs.
+    return updatedRecords;
+
+  return 0;
 }
 
 int PacketHandler::processUpdate(DNSPacket *p) {
@@ -1308,7 +1308,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     }
   }
 
-
+  // Section 3.6 - Update the soa
   if (updateRecords > 0) {
     DNSResourceRecord rec, newRec;
     di.backend->lookup(QType(QType::SOA), di.zone);
