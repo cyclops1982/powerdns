@@ -1,0 +1,51 @@
+#!/bin/sh
+
+cleandig host-255.test.dyndns ANY
+
+nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
+server $nameserver $port
+zone test.dyndns
+prereq yxdomain host-255.test.dyndns
+update delete host-1.test.dyndns
+send
+answer
+!
+
+
+cleandig host-1.test.dyndns ANY
+
+nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
+server $nameserver $port
+zone test.dyndns
+prereq yxrrset host-255.test.dyndns A
+update delete host-1.test.dyndns
+send
+answer
+!
+
+cleandig host-1.test.dyndns ANY
+
+
+cleandig host-2.test.dyndns ANY
+
+nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
+server $nameserver $port
+zone test.dyndns
+prereq nxdomain host-2.test.dyndns
+update delete host-2.test.dyndns
+send
+answer
+!
+
+cleandig host-2.test.dyndns ANY
+
+nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
+server $nameserver $port
+zone test.dyndns
+prereq nxrrset host-2.test.dyndns A
+update delete host-2.test.dyndns
+send
+answer
+!
+
+cleandig host-2.test.dyndns A
