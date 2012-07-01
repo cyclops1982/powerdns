@@ -2,7 +2,10 @@
 	- QType isSupportedType() loop.
 	- Change all test to use nsupdate.
 
-- Record testing:
+- The prio in my DB was NULL, which made the update query not work.
+  Either we need to change the query (with some if statement if 0 || NULL) or we make check-zone complain about it?
+
+- testing:
 	- WKS record is not supported (for replace)
 	- test if axfr still works (with TSIG)
 
