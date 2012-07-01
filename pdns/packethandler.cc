@@ -861,10 +861,12 @@ int PacketHandler::updatePrescanCheck(const DNSRecord *rr) {
 }
 
 // Implements section 3.4.2 of RFC2136
-void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narrow, bool haveNSEC3, const NSEC3PARAMRecordContent *ns3pr) {
+bool PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narrow, bool haveNSEC3, const NSEC3PARAMRecordContent *ns3pr) {
   //TODO: Add DLOG/verbose logging to this, so we know what is actually performed.
   //cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rr->d_type<<endl;
   DNSResourceRecord rec;
+  bool updatedZone = false;
+  bool updatedSoa = false;
 
   string rLabel = stripDot(rr->d_label);
 
@@ -880,8 +882,10 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narr
         SOAData sdOld, sdUpdate;
         fillSOAData(rec.content, sdOld);
         fillSOAData(newRec.content, sdUpdate);
-        if (rfc1982LessThan(sdOld.serial, sdUpdate.serial)) 
+        if (rfc1982LessThan(sdOld.serial, sdUpdate.serial)) {
           recordsToUpdate.push_back(make_pair(rec, newRec));
+          updatedSoa = true;
+        }
         else
           L<<Logger::Notice<<"Provided serial ("<<sdUpdate.serial<<") is older than the current serial ("<<sdOld.serial<<"), ignoring SOA update."<<endl;
 
@@ -902,76 +906,79 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narr
       }
     }
     if (! foundRecord && rr->d_type != QType::SOA && rr->d_type != QType::CNAME) {
-      cerr<<rr->d_content->getZoneRepresentation()<<endl;
       DNSResourceRecord newRec(*rr);
       newRec.domain_id = di->id;
       di->backend->feedRecord(newRec);
+      updatedZone = true;
     }
 
     // Perform updates on the backend
     for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
       di->backend->updateRecord(i->first, i->second);
+      updatedZone = true;
     }
     
-    string shorter(rLabel);
-    bool auth=true;
-    if (shorter != di->zone && rr->d_type != QType::DS) {
-      do {
-        if (shorter == di->zone)
-          break;
+    if (updatedZone) {
+      string shorter(rLabel);
+      bool auth=true;
+      if (shorter != di->zone && rr->d_type != QType::DS) {
+        do {
+          if (shorter == di->zone)
+            break;
 
-        di->backend->lookup(QType(QType::NS), shorter);
+          di->backend->lookup(QType(QType::NS), shorter);
+          DNSResourceRecord rec;
+          while (di->backend->get(rec)) {
+            auth=false;
+          }
+        } while(chopOff(shorter));
+      }
+      if(haveNSEC3)
+      {
+        string hashed;
+        if(!narrow) 
+          hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr->d_iterations, ns3pr->d_salt, rLabel)));
+        
+        di->backend->updateDNSSECOrderAndAuthAbsolute(di->id, rLabel, hashed, auth);
+        if(!auth || rr->d_type == QType::DS)
+        {
+          di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "NS");
+          di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "A");
+          di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "AAAA");
+        }
+      }
+      else // NSEC
+      {
+        di->backend->updateDNSSECOrderAndAuth(di->id, di->zone, rLabel, auth);
+        if(!auth || rr->d_type == QType::DS)
+        {
+          di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "A");
+          di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "AAAA");
+        }
+      }
+      if (auth == false && rr->d_type == QType::NS) {
+        vector<string> qnames;
+        di->backend->listSubZone(rLabel, di->id);
         DNSResourceRecord rec;
-        while (di->backend->get(rec)) {
-          auth=false;
+        while(di->backend->get(rec)) {
+          if (rec.qtype.getCode() != QType::DS)
+            qnames.push_back(rec.qname);
         }
-      } while(chopOff(shorter));
-    }
-    if(haveNSEC3)
-    {
-      string hashed;
-      if(!narrow) 
-        hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr->d_iterations, ns3pr->d_salt, rLabel)));
-      
-      di->backend->updateDNSSECOrderAndAuthAbsolute(di->id, rLabel, hashed, auth);
-      if(!auth || rr->d_type == QType::DS)
-      {
-        di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "NS");
-        di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "A");
-        di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "AAAA");
-      }
-    }
-    else // NSEC
-    {
-      di->backend->updateDNSSECOrderAndAuth(di->id, di->zone, rLabel, auth);
-      if(!auth || rr->d_type == QType::DS)
-      {
-        di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "A");
-        di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "AAAA");
-      }
-    }
-    if (auth == false && rr->d_type == QType::NS) {
-      vector<string> qnames;
-      di->backend->listSubZone(rLabel, di->id);
-      DNSResourceRecord rec;
-      while(di->backend->get(rec)) {
-        if (rec.qtype.getCode() != QType::DS)
-          qnames.push_back(rec.qname);
-      }
-      for(vector<string>::const_iterator qname=qnames.begin(); qname != qnames.end(); ++qname) {
-        if(haveNSEC3)  {
-          string hashed;
-          if(!narrow) 
-            hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr->d_iterations, ns3pr->d_salt, *qname)));
-      
-          di->backend->updateDNSSECOrderAndAuthAbsolute(di->id, *qname, hashed, auth);
-          di->backend->nullifyDNSSECOrderNameAndAuth(di->id, *qname, "NS");
-        }
-        else // NSEC
-          di->backend->updateDNSSECOrderAndAuth(di->id, di->zone, *qname, auth);
+        for(vector<string>::const_iterator qname=qnames.begin(); qname != qnames.end(); ++qname) {
+          if(haveNSEC3)  {
+            string hashed;
+            if(!narrow) 
+              hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr->d_iterations, ns3pr->d_salt, *qname)));
+        
+            di->backend->updateDNSSECOrderAndAuthAbsolute(di->id, *qname, hashed, auth);
+            di->backend->nullifyDNSSECOrderNameAndAuth(di->id, *qname, "NS");
+          }
+          else // NSEC
+            di->backend->updateDNSSECOrderAndAuth(di->id, di->zone, *qname, auth);
 
-        di->backend->nullifyDNSSECOrderNameAndAuth(di->id, *qname, "AAAA");
-        di->backend->nullifyDNSSECOrderNameAndAuth(di->id, *qname, "A");
+          di->backend->nullifyDNSSECOrderNameAndAuth(di->id, *qname, "AAAA");
+          di->backend->nullifyDNSSECOrderNameAndAuth(di->id, *qname, "A");
+        }
       }
     }
   } // rr->d_class == QClass::IN
@@ -1070,6 +1077,7 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narr
   // Perform removes on the backend.
   for(vector<DNSResourceRecord>::const_iterator i=recordsToDelete.begin(); i!=recordsToDelete.end(); ++i){
     di->backend->removeRecord(*i);
+    updatedZone = true;
     if (i->qtype.getCode() == QType::NS && i->qname != di->zone) {
       vector<string> changeAuth;
       di->backend->listSubZone(i->qname, di->id);
@@ -1093,6 +1101,11 @@ void PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narr
 
   // Finally, we clean the cache for this RR
   PC.purge(rLabel);
+
+  if (updatedZone && !updatedSoa) { // Change the SOA serial, unless we did that ourselfs.
+    return true;
+  }
+  return false;
 }
 
 int PacketHandler::processUpdate(DNSPacket *p) {
@@ -1212,8 +1225,6 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     } 
   }
 
-
-
   // 3.2.3 - Prerequisite check
   typedef pair<string, QType> rrSetKey_t;
   typedef vector<DNSResourceRecord> rrVector_t;
@@ -1264,6 +1275,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
 
   // 3.4 - Prescan & Add/Update/Delete records
+  bool updateSerial = false;
   NSEC3PARAMRecordContent ns3pr;
   bool narrow; 
   bool haveNSEC3 = d_dk.getNSEC3PARAM(di.zone, &ns3pr, &narrow);
@@ -1280,7 +1292,8 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
       // 3.4.2 - Update
       try {
-       performUpdate(rr, &di, narrow, haveNSEC3, &ns3pr);
+        if (performUpdate(rr, &di, narrow, haveNSEC3, &ns3pr))
+          updateSerial = true;
       }
       catch (AhuException &e) {
         L<<Logger::Error<<msgPrefix<<"Caught AhuException: "<<e.reason<<"; Sending ServFail!"<<endl;
@@ -1295,6 +1308,19 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     }
   }
 
+
+  if (updateSerial) {
+    DNSResourceRecord rec, newRec;
+    di.backend->lookup(QType(QType::SOA), di.zone);
+    while (di.backend->get(rec)) {
+      newRec = rec;
+      SOAData soa2Update;
+      fillSOAData(rec.content, soa2Update);
+      soa2Update.serial++;
+      newRec.content = serializeSOAData(soa2Update);
+    }
+    di.backend->updateRecord(rec, newRec);
+  }
 
   if (!di.backend->commitTransaction()) {
     L<<Logger::Error<<msgPrefix<<"Failed to commit update for domain "<<di.zone<<"!"<<endl;

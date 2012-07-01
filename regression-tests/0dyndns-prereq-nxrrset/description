@@ -1,3 +1,0 @@
-RFC2136 section 3.2.1 states the usage of NXRRSET. NXRRSET must be returned when a record with the
-same name and type does not exists, and it is required by the prerequisites.
-This test also checks to see if powerdns stops processing after the NXRRSET.

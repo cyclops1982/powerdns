@@ -1,6 +1,6 @@
 #!/bin/sh
 
-cleandig delegate1.test.dyndns ANY
+cleandig delegate1.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
@@ -37,8 +37,8 @@ send
 answer
 !
 
-cleandig delegate2.test.dyndns ANY
-cleandig delegate1.test.dyndns ANY
+cleandig delegate2.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig delegate1.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 cleandig ns1.delegate1.test.dyndns ANY
 cleandig ns2.delegate1.test.dyndns ANY
 cleandig ns1.delegate2.test.dyndns ANY
@@ -55,7 +55,7 @@ send
 answer
 !
 
-cleandig ns1.delegate1.test.dyndns ANY
-cleandig ns2.delegate1.test.dyndns ANY
-cleandig ns1.delegate2.test.dyndns ANY
-cleandig ns2.delegate2.test.dyndns ANY
+cleandig ns1.delegate1.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig ns2.delegate1.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig ns1.delegate2.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig ns2.delegate2.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'

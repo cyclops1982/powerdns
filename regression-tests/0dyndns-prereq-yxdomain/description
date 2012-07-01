@@ -1,3 +1,0 @@
-RFC2136 section 3.2.1 states the usage of YXDOMAIN. YXDOMAIN must be returned when a record with the
-same name exists, and the prerequisites require the name to not exist.
-The test also checks to see if the code stops processing after the YXDOMAIN.

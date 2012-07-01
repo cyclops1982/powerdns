@@ -1,6 +1,6 @@
 #!/bin/sh
 cleandig delete-add.test.dyndns ANY
 $testname/deleterecord.pl $nameserver $port
-cleandig delete-add.test.dyndns ANY
+cleandig delete-add.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 $testname/addrecord.pl $nameserver $port
 cleandig delete-add.test.dyndns ANY
