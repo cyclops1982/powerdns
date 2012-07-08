@@ -1,6 +1,6 @@
 - Habbie's comments:
 	- QType isSupportedType() loop.
-	- Change all test to use nsupdate.
+	- Change all test to use nsupdate (and add -t 1 to nsupdate command)
 
 - The prio in my DB was NULL, which made the update query not work.
   Either we need to change the query (with some if statement if 0 || NULL) or we make check-zone complain about it?
@@ -8,10 +8,13 @@
 - testing:
 	- WKS record is not supported (for replace)
 	- test if axfr still works (with TSIG)
+	- Test delete of record with Priority (MX, SRV) (does it delete 1 record or all)
 
 - Backends
 	- Make sure backends that do not support dyndns return NotImpl.
 	- BindBackend is something that we would need at release, at the moment it is not up to date.
 
+- Make sure we identify the queries correctly to we know they are for dyndns (and give them a better name)
+- d_UpdateRecord query variable with lowercase u (d_U)...
 - Forward update packet?
 - Use msgPrefix everywhere.
