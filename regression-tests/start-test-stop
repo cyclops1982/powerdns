@@ -39,8 +39,9 @@ case $context in
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=bind --bind-config=./named.conf                \
 				--fancy-records --query-logging --send-root-referral --loglevel=9    \
-				--cache-ttl=0 --no-config &
-			skipreasons="nodnssec nodyndns"
+				--cache-ttl=0 --no-config \
+				--allow-2136-from="127.0.0.1" &
+			skipreasons="nodnssec"
 			;;
 		bind-dnssec | bind-dnssec-nsec3 )
 			./bind-dnssec-setup
@@ -58,8 +59,9 @@ case $context in
 				--no-shuffle --launch=bind --bind-config=./named.conf       \
 				--bind-dnssec-db=./dnssec.sqlite3 \
 				--query-logging --send-root-referral --loglevel=9    \
-				--cache-ttl=0 --no-config &
-			skipreasons=nodyndns
+				--cache-ttl=0 --no-config \
+				--allow-2136-from="127.0.0.1" &
+			skipreasons=
 			;;
 		gmysql-nodnssec)
 			[ -z "$GMYSQLDB" ] && GMYSQLDB=pdnstest

@@ -1,8 +1,42 @@
 #!/bin/sh
 cleandig test.dyndns SOA | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
-$testname/replace1.pl $nameserver $port
+
+nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
+server $nameserver $port
+zone test.dyndns
+update add test.dyndns. 3600 SOA ns2.test.dyndns. ahu.example.dyndns. 2050101000 28800 7200 604800 86400
+send
+answer
+!
+
 cleandig test.dyndns SOA
-$testname/replace2.pl $nameserver $port
+
+nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
+server $nameserver $port
+zone test.dyndns
+update add test.dyndns. 3600 SOA ns2.test.dyndns. ahu.example.dyndns. 2050101000 28800 7200 604800 86400
+send
+answer
+!
+
 cleandig test.dyndns SOA
-$testname/replace3.pl $nameserver $port
+
+nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
+server $nameserver $port
+zone test.dyndns
+update add test.dyndns. 3600 SOA ns2.test.dyndns. ahu.example.dyndns. 2050100999 28800 7200 604800 86400
+send
+answer
+!
+
+cleandig test.dyndns SOA
+
+nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
+server $nameserver $port
+zone test.dyndns
+update add test.dyndns. 3600 SOA ns2.test.dyndns. ahu.example.dyndns. 2050101001 28800 7200 604800 86400
+send
+answer
+!
+
 cleandig test.dyndns SOA

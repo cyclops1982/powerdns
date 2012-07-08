@@ -1,15 +1,39 @@
 0	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012060701 28800 7200 604800 86400
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='test.dyndns.', qtype=SOA
-RCODE: NOERROR
-0	test.dyndns.	IN	SOA	3600	ns2.test.dyndns. ahu.example.dyndns. 2012060800 28800 7200 604800 86400
+Answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
+;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;test.dyndns.			IN	SOA
+
+0	test.dyndns.	IN	SOA	3600	ns2.test.dyndns. ahu.example.dyndns. 2050101000 28800 7200 604800 86400
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='test.dyndns.', qtype=SOA
-RCODE: NOERROR
-0	test.dyndns.	IN	SOA	3600	ns2.test.dyndns. ahu.example.dyndns. 2012060800 28800 7200 604800 86400
+Answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
+;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;test.dyndns.			IN	SOA
+
+0	test.dyndns.	IN	SOA	3600	ns2.test.dyndns. ahu.example.dyndns. 2050101000 28800 7200 604800 86400
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='test.dyndns.', qtype=SOA
-RCODE: NOERROR
-0	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012060801 28800 7200 604800 86400
+Answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
+;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;test.dyndns.			IN	SOA
+
+0	test.dyndns.	IN	SOA	3600	ns2.test.dyndns. ahu.example.dyndns. 2050101000 28800 7200 604800 86400
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Reply to question for qname='test.dyndns.', qtype=SOA
+Answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
+;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;test.dyndns.			IN	SOA
+
+0	test.dyndns.	IN	SOA	3600	ns2.test.dyndns. ahu.example.dyndns. 2050101001 28800 7200 604800 86400
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='test.dyndns.', qtype=SOA
