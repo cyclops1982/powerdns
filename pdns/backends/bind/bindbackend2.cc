@@ -185,15 +185,12 @@ bool Bind2Backend::startTransaction(const string &qname, int id)
 
   if(d_transaction_id < 0) {
     if (!bbd.d_loaded) {
-      cerr<<"Loading zone!!"<<endl;
       queueReload(&bbd);
       if (!bbd.d_loaded)
         throw new DBException("Could not load zone '"+bbd.d_name+"' to create transaction, message: "+bbd.d_status);
     }
-    cerr<<"zone loaded, start copy"<<endl;
     d_transRecords.clear();
     std::copy(bbd.d_records->begin(), bbd.d_records->end(), std::back_inserter(d_transRecords));
-    cerr<<"zone loaded, copied:"<<d_transRecords.size()<<endl;
   } else {
     d_of=new ofstream(d_transaction_tmpname.c_str());
     if(!*d_of) {
@@ -214,7 +211,6 @@ bool Bind2Backend::commitTransaction()
 {
   shared_ptr<State> state = getState(); 
   BB2DomainInfo &bbd = state->id_zone_map[state->name_id_map[d_transaction_zone]];
-  cerr<<"Commiting zone: "<<bbd.d_name<<endl;
   if(d_transaction_id < 0) {
     d_of=new ofstream(d_transaction_tmpname.c_str()); // filename was already set in starTransaction
     if(!*d_of) {
@@ -269,7 +265,6 @@ bool Bind2Backend::updateRecord(const DNSResourceRecord &oldR, const DNSResource
   for (vector<Bind2DNSRecord>::iterator i = d_transRecords.begin(); i != d_transRecords.end(); i++) {
     string qname = labelReverse(i->qname); // reverse the reversed label. yay :-)
     qname = i->qname.empty() ? d_transaction_zone : (i->qname+"."+d_transaction_zone);
-    cerr<<"UPDATE:"<<qname<<" - "<<i->qtype<<" - "<<i->priority<<" -=- "<<oldR.qname<<" - "<<oldR.qtype.getCode()<<" - "<<oldR.priority<<endl;
     if (qname == oldR.qname && i->qtype == oldR.qtype.getCode() && i->priority == oldR.priority) {
       i->content = r.content;
       i->ttl = r.ttl;
@@ -285,9 +280,7 @@ bool Bind2Backend::removeRecord(const DNSResourceRecord &r) {
   for (vector<Bind2DNSRecord>::iterator i = d_transRecords.begin(); i != d_transRecords.end(); i++) {
     string qname = labelReverse(i->qname); // reverse the reversed label. yay :-)
     qname = qname.empty() ? d_transaction_zone : (qname+"."+d_transaction_zone);
-    cerr<<"REMOVE:"<<qname<<" - "<<i->qtype<<" - "<<i->priority<<" -=- "<<r.qname<<" - "<<r.qtype.getCode()<<" - "<<r.priority<<endl;
     if (qname == r.qname && i->qtype == r.qtype.getCode() && i->content == r.content) {
-      cerr<<"Removing record: "<<qname<<endl;
       d_transRecords.erase(i);
     }
   }
@@ -355,18 +348,15 @@ void Bind2Backend::writeRecord(const string &domain, const string &qname, const 
       if(!stripDomainSuffix(&content, domain))
         content+=".";
       *d_of<<name<<"\t"<<ttl<<"\t"<<qtype.getName()<<"\t"<<priority<<"\t"<<content<<endl;
-      cerr<<"WRITE:"<<name<<"\t"<<ttl<<"\t"<<qtype.getName()<<"\t"<<priority<<"\t"<<content<<endl;
       break;
     case QType::CNAME:
     case QType::NS:
       if(!stripDomainSuffix(&content, domain))
         content+=".";
       *d_of<<name<<"\t"<<ttl<<"\t"<<qtype.getName()<<"\t"<<content<<endl;
-      cerr<<"WRITE:"<<name<<"\t"<<ttl<<"\t"<<qtype.getName()<<"\t"<<content<<endl;
       break;
     default:
       *d_of<<name<<"\t"<<ttl<<"\t"<<qtype.getName()<<"\t"<<content<<endl;
-      cerr<<"WRITE:"<<name<<"\t"<<ttl<<"\t"<<qtype.getName()<<"\t"<<content<<endl;
       break;
   }
 }
