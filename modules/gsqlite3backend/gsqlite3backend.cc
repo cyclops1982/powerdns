@@ -109,7 +109,7 @@ public:
     declare(suffix, "zone-lastchange-query", "", "select max(change_date) from records where domain_id=%d");
     declare(suffix, "info-all-master-query", "", "select id,name,master,last_check,notified_serial,type from domains where type='MASTER'");
     declare(suffix, "delete-zone-query", "", "delete from records where domain_id=%d");
-    declare(suffix, "delete-record-query", "delete from records query for dyndns", "delete from records where domain_id=%d and name='%s' and type='%s' and content='%s'");
+    declare(suffix, "delete-record-query", "delete from records query for dyndns", "delete from records where domain_id=%d and name='%s' and type='%s' and content='%s' and prio=%d");
     declare(suffix, "dnssec", "Assume DNSSEC Schema is in place","no");
 
     declare(suffix, "add-domain-key-query","", "insert into cryptokeys (domain_id, flags, active, content) select id, %d, %d, '%s' from domains where name='%s'");

@@ -799,7 +799,9 @@ bool GSQLBackend::listSubZone(const string &zone, int domain_id) {
 
 
 bool GSQLBackend::removeRecord(const DNSResourceRecord &r) {
-  string output = (boost::format(d_DeleteRecordQuery) % r.domain_id % sqlEscape(r.qname) % sqlEscape(r.qtype.getName()) % sqlEscape(r.content)).str();
+  cerr<<"DO:"<<d_DeleteRecordQuery<<endl;
+  cerr<<"PRIO:"<<r.priority<<endl;
+  string output = (boost::format(d_DeleteRecordQuery) % r.domain_id % sqlEscape(r.qname) % sqlEscape(r.qtype.getName()) % sqlEscape(r.content) % r.priority ).str();
 
   try {
     d_db->doCommand(output.c_str());

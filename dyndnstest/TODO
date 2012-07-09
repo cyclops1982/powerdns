@@ -9,6 +9,7 @@
 	- WKS record is not supported (for replace)
 	- test if axfr still works (with TSIG)
 	- Test delete of record with Priority (MX, SRV) (does it delete 1 record or all)
+	- The NSEC3 tests do not work (bind-dnssec-nsec3 gmysql-nsec3 gpgsql-nsec3 gsqlite3-nsec3)
 
 
 
