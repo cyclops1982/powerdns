@@ -10,11 +10,17 @@
 	- test if axfr still works (with TSIG)
 	- Test delete of record with Priority (MX, SRV) (does it delete 1 record or all)
 
-- Backends
-	- Make sure backends that do not support dyndns return NotImpl.
-	- BindBackend is something that we would need at release, at the moment it is not up to date.
 
-- Make sure we identify the queries correctly to we know they are for dyndns (and give them a better name)
-- d_UpdateRecord query variable with lowercase u (d_U)...
+
+Cleanup:
+	- Change sql query name, so we can identify them for dyndns
+	- d_UpdateRecord query variable with lowercase u (d_U)...
+	- Use msgPrefix everywhere.
+	- Make sure backends that do not support dyndns return NotImpl.
+
+- Documentation
+	- new chapter on dyndns
+	- Update backend-writers code
+
+"Out of scope"
 - Forward update packet?
-- Use msgPrefix everywhere.

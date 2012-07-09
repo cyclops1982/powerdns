@@ -174,12 +174,16 @@ shared_ptr<Bind2Backend::State> Bind2Backend::getState()
 
 bool Bind2Backend::startTransaction(const string &qname, int id)
 {
-  shared_ptr<State> state = getState();
-  BB2DomainInfo &bbd = state->id_zone_map[state->name_id_map[qname]];
-
-  d_transaction_tmpname = bbd.d_filename+"."+itoa(random()); // we might not need this filename right away, but let's set it anyway ((c) codepoet)
+ 
   d_transaction_id = id;
   d_transaction_zone = qname;
+  if(d_transaction_zone.empty() && d_transaction_id < 0) // when we only want DNSSEC operation from pdnssec.cc
+    return false;
+
+  shared_ptr<State> state = getState();
+  BB2DomainInfo &bbd = state->id_zone_map[state->name_id_map[d_transaction_zone]];
+
+  d_transaction_tmpname = bbd.d_filename+"."+itoa(random()); // we might not need this filename right away, but let's set it anyway ((c) codepoet)
   d_transaction_nsec3zone = getNSEC3PARAM(bbd.d_name, &d_transaction_ns3p);
   
 
@@ -209,6 +213,9 @@ bool Bind2Backend::startTransaction(const string &qname, int id)
 
 bool Bind2Backend::commitTransaction()
 {
+  if (d_transaction_zone.empty() && d_transaction_id < 0)
+    return true;
+
   shared_ptr<State> state = getState(); 
   BB2DomainInfo &bbd = state->id_zone_map[state->name_id_map[d_transaction_zone]];
   if(d_transaction_id < 0) {
