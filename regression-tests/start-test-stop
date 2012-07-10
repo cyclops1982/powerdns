@@ -34,6 +34,13 @@ __EOF__
 	exit 1
 fi
 
+
+# Copy zones because the test might modify them (well only the dyndns stuff, but let's make this work for others as well)
+for zone in $(grep zone named.conf  | cut -f2 -d\")
+do
+	cp $zone $zone.backup
+done
+
 case $context in
 		bind)
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
@@ -309,3 +316,8 @@ then
 	read l
 fi
 kill $(cat pdns.pid)
+
+for zone in $(grep zone named.conf  | cut -f2 -d\")
+do
+	cp $zone.backup $zone
+done
