@@ -1,0 +1,20 @@
+0	8pqjv4b3m0lcfmvae0hp394lc154l1i7.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd FQU365VN7BR5CSV8CG6NE9V8HA6D008P CNAME RRSIG
+0	cname1.test.dyndns.	IN	CNAME	3600	host-1.test.dyndns.
+0	host-1.test.dyndns.	IN	A	3600	127.0.0.101
+0	u36f0tjooqv1kspatto6qns0vap731v2.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd 2GP5RDNJOQ5OOSPC5O1IH9LALI101DI8 NS SOA MX RRSIG DNSKEY NSEC3PARAM
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Reply to question for qname='cname1.test.dyndns.', qtype=ANY
+RCODE: NOERROR
+0	8pqjv4b3m0lcfmvae0hp394lc154l1i7.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd FQU365VN7BR5CSV8CG6NE9V8HA6D008P CNAME RRSIG
+0	cname1.test.dyndns.	IN	CNAME	3600	host-2.test.dyndns.
+0	host-2.test.dyndns.	IN	A	3600	127.0.0.102
+0	u36f0tjooqv1kspatto6qns0vap731v2.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd 2GP5RDNJOQ5OOSPC5O1IH9LALI101DI8 NS SOA MX RRSIG DNSKEY NSEC3PARAM
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Reply to question for qname='cname1.test.dyndns.', qtype=ANY
+RCODE: NOERROR
+0	8pqjv4b3m0lcfmvae0hp394lc154l1i7.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd FQU365VN7BR5CSV8CG6NE9V8HA6D008P CNAME RRSIG
+0	cname1.test.dyndns.	IN	CNAME	3600	host-1.test.dyndns.
+0	host-1.test.dyndns.	IN	A	3600	127.0.0.101
+0	u36f0tjooqv1kspatto6qns0vap731v2.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd 2GP5RDNJOQ5OOSPC5O1IH9LALI101DI8 NS SOA MX RRSIG DNSKEY NSEC3PARAM
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Reply to question for qname='cname1.test.dyndns.', qtype=ANY
