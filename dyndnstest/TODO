@@ -7,7 +7,6 @@
 
 - testing:
 	- WKS record is not supported (for replace)
-	- test if axfr still works (with TSIG)
 
 Cleanup:
 	- Change sql query name, so we can identify them for dyndns
