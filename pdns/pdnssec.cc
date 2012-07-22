@@ -516,6 +516,10 @@ try
   }
   
   if (cmds[0] == "test-algorithm") {
+    if(cmds.size() != 2) {
+      cerr << "Syntax: pdnssec test-algorithm algonum"<<endl;
+      return 0;
+    }
     testAlgorithm(lexical_cast<int>(cmds[1]));
     return 0; 
   }
@@ -566,6 +570,14 @@ try
   }
   else if (cmds[0] == "check-all-zones") {
     exit(checkAllZones(dk));
+  }
+  else if (cmds[0] == "test-zone") {
+    cerr << "Did you mean check-zone?"<<endl;
+    return 0;
+  }
+  else if (cmds[0] == "test-all-zones") {
+    cerr << "Did you mean check-all-zones?"<<endl;
+    return 0;
   }
 #if 0
   else if(cmds[0] == "signing-server" )
@@ -679,7 +691,7 @@ try
   }
   else if(cmds[0] == "remove-zone-key") {
     if(cmds.size() < 3) {
-      cerr<<"Syntax: pdnssec remove-zone-key ZONE KEY-ID";
+      cerr<<"Syntax: pdnssec remove-zone-key ZONE KEY-ID"<<endl;
       return 0;
     }
     const string& zone=cmds[1];
