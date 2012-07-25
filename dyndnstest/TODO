@@ -1,9 +1,4 @@
-- Habbie's comments:
-	- QType isSupportedType() loop.
-	- Change all test to use nsupdate (and add -t 1 to nsupdate command)
-
-- The prio in my DB was NULL, which made the update query not work.
-  Either we need to change the query (with some if statement if 0 || NULL) or we make check-zone complain about it?
+- Change all test to use nsupdate (and add -t 1 to nsupdate command)
 
 - SOA-edit option for dyndns
   A specific soa-edit (SOA-EDIT-2136 ?) could help is tune the SOA-changes that are required after an update.

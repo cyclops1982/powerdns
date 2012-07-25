@@ -1,2 +1,0 @@
-RFC2136 section 3.2.1 states the usage of NXDOMAIN. NXDOMAIN must be returned when a record with the
-same name does not exists, and it is required by the prerequisites.
