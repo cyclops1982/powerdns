@@ -281,7 +281,8 @@ GSQLBackend::GSQLBackend(const string &mode, const string &suffix)
   d_DeleteZoneQuery=getArg("delete-zone-query");
   d_DeleteRecordQuery=getArg("delete-record-query");
   d_getAllDomainsQuery=getArg("get-all-domains-query");
-  d_UpdateContentQuery=getArg("update-query");
+  d_UpdateRecordQuery=getArg("update-record-query");
+  d_UpdateRecordQueryNoPrio=getArg("update-record-query-no-prio");
   
   if (d_dnssecQueries)
   {
@@ -815,7 +816,12 @@ bool GSQLBackend::removeRecord(const DNSResourceRecord &r) {
 
 
 bool GSQLBackend::updateRecord(const DNSResourceRecord &oldR, const DNSResourceRecord &r) {
-  string output = (boost::format(d_UpdateContentQuery) % sqlEscape(r.content) % r.ttl % sqlEscape(oldR.qname) % sqlEscape(oldR.qtype.getName()) % oldR.domain_id % oldR.priority).str();
+  string output;
+  if (oldR.qtype == QType::MX || oldR.qtype == QType::SRV)
+    output = (boost::format(d_UpdateRecordQuery) % sqlEscape(r.content) % r.ttl % r.priority % sqlEscape(oldR.qname) % sqlEscape(oldR.qtype.getName()) % oldR.domain_id % oldR.priority).str();
+  else 
+    output = (boost::format(d_UpdateRecordQueryNoPrio) % sqlEscape(r.content) % r.ttl % sqlEscape(oldR.qname) % sqlEscape(oldR.qtype.getName()) % oldR.domain_id).str();
+    
 
   try {
     d_db->doCommand(output.c_str());

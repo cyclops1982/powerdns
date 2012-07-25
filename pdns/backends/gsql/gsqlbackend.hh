@@ -87,7 +87,8 @@ private:
   string d_InsertRecordQuery;
   string d_UpdateSerialOfZoneQuery;
   string d_UpdateLastCheckofZoneQuery;
-  string d_UpdateContentQuery;
+  string d_UpdateRecordQuery;
+  string d_UpdateRecordQueryNoPrio;
   string d_InfoOfAllMasterDomainsQuery;
   string d_DeleteZoneQuery;		
   string d_DeleteRecordQuery;

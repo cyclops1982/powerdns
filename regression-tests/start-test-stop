@@ -47,7 +47,7 @@ case $context in
 				--no-shuffle --launch=bind --bind-config=./named.conf                \
 				--fancy-records --query-logging --send-root-referral --loglevel=9    \
 				--cache-ttl=0 --no-config \
-				--allow-2136-from="127.0.0.1" &
+				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no &
 			skipreasons="nodnssec"
 			;;
 		bind-dnssec | bind-dnssec-nsec3 )
@@ -67,7 +67,7 @@ case $context in
 				--bind-dnssec-db=./dnssec.sqlite3 \
 				--query-logging --send-root-referral --loglevel=9    \
 				--cache-ttl=0 --no-config \
-				--allow-2136-from="127.0.0.1" &
+				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no &
 			skipreasons=
 			;;
 		gmysql-nodnssec)
@@ -89,7 +89,7 @@ case $context in
 				--no-shuffle --launch=gmysql \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
 				--cache-ttl=0 --no-config \
-				--allow-2136-from="127.0.0.1" \
+				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gmysql-dbname="$GMYSQLDB" \
 				--gmysql-user="$GMYSQLUSER" \
 				--gmysql-host="$GMYSQLHOST" \
@@ -136,7 +136,7 @@ __EOF__
 				--no-shuffle --launch=gmysql --gmysql-dnssec \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
 				--cache-ttl=0 --no-config \
-				--allow-2136-from="127.0.0.1" \
+				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gmysql-dbname="$GMYSQLDB" \
 				--gmysql-user="$GMYSQLUSER" \
 				--gmysql-host="$GMYSQLHOST" \
@@ -180,7 +180,7 @@ __EOF__
 				--no-shuffle --launch=gpgsql --gpgsql-dnssec \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
 				--cache-ttl=0 --no-config  \
-				--allow-2136-from="127.0.0.1" \
+				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gpgsql-dbname="$GPGSQLDB" \
 				--gpgsql-user="$GPGSQLUSER" &
 			if [ $context = gpgsql-nsec3 ]
@@ -210,7 +210,7 @@ __EOF__
 				--no-shuffle --launch=gpgsql \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
 				--cache-ttl=0 --no-config \
-				--allow-2136-from="127.0.0.1" \
+				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gpgsql-dbname="$GPGSQLDB" \
 				--gpgsql-user="$GPGSQLUSER" &
 			skipreasons=nodnssec
@@ -227,7 +227,7 @@ __EOF__
 				--no-shuffle --launch=gsqlite3 \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
 				--cache-ttl=0 --no-config \
-				--allow-2136-from="127.0.0.1" \
+				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gsqlite3-database=pdns.sqlite3 &
 			skipreasons=nodnssec
 
@@ -275,7 +275,7 @@ __EOF__
 				--no-shuffle --launch=gsqlite3 --gsqlite3-dnssec \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
 				--cache-ttl=0 --no-config \
-				--allow-2136-from="127.0.0.1" \
+				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gsqlite3-database=pdns.sqlite3 &
 			if [ $context = gsqlite3-nsec3 ]
 			then
