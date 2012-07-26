@@ -168,6 +168,10 @@ void declareStats(void)
   S.declare("latency","Average number of microseconds needed to answer a question");
   S.declare("timedout-packets","Number of packets which weren't answered within timeout set");
 
+  S.declare("rfc2136-queries", "RFC2136 packets received.");
+  S.declare("rfc2136-answers", "RFC2136 packets succesfully answered.");
+  S.declare("rfc2136-refused", "RFC2136 packets that are refused.");
+
   S.declareRing("queries","UDP Queries Received");
   S.declareRing("nxdomain-queries","Queries for non-existent records within existent domains");
   S.declareRing("noerror-queries","Queries for existing records, but for type we don't have");
