@@ -4,14 +4,24 @@
 2	host-2.test.dyndns.	IN	A	3600	127.0.0.102
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='test.dyndns.', qtype=MX
-RCODE: NOERROR
+Answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
+;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;test.dyndns.			IN	SOA
+
 0	test.dyndns.	IN	MX	3000	10 host-1.test.dyndns.
 0	test.dyndns.	IN	MX	3600	20 host-2.test.dyndns.
 2	host-1.test.dyndns.	IN	A	3600	127.0.0.101
 2	host-2.test.dyndns.	IN	A	3600	127.0.0.102
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='test.dyndns.', qtype=MX
-RCODE: NOERROR
+Answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
+;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;test.dyndns.			IN	SOA
+
 0	test.dyndns.	IN	MX	3600	10 host-1.test.dyndns.
 0	test.dyndns.	IN	MX	3600	20 host-2.test.dyndns.
 2	host-1.test.dyndns.	IN	A	3600	127.0.0.101
