@@ -6,6 +6,8 @@
 - testing:
 	- WKS record is not supported (for replace)
 
+- Add DynUpdate counter to statbag.
+
 Cleanup:
 	- Change sql query name, so we can identify them for dyndns
 	- Use msgPrefix everywhere.
