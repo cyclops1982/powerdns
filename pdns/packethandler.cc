@@ -1118,7 +1118,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
   // Check permissions - IP based
   vector<string> allowedRanges;
-  B.getDomainMetadata(p->qdomain, "ALLOW-2136-FROM", allowedRanges); //TODO: change the name? But we only have 16 chars :(
+  B.getDomainMetadata(p->qdomain, "ALLOW-2136-FROM", allowedRanges);
   if (! ::arg()["allow-2136-from"].empty()) 
     stringtok(allowedRanges, ::arg()["allow-2136-from"], ", \t" );
 
