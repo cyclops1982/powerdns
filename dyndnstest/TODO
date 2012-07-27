@@ -1,24 +1,9 @@
 - Change all test to use nsupdate (and add -t 1 to nsupdate command)
 
-- SOA-edit option for dyndns
-  A specific soa-edit (SOA-EDIT-2136 ?) could help is tune the SOA-changes that are required after an update.
-
-21:44 < _cyclops_> Add a option to domainmetadata called 'SOA-EDIT-2136', options are:
-21:44 < _cyclops_> - DEFAULT - Change serial to YYYYMMDD01. If current serial >= YYYYMMDD01 do
-                   current serial+1
-21:45 < _cyclops_> - INCREASE - Set the serial to current serial + 1
-21:45 < _cyclops_> - SOA-EDIT-INCREASE - Set to whatever SOA-EDIT provides. If the provided <=
-                   current serial do current serial+1
-21:46 < _cyclops_> - SOA-EDIT - Simply set to whatever SOA-EDIT provides
-12:13 <@   Habbie> soa-edit-2136 sounds good
-12:13 <@   Habbie> although i'd like a unixtime variant too
-
-
 - testing:
 	- WKS record is not supported (for replace)
 
 Cleanup:
-	- Change sql query name, so we can identify them for dyndns
 	- Use msgPrefix everywhere.
 	- Make sure backends that do not support dyndns return NotImpl.
 

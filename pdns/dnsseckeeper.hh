@@ -163,4 +163,5 @@ private:
 
 class DNSPacket;
 bool editSOA(DNSSECKeeper& dk, const string& qname, DNSPacket* dp);
+uint32_t calculateEditSOA(SOAData sd, const string& kind);
 #endif

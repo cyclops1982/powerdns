@@ -1226,7 +1226,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     } 
   }
 
-  // 3.2.3 - Prerequisite check
+  // 3.2.3 - Prerequisite check - this is outside of updatePrequisitesCheck because we check an RRSet and not the RR.
   typedef pair<string, QType> rrSetKey_t;
   typedef vector<DNSResourceRecord> rrVector_t;
   typedef std::map<rrSetKey_t, rrVector_t> RRsetMap_t;
@@ -1310,28 +1310,8 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   }
 
   // Section 3.6 - Update the soa
-  if (updateRecords > 0 && !updatedSerial) {
-    DNSResourceRecord rec, newRec;
-    di.backend->lookup(QType(QType::SOA), di.zone);
-    while (di.backend->get(rec)) {
-      newRec = rec;
-      SOAData soa2Update;
-      fillSOAData(rec.content, soa2Update);
-      time_t now = time(0);
-      struct tm tm;
-      localtime_r(&now, &tm);
-      boost::format fmt("%04d%02d%02d%02d");
-      string newserdate=(fmt % (tm.tm_year+1900) % (tm.tm_mon +1 )% tm.tm_mday % 1).str();
-      uint32_t newser = atol(newserdate.c_str());
-      if (newser <= soa2Update.serial)
-        soa2Update.serial++;
-      else
-        soa2Update.serial = newser;
-      newRec.content = serializeSOAData(soa2Update);
-    }
-    di.backend->updateRecord(rec, newRec);
-    PC.purge(newRec.qname);
-  }
+  if (updateRecords > 0 && !updatedSerial)
+    increaseSerial(di);
 
   if (!di.backend->commitTransaction()) {
     L<<Logger::Error<<msgPrefix<<"Failed to commit update for domain "<<di.zone<<"!"<<endl;
@@ -1340,6 +1320,72 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   L<<Logger::Info<<msgPrefix<<"Update completed, "<<updateRecords<<" changed records commited."<<endl;
   return RCode::NoError; //rfc 2136 3.4.2.5
 }
+
+void PacketHandler::increaseSerial(const DomainInfo& di) {
+  DNSResourceRecord rec, newRec;
+  di.backend->lookup(QType(QType::SOA), di.zone);
+  bool foundSOA=false;
+  while (di.backend->get(rec)) {
+    newRec = rec;
+    foundSOA=true;
+  }
+  if (!foundSOA) {
+    throw AhuException("SOA-Serial update failed because there was no SOA. Wowie.");
+  }
+  SOAData soa2Update;
+  fillSOAData(rec.content, soa2Update);
+  uint32_t newser = soa2Update.serial;
+
+  vector<string> soaEdit2136Setting;
+  B.getDomainMetadata(di.zone, "SOA-EDIT-2136", soaEdit2136Setting);
+  string soaEdit2136 = "DEFAULT";
+  string soaEdit;
+  if (!soaEdit2136Setting.empty()) {
+    soaEdit2136 = soaEdit2136Setting[0];
+    if (pdns_iequals(soaEdit2136, "SOA-EDIT") || pdns_iequals(soaEdit2136,"SOA-EDIT-INCREASE") ){
+      vector<string> soaEditSetting;
+      B.getDomainMetadata(di.zone, "SOA-EDIT", soaEditSetting);
+      if (soaEditSetting.empty()) {
+        L<<Logger::Error<<"Using "<<soaEdit2136<<" for SOA-EDIT-2136 increase on RFC2136, but SOA-EDIT is not set for domain. Using DEFAULT for SOA-EDIT-2136"<<endl;
+        soaEdit2136 = "DEFAULT";
+      } else
+        soaEdit = soaEditSetting[0];
+    }
+  }
+
+
+  if (pdns_iequals(soaEdit2136, "INCREASE"))
+    soa2Update.serial++;
+  else if (pdns_iequals(soaEdit2136, "SOA-EDIT-INCREASE")) {
+    uint32_t newSer = calculateEditSOA(soa2Update, soaEdit);
+    if (newSer <= soa2Update.serial)
+      soa2Update.serial++;
+    else
+      soa2Update.serial = newSer;
+  } else if (pdns_iequals(soaEdit2136, "SOA-EDIT"))
+    soa2Update.serial = calculateEditSOA(soa2Update, soaEdit);
+  else if (pdns_iequals(soaEdit2136, "EPOCH"))
+    soa2Update.serial = time(0);
+  else {
+    time_t now = time(0);
+    struct tm tm;
+    localtime_r(&now, &tm);
+    boost::format fmt("%04d%02d%02d%02d");
+    string newserdate=(fmt % (tm.tm_year+1900) % (tm.tm_mon +1 )% tm.tm_mday % 1).str();
+    uint32_t newser = atol(newserdate.c_str());
+    if (newser <= soa2Update.serial)
+      soa2Update.serial++;
+    else
+      soa2Update.serial = newser;
+  }
+  
+
+  newRec.content = serializeSOAData(soa2Update);
+
+  di.backend->updateRecord(rec, newRec);
+  PC.purge(newRec.qname); 
+}
+
 
 int PacketHandler::processNotify(DNSPacket *p)
 {
