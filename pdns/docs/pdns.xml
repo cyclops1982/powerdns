@@ -11689,6 +11689,106 @@ sql> insert into domainmetadata (domain_id, kind, content) values (7,'ALLOW-AXFR
     </variablelist>
   </para>
   </chapter>
+  <chapter id="rfc-2136"><title>RFC 2136 Support (Dynamic DNS Update)</title>
+    <para>Starting with the PowerDNS Authoritative Server 3.X, RFC 2136 support is available. There are a number of items not supported:
+      <itemizedlist>
+        <listitem><para>Forwarding of RFC 2136 packages to the master is not supported (Chapter 6 of RFC 2136)</para></listitem>
+        <listitem><para>There is no support for GSS-TSIG and SIG (TSIG is supported).</para></listitem>
+        <listitem><para>Anything we forgot....</para></listitem>
+      </itemizedlist>
+    </para>
+    <para>The implementation requires the backend to support a number of new oparations. Currently, the following backends have been updated and support RFC 2136:
+      <itemizedlist>
+        <listitem><para>gmysql</para></listitem>
+        <listitem><para>gpgsql</para></listitem>
+        <listitem><para>gsqlite3</para></listitem>
+        <listitem><para>bindbackend2</para></listitem>
+      </itemizedlist>
+    </para>
+    <sect1 id="rfc-2136-configuration"><title>Configuration options</title>
+      <para>There are two configuration parameters that can be used within the powerdns configuration file.</para>
+      <variablelist>
+        <varlistentry>
+          <term>disable-rfc2136 [=yes]</term>
+          <listitem>
+            <para>
+              A setting to enable/disable RFC 2136 completely. The default is yes, which means that RFC 2136 updates are ignored by PowerDNS (no message is provided about this!).
+              Change the setting to <command>disable-rfc2136=no</command> to enable RFC 2136 support.
+            </para>
+          </listitem>
+        </varlistentry>
+
+        <varlistentry>
+          <term>allow-2136-from</term>
+          <listitem>
+            <para>
+              A list of IP ranges that are allowed to perform updates on any domain. The default is 0.0.0.0/0, which means that all ranges are accepted.
+              Multiple entries are accepted in one line. The option can be left empty to disable any global allowed ranges.
+            </para>
+          </listitem>
+        </varlistentry>
+      </variablelist>
+    </sect1>
+
+    <sect1 id="rfc-2136-domainmetadata"><title>Per zone settings</title>
+      <para>For permissions, a number of per zone settings are available via Domain metadata (See <xref linkend="domainmetadata" />)</para>
+      <variablelist>
+        <varlistentry>
+          <term>ALLOW-2136-FROM</term>
+          <listitem>
+            <para>
+              This setting has the same function as described in the Configuration options. Only one item is allowed per row, but multiple rows are allowed.
+              An example:
+              <programlisting>
+sql> select id from domains where name='powerdnssec.org';
+5
+sql> insert into domainmetadata(domain_id, kind, content) values(5, ‘ALLOW-2136-FROM’,’192.168.1.0/24’);
+sql> insert into domainmetadata(domain_id, kind, content) values(5, ‘ALLOW-2136-FROM’,’192.168.2.0/24’);
+              </programlisting>
+              
+              This will allow 192.168.1.0/24 and 192.168.2.0/24 to send RFC 2136 updates for the domain.
+            </para>
+          </listitem>
+        </varlistentry>
+        <varlistentry>
+          <term>TSIG-ALLOW-2136</term>
+          <listitem>
+            <para>
+              This setting allows to se tthe TSIG key required to do an RFC 2136 update.
+              An example:
+            </para>
+            <programlisting>
+sql> insert into tsigkeys (name, algorithm, secret) values ('test', 'hmac-md5', 'kp4/24gyYsEzbuTVJRUMoqGFmN3LYgVDzJ/3oRSP7ys=');
+sql> select id from domains where name='powerdnssec.org';
+5
+sql> insert into domainmetadata (domain_id, kind, content) values (5, 'TSIG-ALLOW-2136', 'test');
+            </programlisting>
+              
+            <para>An example of how to use this with the <command>nsupdate</command> tool:</para>
+            <programlisting>
+nsupdate &lt;&lt;! 
+server &lt;ip&gt; &lt;port&gt;
+zone powerdnssec.org
+update add test1.powerdnssec.org 3600 A 192.168.1.1
+key test kp4/24gyYsEzbuTVJRUMoqGFmN3LYgVDzJ/3oRSP7ys=
+send
+!
+            </programlisting>
+            <para>If a TSIG key is set for the domain, it is required to be used for the update. The TSIG is extra security on top of the <command>ALLOW-2136-FROM</command>
+            setting. So, if a TSIG key is set, the IP(-range) still needs to be allowed via <command>ALLOW-2136-FROM</command>.
+            </para>
+          </listitem>
+        </varlistentry>
+
+      </variablelist>
+    </sect1>
+    <sect1 id="rfc-2136-soa-edit"><title>SOA Serial Updates</title>
+      <para> TODO</para>
+    </sect1>
+    <sect1 id="rfc-2136-how-it-works"><title>How it works</title>
+      <para>TODO</para>
+    </sect1>
+  </chapter>
   <chapter id="recursion"><title>Recursion</title>
     <para>(only available from 1.99.8 and onwards, recursing component available since 2.9.5)</para>
     <para>
@@ -18373,6 +18473,10 @@ static RandomLoader randomloader;
 	  </varlistentry>
 	</variablelist>
       </para>
+    </sect1>
+
+    <sect1 id="rfc-2136-backend"><title>RFC 2136 capable backend</title>
+    <para>TODO</para>
     </sect1>
 
   </appendix>

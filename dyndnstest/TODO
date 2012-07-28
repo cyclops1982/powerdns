@@ -1,4 +1,5 @@
 - Change all test to use nsupdate (and add -t 1 to nsupdate command)
+- Check if allow-2136-from works with IPv6 and how it handles ipv6 with 0.0.0.0/0
 
 - testing:
 	- WKS record is not supported (for replace)
@@ -8,8 +9,8 @@ Cleanup:
 	- Make sure backends that do not support dyndns return NotImpl.
 
 - Documentation
-	- new chapter on dyndns
-	- Update backend-writers code
+	- update/add the TODO's.
+	- Fix disable-rfc2136 and the c2136 issue.
 
 "Out of scope"
 - Forward update packet?
