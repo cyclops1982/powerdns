@@ -11690,14 +11690,14 @@ sql> insert into domainmetadata (domain_id, kind, content) values (7,'ALLOW-AXFR
   </para>
   </chapter>
   <chapter id="rfc-2136"><title>RFC 2136 Support (Dynamic DNS Update)</title>
-    <para>Starting with the PowerDNS Authoritative Server 3.X, RFC 2136 support is available. There are a number of items not supported:
+    <para>Starting with the PowerDNS Authoritative Server 3.2, RFC 2136 support is available. There are a number of items not supported:
       <itemizedlist>
-        <listitem><para>Forwarding of RFC 2136 packages to the master is not supported (Chapter 6 of RFC 2136)</para></listitem>
-        <listitem><para>There is no support for GSS-TSIG and SIG (TSIG is supported).</para></listitem>
+        <listitem><para>When an update for a zone we are slave for comes in, we do not forward it to the master (Chapter 6 of RFC 2136);</para></listitem>
+        <listitem><para>There is no support for GSS-TSIG and SIG (TSIG is supported);</para></listitem>
         <listitem><para>Anything we forgot....</para></listitem>
       </itemizedlist>
     </para>
-    <para>The implementation requires the backend to support a number of new oparations. Currently, the following backends have been updated and support RFC 2136:
+    <para>The implementation requires the backend to support a number of new oparations. Currently, the following backends have been modified to support RFC 2136:
       <itemizedlist>
         <listitem><para>gmysql</para></listitem>
         <listitem><para>gpgsql</para></listitem>
@@ -11779,11 +11779,57 @@ send
             </para>
           </listitem>
         </varlistentry>
-
+        <varlistentry>
+          <term>SOA-EDIT-2136</term>
+          <listitem>
+            <para>This configures how the soa serial should be updated. See <xref linkend="rfc-2136-soa-edit" />.</para>
+           </listitem>
+        </varlistentry>
       </variablelist>
     </sect1>
     <sect1 id="rfc-2136-soa-edit"><title>SOA Serial Updates</title>
-      <para> TODO</para>
+      <para>
+         After every update, the soa serial is changed. This is is stated in section 3.7 of RFC 2136.
+         The behaviour is configurable via domainmetadata with the SOA-EDIT-2136 option. It has a number of
+         options listed here. If no behaviour is specified, DEFAULT is used.
+         Don't forget that powerdns will always use SOA-EDIT when service SOA records, thus a query for the SOA record of
+         the recently update domain, might have an unexpected result due to a SOA-EDIT setting.
+      </para>
+      <variablelist>
+        <varlistentry>
+          <term>DEFAULT</term>
+          <listitem>
+            <para>
+              Generate a soa serial of YYYYMMDD01. If the current serial is lower than the generated serial, 
+              use the generated serial. If the current serial is higher or equal to the generated serial, increase the
+              current serial by 1.</para>
+          </listitem>
+        </varlistentry>
+        <varlistentry>
+          <term>INCREASE</term>
+          <listitem>
+            <para>Increase the current serial by 1.</para>
+          </listitem>
+        </varlistentry>
+        <varlistentry>
+          <term>EPOCH</term>
+          <listitem>
+            <para>Change the serial to the number of seconds since the EPOCH, aka unixtime.</para>
+          </listitem>
+        </varlistentry>
+        <varlistentry>
+          <term>SOA-EDIT</term>
+          <listitem>
+            <para>Change the serial to whatever SOA-EDIT would provide. See <xref linkend="domainmetadata" /></para>
+          </listitem>
+        </varlistentry>
+        <varlistentry>
+          <term>SOA-EDIT-INCREASE</term>
+          <listitem>
+            <para>Change the serial to whatever SOA-EDIT would provide. If what SOA-EDIT provides is lower than the current serial, increase the current serial by 1.</para>
+          </listitem>
+        </varlistentry>
+      </variablelist>
     </sect1>
     <sect1 id="rfc-2136-how-it-works"><title>How it works</title>
       <para>TODO</para>

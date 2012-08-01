@@ -11,6 +11,7 @@ Cleanup:
 - Documentation
 	- update/add the TODO's.
 	- Fix disable-rfc2136 and the c2136 issue.
+	- Write howto with warning if you only change disable-rfc2136
 
 "Out of scope"
 - Forward update packet?
