@@ -1,12 +1,8 @@
 #!/bin/sh
 sed \
-'s|rfc2136|aaa2136|g' |
+'s|[^f]c\([0-9][0-9][0-9]*\)|<ulink url="http://wiki.powerdns.com/projects/trac/changeset/\1">commit \1</ulink>|g' |
 sed \
-'s|c\([0-9][0-9][0-9]*\)|<ulink url="http://wiki.powerdns.com/projects/trac/changeset/\1">commit \1</ulink>|g' |
-sed \
-'s|C\([0-9][0-9][0-9]*\)|<ulink url="http://wiki.powerdns.com/projects/trac/changeset/\1">\1</ulink>|g' |
-sed \
-'s|aaa2136|rfc2136|g' |
+'s|[^F]C\([0-9][0-9][0-9]*\)|<ulink url="http://wiki.powerdns.com/projects/trac/changeset/\1">\1</ulink>|g' |
 sed \
 's|\sT\([0-9][0-9]*\)| <ulink url="http://wiki.powerdns.com/projects/trac/ticket/\1">\1</ulink>|g' |
 sed \
