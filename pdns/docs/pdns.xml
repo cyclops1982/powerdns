@@ -11684,12 +11684,35 @@ sql> insert into domainmetadata (domain_id, kind, content) values (7,'ALLOW-AXFR
 	    Allow these named TSIG keys to AXFR this zone (see <xref linkend="tsig-outbound-axfr" />).
 	  </para>
 	</listitem>
-      </varlistentry>
-      
+       </varlistentry>
+        <varlistentry>
+          <term>ALLOW-2136-FROM</term>
+          <listitem>
+            <para>
+              See <xref linkend="rfc-2136-domainmetadata" />
+            </para>
+          </listitem>
+        </varlistentry>
+        <varlistentry>
+          <term>TSIG-ALLOW-2136</term>
+          <listitem>
+            <para>
+              See <xref linkend="rfc-2136-domainmetadata" />
+            </para>
+          </listitem>
+        </varlistentry>
+        <varlistentry>
+          <term>SOA-EDIT-2136</term>
+          <listitem>
+            <para>
+              See <xref linkend="rfc-2136-domainmetadata" />
+            </para>
+          </listitem>
+        </varlistentry>
     </variablelist>
   </para>
   </chapter>
-  <chapter id="rfc-2136"><title>RFC 2136 Support (Dynamic DNS Update)</title>
+  <chapter id="rfc-2136"><title>RFC2136 Support (Dynamic DNS Update)</title>
     <para>Starting with the PowerDNS Authoritative Server 3.2, RFC 2136 support is available. There are a number of items not supported:
       <itemizedlist>
         <listitem><para>When an update for a zone we are slave for comes in, we do not forward it to the master (Chapter 6 of RFC 2136);</para></listitem>
@@ -11832,7 +11855,44 @@ send
       </variablelist>
     </sect1>
     <sect1 id="rfc-2136-how-it-works"><title>How it works</title>
-      <para>TODO</para>
+      <para>This is a short description of how RFC2136 (update) messages are processed by PowerDNS.</para>
+      <para>
+        <orderedlist>
+          <listitem><para>
+          	The RFC2136 message is received, if it is TSIG signed, the TSIG is validated against the tsigkeys table. If it is not valid, Refused is returned to the requestor.
+          </para></listitem>
+          <listitem><para>A check is performed on the domain, to see if it is a valid domain. ServFail is returned if it is not valid.</para></listitem>
+          <listitem><para>The <command>disable-rfc2136</command> setting is checked. Refused is returned when the setting is 'yes'.</para></listitem>
+          <listitem><para>
+          	If the <command>ALLOW-2136-FROM</command> has a value (from both domainmetadata and the configuration file), a check on the value is performed.
+            If the requestor (sender of the update message) does not match the values in <command>ALLOW-2136-FROM</command>, Refused is returned.
+          </para></listitem>
+          <listitem><para>
+          	If the message is TSIG signed, the TSIG keyname is compared with the TSIG keyname in domainmetadata. If they do not match, a Refused is send. 
+          	The TSIG-ALLOW-2136 domainmetadata setting is used to find which key belongs to the domain.
+          </para></listitem>
+          <listitem><para>The backends are queried to find the backend for the given domain.</para></listitem>
+          <listitem><para>If the powerdns instance is a slave for the given domain, NotImp is returned.</para></listitem>
+          <listitem><para>A check is performed to make sure all updates/prerequisites are for the given zone. NotZone is returned if this is not the case.</para></listitem>
+          <listitem><para>The transaction with the backend is started.</para></listitem>
+          <listitem><para>
+          	The prerequisite checks are performed (section 3.2 of RFC2136).
+          	If a check fails, the corresponding RCode is returned. No further processing will happen.
+          </para></listitem>
+          <listitem><para>
+          	Per record in the update message, a the prescan checks are performed. If the prescan fails, the corresponding RCode is returned.
+          	If the prescan for the record is correct, the actual update/delete/modify of the record is performed. If the update fails (for whatever reason), ServFail is returned.
+          	After changes to the records have been applied, the ordername and auth flag are set to make sure DNSSEC remains working.
+          	The cache for that record is purged.
+          </para></listitem>
+          <listitem><para>
+          	If there are records updated and the SOA record was not modified, the SOA serial is updated. See <xref linkend="rfc-2136-soa-edit"/>.
+            The cache for this record is purged.
+          </para></listitem>
+          <listitem><para>The transaction with the backend is commited. If this fails, ServFail is returned.</para></listitem>
+          <listitem><para>NoError is returned.</para></listitem>
+        </orderedlist>
+      </para>
     </sect1>
   </chapter>
   <chapter id="recursion"><title>Recursion</title>
