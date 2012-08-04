@@ -1,6 +1,30 @@
 #!/bin/sh
+
+# check if add-delete.test.dyndns exists. It should not.
 cleandig add-delete.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
-$testname/addrecord.pl $nameserver $port
+
+# add a record
+nsupdate <<!
+server $nameserver $port
+zone test.dyndns
+prereq nxrrset add-delete.test.dyndns A
+update add add-delete.test.dyndns. 3600 A 127.0.0.108
+send
+answer
+!
+
+# query if the record now exists
 cleandig add-delete.test.dyndns ANY
-$testname/deleterecord.pl $nameserver $port
+
+# delete the just added record
+nsupdate <<!
+server $nameserver $port
+zone test.dyndns
+prereq yxrrset add-delete.test.dyndns A
+update delete add-delete.test.dyndns.
+send
+answer
+!
+
+# check if the record was deleted.
 cleandig add-delete.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'

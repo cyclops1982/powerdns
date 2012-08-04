@@ -1,11 +1,21 @@
 1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012060701 28800 7200 604800 86400
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='add-delete.test.dyndns.', qtype=ANY
-RCODE: NOERROR
+Answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id:  48681
+;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;test.dyndns.			IN	SOA
+
 0	add-delete.test.dyndns.	IN	A	3600	127.0.0.108
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='add-delete.test.dyndns.', qtype=ANY
-RCODE: NOERROR
+Answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id:  62722
+;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
+;; QUESTION SECTION:
+;test.dyndns.			IN	SOA
+
 1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012060701 28800 7200 604800 86400
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='add-delete.test.dyndns.', qtype=ANY

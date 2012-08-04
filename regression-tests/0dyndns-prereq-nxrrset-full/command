@@ -1,5 +1,8 @@
 #!/bin/sh
+
+# query to see if the records that we need, are actually there.
 cleandig multi.test.dyndns ANY
+
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
 zone test.dyndns
