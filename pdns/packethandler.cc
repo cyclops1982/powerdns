@@ -1133,6 +1133,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
 
   // Check permissions - TSIG based.
+  //TODO: Improve handling, because we check altough we might not even have a p->d_havetsig.
   vector<string> tsigKeys;
   B.getDomainMetadata(p->qdomain, "TSIG-ALLOW-2136", tsigKeys);
   if (tsigKeys.size() > 0) {
