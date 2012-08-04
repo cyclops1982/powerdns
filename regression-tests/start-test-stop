@@ -319,5 +319,5 @@ kill $(cat pdns.pid)
 
 for zone in $(grep zone named.conf  | cut -f2 -d\")
 do
-	cp $zone.backup $zone
+	mv $zone.backup $zone
 done
