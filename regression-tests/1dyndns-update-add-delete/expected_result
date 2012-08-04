@@ -2,7 +2,7 @@
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='add-delete.test.dyndns.', qtype=ANY
 Answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id:  48681
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
 ;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
 ;; QUESTION SECTION:
 ;test.dyndns.			IN	SOA
@@ -11,7 +11,7 @@ Answer:
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='add-delete.test.dyndns.', qtype=ANY
 Answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id:  62722
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
 ;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
 ;; QUESTION SECTION:
 ;test.dyndns.			IN	SOA

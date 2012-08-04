@@ -4,7 +4,7 @@
 cleandig add-delete.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 
 # add a record
-nsupdate <<!
+nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
 zone test.dyndns
 prereq nxrrset add-delete.test.dyndns A
@@ -17,7 +17,7 @@ answer
 cleandig add-delete.test.dyndns ANY
 
 # delete the just added record
-nsupdate <<!
+nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
 zone test.dyndns
 prereq yxrrset add-delete.test.dyndns A
