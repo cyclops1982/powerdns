@@ -1,3 +1,4 @@
+- fix expected_result.nsec3 files, all nsec3 test now break.
 - Change all test to use nsupdate
 
 - testing:
