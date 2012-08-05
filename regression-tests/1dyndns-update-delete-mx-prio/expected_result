@@ -5,9 +5,9 @@
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='test.dyndns.', qtype=MX
 Answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
-;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-;; QUESTION SECTION:
+;; ->>HEADER<<- opcode: UPDATE, status: NOERROR ID_REPLACED
+;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
+;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
 0	test.dyndns.	IN	MX	3600	10 host-1.test.dyndns.
@@ -18,9 +18,9 @@ Answer:
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='test.dyndns.', qtype=MX
 Answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
-;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-;; QUESTION SECTION:
+;; ->>HEADER<<- opcode: UPDATE, status: NOERROR ID_REPLACED
+;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
+;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
 0	test.dyndns.	IN	MX	3600	10 host-1.test.dyndns.
@@ -31,9 +31,9 @@ Answer:
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='test.dyndns.', qtype=MX
 Answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
-;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-;; QUESTION SECTION:
+;; ->>HEADER<<- opcode: UPDATE, status: NOERROR ID_REPLACED
+;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
+;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
 0	test.dyndns.	IN	MX	3600	10 host-1.test.dyndns.
