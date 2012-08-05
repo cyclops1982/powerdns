@@ -1,5 +1,4 @@
 - Change all test to use nsupdate
-- Check if allow-2136-from works with IPv6 and how it handles ipv6 with 0.0.0.0/0
 
 - testing:
 	- WKS record is not supported (for replace)
