@@ -982,64 +982,6 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
     }
   } // rr->d_class == QClass::IN
 
-
-    /*
-    if (rr->d_type == QType::SOA) {
-      di->backend->lookup(QType(QType::ANY), rLabel);
-      while (di->backend->get(rec)) {
-        if (rec.qtype.getCode() == QType::SOA) {
-          DNSResourceRecord newRec = rec;
-          newRec.setContent(rr->d_content->getZoneRepresentation());
-          newRec.ttl = rr->d_ttl;
-          SOAData sdOld, sdUpdate;
-          fillSOAData(rec.content, sdOld);
-          fillSOAData(newRec.content, sdUpdate);
-          if (rfc1982LessThan(sdOld.serial, sdUpdate.serial)) 
-            recordsToUpdate.push_back(make_pair(rec, newRec));
-          else
-            L<<Logger::Notice<<"Serial is older ("<<sdUpdate.serial<<") than the current serial("<<sdOld.serial<<"), ignoring SOA update."<<endl;
-        }
-      }
-    } else if (rr->d_type == QType::CNAME) {
-      di->backend->lookup(QType(QType::ANY), rLabel);
-      while (di->backend->get(rec)) {
-        if (rec.qtype.getCode() == QType::CNAME) {
-          DNSResourceRecord newRec = rec;
-          newRec.ttl = rr->d_ttl;
-          newRec.setContent(rr->d_content->getZoneRepresentation());
-          recordsToUpdate.push_back(make_pair(rec, newRec));
-        }
-      }
-    } else {
-      bool recordFound=false;
-      di->backend->lookup(QType(QType::ANY), rLabel);
-      while (di->backend->get(rec)) {
-        string content = rr->d_content->getZoneRepresentation();
-        if (rec.qtype == rr->d_type && rec.getZoneRepresentation() == content) {
-          DNSResourceRecord newRec = rec;
-          newRec.ttl = rr->d_ttl;
-          newRec.setContent(content);
-          recordsToUpdate.push_back(make_pair(rec, newRec));
-          recordFound=true;
-        }
-      }  
-
-
-      if (!recordFound) {
-        DNSResourceRecord newRec(*rr);
-        newRec.domain_id = di->id;
-
-        di->backend->feedRecord(newRec);
-      }
-    }
-
-    // Perform updates on the backend
-    for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
-      di->backend->updateRecord(i->first, i->second);
-    } 
-  }*/ 
-
-
   vector<DNSResourceRecord> recordsToDelete;
   //Section 3.4.2.3: Delete RRs based on name and (if provided) type, but never delete NS or SOA of the zone.
   if (rr->d_class == QClass::ANY) { 
@@ -1133,7 +1075,6 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
 
   // Check permissions - TSIG based.
-  //TODO: Improve handling, because we check altough we might not even have a p->d_havetsig.
   vector<string> tsigKeys;
   B.getDomainMetadata(p->qdomain, "TSIG-ALLOW-2136", tsigKeys);
   if (tsigKeys.size() > 0) {
