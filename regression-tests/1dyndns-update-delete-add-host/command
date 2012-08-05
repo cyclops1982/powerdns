@@ -7,8 +7,7 @@ cleandig delete-add.test.dyndns ANY
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
 zone test.dyndns
-prereq yxdomain delete-add.test.dyndns A
-update delete delete-add.test.dyndns. 3600 A 127.0.0.109
+update delete delete-add.test.dyndns. 3600 A 127.0.0.108
 send
 answer
 !
@@ -20,8 +19,7 @@ cleandig delete-add.test.dyndns ANY
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
 zone test.dyndns
-prereq nxdomain delete-add.test.dyndns A
-update add delete-add.test.dyndns. 3600 A 127.0.0.109
+update add delete-add.test.dyndns. 3600 A 127.0.0.108
 send
 answer
 !
