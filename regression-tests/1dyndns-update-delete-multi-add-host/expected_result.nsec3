@@ -1,19 +1,25 @@
-0	8pqjv4b3m0lcfmvae0hp394lc154l1i7.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd FQU365VN7BR5CSV8CG6NE9V8HA6D008P CNAME RRSIG
 0	delete-add.test.dyndns.	IN	A	3600	127.0.0.108
 0	delete-add.test.dyndns.	IN	TXT	3600	"Should be gone after a while"
 0	slsck1enia56lrkr5gep7clu9j1o5ifn.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd TDHV9CBK13JG8DRIVLDHSL3MJI8QQQE2 A TXT RRSIG
-0	u36f0tjooqv1kspatto6qns0vap731v2.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd 2GP5RDNJOQ5OOSPC5O1IH9LALI101DI8 NS SOA MX RRSIG DNSKEY NSEC3PARAM
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='delete-add.test.dyndns.', qtype=ANY
-RCODE: NOERROR
+Answer:
+;; ->>HEADER<<- opcode: UPDATE, status: NOERROR ID_REPLACED
+;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
+;; ZONE SECTION:
+;test.dyndns.			IN	SOA
+
 1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012060701 28800 7200 604800 86400
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='delete-add.test.dyndns.', qtype=ANY
-RCODE: NOERROR
-0	8pqjv4b3m0lcfmvae0hp394lc154l1i7.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd FQU365VN7BR5CSV8CG6NE9V8HA6D008P CNAME RRSIG
+Answer:
+;; ->>HEADER<<- opcode: UPDATE, status: NOERROR ID_REPLACED
+;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
+;; ZONE SECTION:
+;test.dyndns.			IN	SOA
+
 0	delete-add.test.dyndns.	IN	A	3600	127.0.0.108
 0	delete-add.test.dyndns.	IN	TXT	3600	"Should be gone after a while"
 0	slsck1enia56lrkr5gep7clu9j1o5ifn.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd TDHV9CBK13JG8DRIVLDHSL3MJI8QQQE2 A TXT RRSIG
-0	u36f0tjooqv1kspatto6qns0vap731v2.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd 2GP5RDNJOQ5OOSPC5O1IH9LALI101DI8 NS SOA MX RRSIG DNSKEY NSEC3PARAM
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='delete-add.test.dyndns.', qtype=ANY

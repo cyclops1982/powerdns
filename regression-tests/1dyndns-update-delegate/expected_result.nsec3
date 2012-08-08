@@ -2,9 +2,9 @@
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='delegate1.test.dyndns.', qtype=ANY
 Answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
-;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-;; QUESTION SECTION:
+;; ->>HEADER<<- opcode: UPDATE, status: NOERROR ID_REPLACED
+;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
+;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
 1	delegate1.test.dyndns.	IN	NS	3600	ns1.delegate1.test.dyndns.
@@ -14,9 +14,9 @@ Answer:
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 0, opcode: 0
 Reply to question for qname='delegate1.test.dyndns.', qtype=ANY
 Answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
-;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-;; QUESTION SECTION:
+;; ->>HEADER<<- opcode: UPDATE, status: NOERROR ID_REPLACED
+;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
+;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
 1	delegate2.test.dyndns.	IN	NS	3600	ns1.delegate2.test.dyndns.
@@ -26,9 +26,9 @@ Answer:
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 0, opcode: 0
 Reply to question for qname='delegate2.test.dyndns.', qtype=ANY
 Answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
-;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-;; QUESTION SECTION:
+;; ->>HEADER<<- opcode: UPDATE, status: NOERROR ID_REPLACED
+;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
+;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
 1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012060701 28800 7200 604800 86400
@@ -37,33 +37,26 @@ Reply to question for qname='delegate2.test.dyndns.', qtype=ANY
 1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012060701 28800 7200 604800 86400
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='delegate1.test.dyndns.', qtype=ANY
-0	asm440u7p2im2slo6iqo92vfp6jtopa0.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd FQU365VN7BR5CSV8CG6NE9V8HA6D008P A RRSIG
 0	ns1.delegate1.test.dyndns.	IN	A	3600	127.0.0.1
 0	rcogol03mg1pg3u4338eo0nvvh6bs567.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd S30OPRHQREKH5SUH6L530KD668ELK9OS A RRSIG
-0	u36f0tjooqv1kspatto6qns0vap731v2.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd 2GP5RDNJOQ5OOSPC5O1IH9LALI101DI8 NS SOA MX RRSIG DNSKEY NSEC3PARAM
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='ns1.delegate1.test.dyndns.', qtype=ANY
-0	asm440u7p2im2slo6iqo92vfp6jtopa0.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd FQU365VN7BR5CSV8CG6NE9V8HA6D008P A RRSIG
 0	ns2.delegate1.test.dyndns.	IN	A	3600	127.0.0.2
 0	oshpf39sqa4j1ciudbbvtb5dkrijnpss.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd Q75PNOE7PB74PND6OGN44T5BTUURBHRF A RRSIG
-0	u36f0tjooqv1kspatto6qns0vap731v2.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd 2GP5RDNJOQ5OOSPC5O1IH9LALI101DI8 NS SOA MX RRSIG DNSKEY NSEC3PARAM
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='ns2.delegate1.test.dyndns.', qtype=ANY
 0	asm440u7p2im2slo6iqo92vfp6jtopa0.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd FQU365VN7BR5CSV8CG6NE9V8HA6D008P A RRSIG
 0	ns1.delegate2.test.dyndns.	IN	A	3600	127.0.0.1
-0	u36f0tjooqv1kspatto6qns0vap731v2.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd 2GP5RDNJOQ5OOSPC5O1IH9LALI101DI8 NS SOA MX RRSIG DNSKEY NSEC3PARAM
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='ns1.delegate2.test.dyndns.', qtype=ANY
-0	asm440u7p2im2slo6iqo92vfp6jtopa0.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd FQU365VN7BR5CSV8CG6NE9V8HA6D008P A RRSIG
 0	ns2.delegate2.test.dyndns.	IN	A	3600	127.0.0.1
 0	rcd0fo052s6a41ao8ue0b43e1mhv50ds.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd RCOGOL03MG1PG3U4338EO0NVVH6BS567 A RRSIG
-0	u36f0tjooqv1kspatto6qns0vap731v2.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd 2GP5RDNJOQ5OOSPC5O1IH9LALI101DI8 NS SOA MX RRSIG DNSKEY NSEC3PARAM
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='ns2.delegate2.test.dyndns.', qtype=ANY
 Answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
-;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-;; QUESTION SECTION:
+;; ->>HEADER<<- opcode: UPDATE, status: NOERROR ID_REPLACED
+;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
+;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
 1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012060701 28800 7200 604800 86400
