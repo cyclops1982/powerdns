@@ -1,26 +1,24 @@
-0	8pqjv4b3m0lcfmvae0hp394lc154l1i7.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd FQU365VN7BR5CSV8CG6NE9V8HA6D008P CNAME RRSIG
 0	multi.test.dyndns.	IN	A	3600	127.0.0.1
 0	multi.test.dyndns.	IN	A	3600	127.0.0.2
 0	multi.test.dyndns.	IN	A	3600	127.0.0.3
 0	tntcbdfsihhd24nt96bq9973vd019u43.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd U36F0TJOOQV1KSPATTO6QNS0VAP731V2 A RRSIG
-0	u36f0tjooqv1kspatto6qns0vap731v2.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd 2GP5RDNJOQ5OOSPC5O1IH9LALI101DI8 NS SOA MX RRSIG DNSKEY NSEC3PARAM
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='multi.test.dyndns.', qtype=ANY
 Answer:
-;; ->>HEADER<<- opcode: QUERY, status: NXRRSET ID_REPLACED
-;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-;; QUESTION SECTION:
+;; ->>HEADER<<- opcode: UPDATE, status: NXRRSET ID_REPLACED
+;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
+;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
 Answer:
-;; ->>HEADER<<- opcode: QUERY, status: NOERROR ID_REPLACED
-;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-;; QUESTION SECTION:
+;; ->>HEADER<<- opcode: UPDATE, status: NOERROR ID_REPLACED
+;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
+;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
 Answer:
-;; ->>HEADER<<- opcode: QUERY, status: NXRRSET ID_REPLACED
-;; flags: qr aa; QUESTION: 1, ANSWER: 0, AUTHORITY: 0, ADDITIONAL: 0
-;; QUESTION SECTION:
+;; ->>HEADER<<- opcode: UPDATE, status: NXRRSET ID_REPLACED
+;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
+;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
