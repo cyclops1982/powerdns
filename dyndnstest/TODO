@@ -1,5 +1,5 @@
-- fix expected_result.nsec3 files, all nsec3 test now break.
 - Change all test to use nsupdate
+- Add test for wildcard record and non-empty terminal (to see if rectify-zone is done correctly)
 
 - testing:
 	- WKS record is not supported (for replace)
@@ -13,4 +13,4 @@ Cleanup:
 	- Add howto section?
 
 "Out of scope"
-- Forward update packet?
+- Forward update packet - move to nproxy?
