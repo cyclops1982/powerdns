@@ -2,12 +2,22 @@
 0	ttl.test.dyndns.	IN	A	3600	127.0.0.1
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='ttl.test.dyndns.', qtype=ANY
-RCODE: NOERROR
+Answer:
+;; ->>HEADER<<- opcode: UPDATE, status: NOERROR ID_REPLACED
+;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
+;; ZONE SECTION:
+;test.dyndns.			IN	SOA
+
 0	q75pnoe7pb74pnd6ogn44t5btuurbhrf.test.dyndns.	IN	NSEC3	31337	1 1 1 abcd S30OPRHQREKH5SUH6L530KD668ELK9OS A RRSIG
 0	ttl.test.dyndns.	IN	A	31337	127.0.0.1
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='ttl.test.dyndns.', qtype=ANY
-RCODE: NOERROR
+Answer:
+;; ->>HEADER<<- opcode: UPDATE, status: NOERROR ID_REPLACED
+;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
+;; ZONE SECTION:
+;test.dyndns.			IN	SOA
+
 0	q75pnoe7pb74pnd6ogn44t5btuurbhrf.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd S30OPRHQREKH5SUH6L530KD668ELK9OS A RRSIG
 0	ttl.test.dyndns.	IN	A	3600	127.0.0.1
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
