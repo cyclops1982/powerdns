@@ -1,5 +1,4 @@
 - Change all test to use nsupdate
-- Add test for wildcard record and non-empty terminal (to see if rectify-zone is done correctly)
 
 - testing:
 	- WKS record is not supported (for replace)
