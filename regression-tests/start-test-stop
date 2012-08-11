@@ -12,13 +12,14 @@ port=$1
 context=$2
 [ -z "$context" ] && context=bind-dnssec
 wait=$3
+spectest=$4
 
 if [ "$port" = help ] || [ "$context" = help ]
 then
 	set +x
 	cat << '__EOF__'
 
-Usage: ./start-test-stop <port> [<context>] [wait]
+Usage: ./start-test-stop <port> [<context>] [wait] [specifictest]
 
 context is one of:
 bind bind-dnssec bind-dnssec-nsec3
@@ -28,8 +29,10 @@ gsqlite3-nodnssec gsqlite3 gsqlite3-nsec3
 opendbx-sqlite3
 tinydns
 
-add 'wait' (literally) after the context to not kill 
-pdns_server immediately after testing
+Add 'wait' (literally) after the context to not kill
+pdns_server immediately after testing. 'nowait' will kill it.
+
+Add a specific test name after [wait|nowait] and it will only run that test.
 __EOF__
 	exit 1
 fi
@@ -321,7 +324,7 @@ export skipreasons
 
 ## TODO: give pdns a few seconds to startup or fail, then check if it did not fail
 ## TODO: give sdig a timeout
-nameserver=127.0.0.1 ./runtests
+nameserver=127.0.0.1 ./runtests $spectest
 ./toxml
 ./totar
 if [ "$wait" = "wait" ]

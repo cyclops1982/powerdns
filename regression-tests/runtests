@@ -1,6 +1,9 @@
 #!/bin/bash
 PATH=.:$PATH
 
+spectest=$1
+[ -z $spectest ] && spectest=""
+
 make -C ../pdns sdig nsec3dig || exit 1
 
 rm -f test-results failed_tests passed_tests skipped_tests */real_result */diff */*.out
@@ -42,6 +45,12 @@ do
 		done
 	fi
 				
+	if [ $spectest != "" ] && [ $spectest != $a ]
+	then
+		SKIPIT=1
+		result="	Skipped test $a because it's not the specified single test"
+	fi
+
 	if [ $SKIPIT = 1 ]
 	then
 		echo $a >> skipped_tests
