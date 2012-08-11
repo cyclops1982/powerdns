@@ -1,5 +1,3 @@
-- Change all test to use nsupdate
-
 - testing:
 	- WKS record is not supported (for replace)
 
