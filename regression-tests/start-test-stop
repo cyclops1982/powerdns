@@ -12,14 +12,17 @@ port=$1
 context=$2
 [ -z "$context" ] && context=bind-dnssec
 wait=$3
-spectest=$4
+[ -z "$wait" ] && wait=nowait
+cachettl=$4
+[ -z "$cachettl" ] && cachettl=0
+spectest=$5
 
 if [ "$port" = help ] || [ "$context" = help ]
 then
 	set +x
 	cat << '__EOF__'
 
-Usage: ./start-test-stop <port> [<context>] [wait] [specifictest]
+Usage: ./start-test-stop <port> [<context>] [wait|nowait] [<cachettl>] [<specifictest>]
 
 context is one of:
 bind bind-dnssec bind-dnssec-nsec3
@@ -32,7 +35,10 @@ tinydns
 Add 'wait' (literally) after the context to not kill
 pdns_server immediately after testing. 'nowait' will kill it.
 
-Add a specific test name after [wait|nowait] and it will only run that test.
+A cachettl can be supplied if you want to run tests with a ttl setting set.
+The default cachettl is 0.
+
+Specifictest can be used to run only one single test.
 __EOF__
 	exit 1
 fi
@@ -49,7 +55,7 @@ case $context in
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=bind --bind-config=./named.conf                \
 				--fancy-records --query-logging --send-root-referral --loglevel=9    \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no &
 			skipreasons="nodnssec"
 			;;
@@ -69,7 +75,7 @@ case $context in
 				--no-shuffle --launch=bind --bind-config=./named.conf       \
 				--bind-dnssec-db=./dnssec.sqlite3 \
 				--query-logging --send-root-referral --loglevel=9    \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no &
 			skipreasons=
 			;;
@@ -91,7 +97,7 @@ case $context in
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gmysql \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gmysql-dbname="$GMYSQLDB" \
 				--gmysql-user="$GMYSQLUSER" \
@@ -144,7 +150,7 @@ __EOF__
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gmysql --gmysql-dnssec \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gmysql-dbname="$GMYSQLDB" \
 				--gmysql-user="$GMYSQLUSER" \
@@ -193,7 +199,7 @@ __EOF__
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gpgsql --gpgsql-dnssec \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config  \
+				--cache-ttl=$cachettl --no-config  \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gpgsql-dbname="$GPGSQLDB" \
 				--gpgsql-user="$GPGSQLUSER" &
@@ -226,7 +232,7 @@ __EOF__
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gpgsql \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gpgsql-dbname="$GPGSQLDB" \
 				--gpgsql-user="$GPGSQLUSER" &
@@ -243,7 +249,7 @@ __EOF__
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gsqlite3 \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gsqlite3-database=pdns.sqlite3 &
 			skipreasons=nodnssec
@@ -260,7 +266,7 @@ __EOF__
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=opendbx \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=$cachettl --no-config \
 				--opendbx-backend=sqlite3 --opendbx-host-read=./ --opendbx-host-write=./ \
 				--opendbx-database=pdns-opendbx.sqlite3 &
 			skipreasons="nodnssec nodyndns"
@@ -291,7 +297,7 @@ __EOF__
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gsqlite3 --gsqlite3-dnssec \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gsqlite3-database=pdns.sqlite3 &
 			if [ $context = gsqlite3-nsec3 ]
@@ -304,7 +310,7 @@ __EOF__
 		tinydns)
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./ \
 				--no-shuffle --launch=tinydns \
-				--query-logging --loglevel=9 --cache-ttl=0 --no-config \
+				--query-logging --loglevel=9 --cache-ttl=$cachettl --no-config \
 				--send-root-referral \
 				--tinydns-dbfile=../modules/tinydnsbackend/data.cdb & 
 			skipreasons="nodnssec nodyndns"
