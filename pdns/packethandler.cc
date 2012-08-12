@@ -1036,7 +1036,11 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
     }
   }
 
-  // Finally, we clean the cache for this RR
+  // Clear cache section
+  if (rLabel[0] == 0x2a) {// PC doesn't handle wildcards, so we remove via suffic matching.
+    rLabel.erase(0, 2);
+    rLabel.append("$");
+  }
   PC.purge(rLabel);
 
   if (updatedRecords > 0 && updatedSerial) // Change the SOA serial, unless we did that ourselfs.
