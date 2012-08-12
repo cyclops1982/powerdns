@@ -786,7 +786,6 @@ bool GSQLBackend::listSubZone(const string &zone, int domain_id) {
   string wildzone = "%." + zone;
   string output = (boost::format(d_listSubZone) % sqlEscape(zone) % sqlEscape(wildzone) % domain_id).str();
   try {
-    cerr<<"QUERY"<<output.c_str()<<endl;
     d_db->doQuery(output.c_str());
   }
   catch(SSqlException &e) {
@@ -800,8 +799,6 @@ bool GSQLBackend::listSubZone(const string &zone, int domain_id) {
 
 
 bool GSQLBackend::removeRecord(const DNSResourceRecord &r) {
-  cerr<<"DO:"<<d_DeleteRecordQuery<<endl;
-  cerr<<"PRIO:"<<r.priority<<endl;
   string output = (boost::format(d_DeleteRecordQuery) % r.domain_id % sqlEscape(r.qname) % sqlEscape(r.qtype.getName()) % sqlEscape(r.content) % r.priority ).str();
 
   try {

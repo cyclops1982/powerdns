@@ -1039,7 +1039,6 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
   // Finally, we clean the cache for this RR
   PC.purge(rLabel);
 
-  return updatedRecords;
   if (updatedRecords > 0 && updatedSerial) // Change the SOA serial, unless we did that ourselfs.
     return updatedRecords;
 
