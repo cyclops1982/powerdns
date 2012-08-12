@@ -18582,7 +18582,17 @@ static RandomLoader randomloader;
     </sect1>
 
     <sect1 id="rfc-2136-backend"><title>RFC 2136 capable backend</title>
-    <para>TODO</para>
+    <para>
+    	To make your backend RFC2136 compliant, it needs to implement an extra set of functions. The functions are quite generic and might be used 
+    	for other update/remove functionality at a later stage.
+    	Appart from the  functions described below, your backend must already be a slave-backend as the <function>startTransaction()</function>, 
+    	<function>stopTransaction()</function>, <function>abortTransaction</function> and <function>feedRecord</function> are used for RFC2136 
+    	operation as well.
+    	Please note that the <function>bool startTransaction(const string &amp;qname, int id);</function> now receives a '-1' id, which indicates that 
+    	the current zone data should NOT be deleted.
+
+    	TODO
+    </para>
     </sect1>
 
   </appendix>
