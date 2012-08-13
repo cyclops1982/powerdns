@@ -1,5 +1,6 @@
 #!/bin/sh
 cleandig ttl.test.dyndns ANY
+cleandig nsec.ttl.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
 
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
@@ -10,6 +11,7 @@ answer
 !
 
 cleandig ttl.test.dyndns ANY
+cleandig nsec.ttl.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
 
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
@@ -20,3 +22,4 @@ answer
 !
 
 cleandig ttl.test.dyndns ANY
+cleandig nsec.ttl.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'

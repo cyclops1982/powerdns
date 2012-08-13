@@ -1,6 +1,8 @@
 0	ttl.test.dyndns.	IN	A	3600	127.0.0.1
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='ttl.test.dyndns.', qtype=ANY
+1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
+1	ttl.test.dyndns.	IN	NSEC	3600	txt.test.dyndns. A RRSIG NSEC
 Answer:
 ;; ->>HEADER<<- opcode: UPDATE, status: NOERROR ID_REPLACED
 ;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
@@ -10,6 +12,8 @@ Answer:
 0	ttl.test.dyndns.	IN	A	31337	127.0.0.1
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='ttl.test.dyndns.', qtype=ANY
+1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
+1	ttl.test.dyndns.	IN	NSEC	31337	txt.test.dyndns. A RRSIG NSEC
 Answer:
 ;; ->>HEADER<<- opcode: UPDATE, status: NOERROR ID_REPLACED
 ;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
@@ -19,3 +23,5 @@ Answer:
 0	ttl.test.dyndns.	IN	A	3600	127.0.0.1
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='ttl.test.dyndns.', qtype=ANY
+1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
+1	ttl.test.dyndns.	IN	NSEC	3600	txt.test.dyndns. A RRSIG NSEC

@@ -1,4 +1,5 @@
 - testing:
+	- NSEC3 in the querycache 
 	- WKS record is not supported (for replace)
 
 Cleanup:
