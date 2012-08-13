@@ -45,7 +45,7 @@ do
 		done
 	fi
 				
-	if [ $spectest != "" ] && [ $spectest != $a ]
+	if [ "$spectest" != "" ] && [ "$spectest" != "$a" ]
 	then
 		SKIPIT=1
 		result="	Skipped test $a because it's not the specified single test"
