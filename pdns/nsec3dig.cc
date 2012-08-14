@@ -17,7 +17,7 @@ string nsec3Hash(const string &qname, const string &salt, unsigned int iters)
   return toLower(toBase32Hex(hashQNameWithSalt(iters, salt, qname)));
 }
 
-void proveOrDeny(const nsec3set &nsec3s, const string &qname, const string &salt, unsigned int iters, set<string> &proven, set<string> &denied)
+string proveOrDeny(const nsec3set &nsec3s, const string &qname, const string &salt, unsigned int iters, set<string> &proven, set<string> &denied)
 {
   string hashed = nsec3Hash(qname, salt, iters);
 
@@ -29,20 +29,21 @@ void proveOrDeny(const nsec3set &nsec3s, const string &qname, const string &salt
     if(hashed == base)
     {
       proven.insert(qname);
-      cout<<qname<<" ("<<hashed<<") proven by base of "<<base<<".."<<next<<endl;
+      return qname+" ("+hashed+") proven by base of "+base+".."+next;
     }
     if(hashed == next)
     {
       proven.insert(qname);
-      cout<<qname<<" ("<<hashed<<") proven by next of "<<base<<".."<<next<<endl;
+      return qname+" ("+hashed+") proven by next of "+base+".."+next;
     }
     if((hashed > base && hashed < next) ||
        (next < base && (hashed < next || hashed > base)))
     {
       denied.insert(qname);
-      cout<<qname<<" ("<<hashed<<") denied by "<<base<<".."<<next<<endl;
+      return qname+" ("+hashed+") denied by "+base+".."+next;
     }
   }
+  return "";
 }
 
 int main(int argc, char** argv)
@@ -128,18 +129,22 @@ try
   cout<<"== nsec3 prove/deny report follows =="<<endl;
   set<string> proven;
   set<string> denied;
+  string r=proveOrDeny(nsec3s, qname, nsec3salt, nsec3iters, proven, denied);
   string shorter(qname);
   do {
-    proveOrDeny(nsec3s, shorter, nsec3salt, nsec3iters, proven, denied);
-    proveOrDeny(nsec3s, "*."+shorter, nsec3salt, nsec3iters, proven, denied);
+    string r;
+    r=proveOrDeny(nsec3s, shorter, nsec3salt, nsec3iters, proven, denied);
+    if(r.size()) cout<<r<<endl;
+    r=proveOrDeny(nsec3s, "*."+shorter, nsec3salt, nsec3iters, proven, denied);
+    if(r.size()) cout<<r<<endl;
   } while(chopOff(shorter));
 
   if(names.count(qname+"."))
   {
-    cout<<"== qname found in names, investigating NSEC3s in case it's a wildcard"<<endl;
-    // exit(EXIT_SUCCESS);
+    cout<<"== qname found in names, not investigating denial any further"<<endl;
+    exit(EXIT_SUCCESS);
   }
-  // cout<<"== qname not found in names, investigating denial"<<endl;
+  cout<<"== qname not found in names, investigating denial"<<endl;
   if(proven.count(qname))
   {
     cout<<"qname found proven, NODATA response?"<<endl;
@@ -175,13 +180,9 @@ try
     {
       cout<<"wildcard at encloser (*."<<encloser<<") is denied correctly"<<endl;
     }
-    else if(proven.count("*."+encloser))
-    {
-      cout<<"wildcard at encloser (*."<<encloser<<") is proven"<<endl;
-    }
     else
     {
-      cout<<"wildcard at encloser (*."<<encloser<<") is NOT denied or proven"<<endl;
+      cout<<"wildcard at encloser (*."<<encloser<<") is NOT denied"<<endl;
     }
   }
   exit(EXIT_SUCCESS);

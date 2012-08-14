@@ -1,3 +1,0 @@
-#!/bin/sh
-cleandig t.something.wtest.com TXT dnssec | egrep 'IN[[:space:]]+NSEC'
-

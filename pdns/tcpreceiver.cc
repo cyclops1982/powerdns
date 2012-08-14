@@ -490,7 +490,6 @@ int TCPNameserver::doAXFR(const string &target, shared_ptr<DNSPacket> q, int out
   bool NSEC3Zone=false;
   
   DNSSECKeeper dk;
-  dk.clearCaches(target);
   bool securedZone = dk.isSecuredZone(target);
   if(dk.getNSEC3PARAM(target, &ns3pr, &narrow)) {
     NSEC3Zone=true;
