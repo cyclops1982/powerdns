@@ -1,13 +1,7 @@
-- testing:
-	- NSEC3 in the querycache 
-	- WKS record is not supported (for replace)
-
-Cleanup:
-	- Use msgPrefix everywhere.
-	- Make sure backends that do not support dyndns return NotImpl.
-
-- Documentation
-	- Add howto section?
-
-"Out of scope"
-- Forward update packet - move to nproxy?
+TODO (in order of importance):
+- fix NSEC(3) querycache issue
+- Create 'how to' section in docs.
+- Packet forwarding - not sure what to do. If not support, then document.
+- use msgPrefix everywhere.
+- check (and resolve) how we handle backends that do not support dyndns (send notimpl)
+- WKS record is not supported (document this)
