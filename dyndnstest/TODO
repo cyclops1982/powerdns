@@ -7,7 +7,6 @@ Cleanup:
 	- Make sure backends that do not support dyndns return NotImpl.
 
 - Documentation
-	- Backend-writers section/chapter
 	- Add howto section?
 
 "Out of scope"

@@ -18581,20 +18581,98 @@ static RandomLoader randomloader;
       </para>
     </sect1>
 
-    <sect1 id="rfc-2136-backend"><title>RFC 2136 capable backend</title>
-    <para>
-    	To make your backend RFC2136 compliant, it needs to implement an extra set of functions. The functions are quite generic and might be used 
-    	for other update/remove functionality at a later stage.
-    	Appart from the  functions described below, your backend must already be a slave-backend as the <function>startTransaction()</function>, 
-    	<function>stopTransaction()</function>, <function>abortTransaction</function> and <function>feedRecord</function> are used for RFC2136 
-    	operation as well.
-    	Please note that the <function>bool startTransaction(const string &amp;qname, int id);</function> now receives a '-1' id, which indicates that 
-    	the current zone data should NOT be deleted.
-
-    	TODO
-    </para>
+    <sect1 id="rfc-2136-backend"><title>RFC2136 support</title>
+      <para>
+        To make your backend RFC2136 compatible, it needs to implement a number of new functions and functions already used for slave-operation. 
+        The new functions are not RFC2136 specific and might be used for other update/remove functionality at a later stage.
+        <programlisting>
+class DNSBackend {
+public:
+  /* ... */
+  virtual bool startTransaction(const string &amp;qname, int id);
+  virtual bool commitTransaction();
+  virtual bool abortTransaction();
+  virtual bool feedRecord(const DNSResourceRecord &amp;rr);
+  virtual bool removeRecord(const DNSResourceRecord &amp;rr);
+  virtual bool updateRecord(const DNSResourceRecord &amp;oldRR, const DNSResourceRecord &amp;newRR);
+  virtual bool listSubZone(const string &amp;zone, int domain_id);
+  /* ... */
+}
+        </programlisting>
+      </para>
+      <para>
+        
+      </para>
+      <para>
+	<variablelist>
+	  <varlistentry>
+	    <term>virtual bool startTransaction(const string &amp;qname, int id);</term>
+	    <listitem>
+	      <para>
+		See <xref linkend="rw-backends" />. Please note that this function now receives a negative number (-1), which indicates that 
+                the current zone data should NOT be deleted.
+	      </para>
+	    </listitem>
+	  </varlistentry>
+	  <varlistentry>
+	    <term>virtual bool commitTransaction();</term>
+	    <listitem>
+	      <para>See <xref linkend="rw-backends" />.</para>
+	    </listitem>
+	  </varlistentry>
+          <varlistentry>
+	    <term>virtual bool abortTransaction();</term>
+	    <listitem>
+	      <para>See <xref linkend="rw-backends" />. Method is called when an exception is received.</para>
+	    </listitem>
+	  </varlistentry>
+          <varlistentry>
+	    <term>virtual bool feedRecord(const DNSResourceRecord &amp;rr);</term>
+	    <listitem>
+	      <para>See <xref linkend="rw-backends" />. Please keep in mind that the zone is not empty because <function>startTransaction()</function> was called different.</para>
+	    </listitem>
+	  </varlistentry>
+          <varlistentry>
+	    <term>virtual bool removeRecord(const DNSResourceRecord &amp;rr);</term>
+	    <listitem>
+	      <para>
+                Remove the record given. The default SQL query for this is:
+                <programlisting>
+delete from records where domain_id=%d and name='%s' and type='%s' and content='%s' and prio='%d'
+                </programlisting>
+                Note the exact match of name, type, content and prio.
+              </para>
+	    </listitem>
+	  </varlistentry>
+          <varlistentry>
+	    <term>virtual bool updateRecord(const DNSResourceRecord &amp;oldRR, const DNSResourceRecord &amp;newRR);</term>
+	    <listitem>
+	      <para>
+                The method needs to update the oldRR and transform/change it into the newRR. The default SQL query is:
+                <programlisting>
+update records set content='%s', ttl=%d, prio=%d where name='%s' and type='%s' and domain_id=%d and prio=%d
+                </programlisting>
+                RFC2136 only allows updating of RDATA (content+prio) and TTL. Changes of name or type are a delete/add operation.
+              </para>
+	    </listitem>
+	  </varlistentry>
+          <varlistentry>
+	    <term>virtual bool listSubZone(const string &amp;name, int domain_id);</term>
+	    <listitem>
+	      <para>
+                This method is needed for rectification of a zone after fields have been added. For DNSSEC, we need to know which records are below the currently added record.
+                <function>listSubZone()</function> is used like <function>list()</function> which means PowerDNS will call <function>get()</function> after this method.
+                The default SQL query looks something like this:
+                <programlisting>
+// First %s is 'sub.zone.com', second %s is '*.sub.zone.com'
+select content,ttl,prio,type,domain_id,name from records where (name='%s' OR name like '%s') and domain_id=%d
+                </programlisting>
+              </para>
+	    </listitem>
+	  </varlistentry>
+        </variablelist>
+      </para>
     </sect1>
-
   </appendix>
   <appendix id="compiling-powerdns"><title>Compiling PowerDNS</title>
     <sect1 id="on-unix"><title>Compiling PowerDNS on Unix</title>
