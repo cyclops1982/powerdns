@@ -149,7 +149,7 @@ public:
     return false;
   }
   
-  //! starts the transaction for updating domain qname (FIXME: what is id?)
+  //! starts the transaction for updating domain qname 
   virtual bool startTransaction(const string &qname, int id=-1)
   {
     return false;
@@ -180,6 +180,23 @@ public:
   {
     return false; // no problem!
   }
+ 
+  virtual bool removeRecord(const DNSResourceRecord &rr)
+  {
+    return false;
+  }
+  
+  virtual bool updateRecord(const DNSResourceRecord &oldRR, const DNSResourceRecord &newRR)
+  {
+    return false;
+  }
+
+  virtual bool listSubZone(const string &zone, int domain_id)
+  {
+    return false;
+  }
+
+
   //! if this returns true, DomainInfo di contains information about the domain
   virtual bool getDomainInfo(const string &domain, DomainInfo &di)
   {

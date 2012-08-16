@@ -18,6 +18,7 @@
 #include "packetcache.hh"
 #include "utility.hh"
 #include "base32.hh"
+#include "base64.hh"
 #include <string>
 #include <sys/types.h>
 #include <boost/algorithm/string.hpp>
@@ -789,6 +790,540 @@ int PacketHandler::trySuperMasterSynchronous(DNSPacket *p)
   return RCode::NoError;
 }
 
+// Implement section 3.2.1 and 3.2.2 of RFC2136
+int PacketHandler::updatePrerequisitesCheck(const DNSRecord *rr, DomainInfo *di) {
+  if (rr->d_ttl != 0)
+    return RCode::FormErr;
+
+  // 3.2.1 and 3.2.2 check content length.
+  if ( (rr->d_class == QClass::NONE || rr->d_class == QClass::ANY) && rr->d_clen != 0)
+    return RCode::FormErr;
+
+  string rLabel = stripDot(rr->d_label);
+
+  bool foundRecord=false;
+  DNSResourceRecord rec;
+  di->backend->lookup(QType(QType::ANY), rLabel);
+  while(di->backend->get(rec)) {
+    if ((rr->d_type != QType::ANY && rec.qtype == rr->d_type) || rr->d_type == QType::ANY)
+      foundRecord=true;
+  }
+
+  // Section 3.2.1        
+  if (rr->d_class == QClass::ANY && !foundRecord) { 
+    if (rr->d_type == QType::ANY) 
+      return RCode::NXDomain;
+    if (rr->d_type != QType::ANY)
+      return RCode::NXRRSet;
+  } 
+
+  // Section 3.2.2
+  if (rr->d_class == QClass::NONE && foundRecord) {
+    if (rr->d_type == QType::ANY)
+      return RCode::YXDomain;
+    if (rr->d_type != QType::ANY)
+      return RCode::YXRRSet;
+  }
+
+  return RCode::NoError;
+}
+
+
+// Method implements section 3.4.1 of RFC2136
+int PacketHandler::updatePrescanCheck(const DNSRecord *rr) {
+  // The RFC stats that d_class != ZCLASS, but we only support the IN class.
+  if (rr->d_class != QClass::IN && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) 
+    return RCode::FormErr;
+
+  QType qtype = QType(rr->d_type);
+
+  if (! qtype.isSupportedType())
+    return RCode::FormErr;
+
+  if ((rr->d_class == QClass::NONE || rr->d_class == QClass::ANY) && rr->d_ttl != 0)
+    return RCode::FormErr;
+
+  if (rr->d_class == QClass::ANY && rr->d_clen != 0)
+    return RCode::FormErr;
+  
+  if (qtype.isMetadataType())
+      return RCode::FormErr;
+
+  if (rr->d_class != QClass::ANY && qtype.getCode() == QType::ANY)
+    return RCode::FormErr;
+
+  return RCode::NoError;
+}
+
+// Implements section 3.4.2 of RFC2136
+uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narrow, bool haveNSEC3, const NSEC3PARAMRecordContent *ns3pr, bool *updatedSerial) {
+  //TODO: Add DLOG/verbose logging to this, so we know what is actually performed.
+  //cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rr->d_type<<endl;
+  DNSResourceRecord rec;
+  uint16_t updatedRecords = 0;
+
+  string rLabel = stripDot(rr->d_label);
+
+  if (rr->d_class == QClass::IN) { // 3.4.2.2, Add/update records.
+    bool foundRecord=false;
+    vector<pair<DNSResourceRecord, DNSResourceRecord> > recordsToUpdate;
+    di->backend->lookup(QType(QType::ANY), rLabel);
+    while (di->backend->get(rec)) {
+      if (rr->d_type == QType::SOA && rec.qtype == QType::SOA) {
+        DNSResourceRecord newRec = rec;
+        newRec.setContent(rr->d_content->getZoneRepresentation());
+        newRec.ttl = rr->d_ttl;
+        SOAData sdOld, sdUpdate;
+        fillSOAData(rec.content, sdOld);
+        fillSOAData(newRec.content, sdUpdate);
+        if (rfc1982LessThan(sdOld.serial, sdUpdate.serial)) {
+          recordsToUpdate.push_back(make_pair(rec, newRec));
+          *updatedSerial = true;
+        }
+        else
+          L<<Logger::Notice<<"Provided serial ("<<sdUpdate.serial<<") is older than the current serial ("<<sdOld.serial<<"), ignoring SOA update."<<endl;
+
+      } else if (rr->d_type == QType::CNAME && rec.qtype == QType::CNAME) {
+        DNSResourceRecord newRec = rec;
+        newRec.ttl = rr->d_ttl;
+        newRec.setContent(rr->d_content->getZoneRepresentation());
+        recordsToUpdate.push_back(make_pair(rec, newRec));
+      } else if (rec.qtype == rr->d_type) {
+        string content = rr->d_content->getZoneRepresentation();
+        if (rec.getZoneRepresentation() == content) {
+          DNSResourceRecord newRec = rec;
+          newRec.ttl = rr->d_ttl;
+          newRec.setContent(content);
+          recordsToUpdate.push_back(make_pair(rec, newRec));
+          foundRecord=true;
+        }
+      }
+    }
+    if (! foundRecord && rr->d_type != QType::SOA && rr->d_type != QType::CNAME) {
+      DNSResourceRecord newRec(*rr);
+      newRec.domain_id = di->id;
+      di->backend->feedRecord(newRec);
+      updatedRecords++;
+    }
+
+    // Perform updates on the backend
+    for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
+      di->backend->updateRecord(i->first, i->second);
+      updatedRecords++;
+    }
+    
+    if (updatedRecords > 0) {
+      string shorter(rLabel);
+      bool auth=true;
+      if (shorter != di->zone && rr->d_type != QType::DS) {
+        do {
+          if (shorter == di->zone)
+            break;
+
+          di->backend->lookup(QType(QType::NS), shorter);
+          DNSResourceRecord rec;
+          while (di->backend->get(rec)) {
+            auth=false;
+          }
+        } while(chopOff(shorter));
+      }
+      if(haveNSEC3)
+      {
+        string hashed;
+        if(!narrow) 
+          hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr->d_iterations, ns3pr->d_salt, rLabel)));
+        
+        di->backend->updateDNSSECOrderAndAuthAbsolute(di->id, rLabel, hashed, auth);
+        if(!auth || rr->d_type == QType::DS)
+        {
+          di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "NS");
+          di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "A");
+          di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "AAAA");
+        }
+      }
+      else // NSEC
+      {
+        di->backend->updateDNSSECOrderAndAuth(di->id, di->zone, rLabel, auth);
+        if(!auth || rr->d_type == QType::DS)
+        {
+          di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "A");
+          di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "AAAA");
+        }
+      }
+      if (auth == false && rr->d_type == QType::NS) {
+        vector<string> qnames;
+        di->backend->listSubZone(rLabel, di->id);
+        DNSResourceRecord rec;
+        while(di->backend->get(rec)) {
+          if (rec.qtype.getCode() != QType::DS)
+            qnames.push_back(rec.qname);
+        }
+        for(vector<string>::const_iterator qname=qnames.begin(); qname != qnames.end(); ++qname) {
+          if(haveNSEC3)  {
+            string hashed;
+            if(!narrow) 
+              hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr->d_iterations, ns3pr->d_salt, *qname)));
+        
+            di->backend->updateDNSSECOrderAndAuthAbsolute(di->id, *qname, hashed, auth);
+            di->backend->nullifyDNSSECOrderNameAndAuth(di->id, *qname, "NS");
+          }
+          else // NSEC
+            di->backend->updateDNSSECOrderAndAuth(di->id, di->zone, *qname, auth);
+
+          di->backend->nullifyDNSSECOrderNameAndAuth(di->id, *qname, "AAAA");
+          di->backend->nullifyDNSSECOrderNameAndAuth(di->id, *qname, "A");
+        }
+      }
+    }
+  } // rr->d_class == QClass::IN
+
+  vector<DNSResourceRecord> recordsToDelete;
+  //Section 3.4.2.3: Delete RRs based on name and (if provided) type, but never delete NS or SOA of the zone.
+  if (rr->d_class == QClass::ANY) { 
+    di->backend->lookup(QType(QType::ANY), rLabel);
+    while (di->backend->get(rec)) {
+      if (rLabel == di->zone && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
+        continue;
+
+      if (rr->d_type == QType::ANY || rr->d_type == rec.qtype.getCode())
+        recordsToDelete.push_back(rec);
+    }
+  }
+
+  //Section 3.4.2.4, Delete a specific record that matches name, type and rdata, with some specifics for NS/SOA records.
+  if (rr->d_class == QClass::NONE) {
+    di->backend->lookup(QType(QType::ANY), rLabel);
+    bool skippedNS=true;
+    while(di->backend->get(rec)) {
+      if (rLabel == di->zone) {
+        if (rec.qtype.getCode() == QType::SOA)
+          continue;
+        if (rec.qtype.getCode() == QType::NS && !skippedNS) {
+          skippedNS=true;
+          continue;
+        }
+      }
+      
+      if (rec.qtype == rr->d_type && rec.getZoneRepresentation() == rr->d_content->getZoneRepresentation()) {
+        recordsToDelete.push_back(rec);
+      }
+    }
+  }
+
+  // Perform removes on the backend.
+  for(vector<DNSResourceRecord>::const_iterator i=recordsToDelete.begin(); i!=recordsToDelete.end(); ++i){
+    di->backend->removeRecord(*i);
+    updatedRecords++;
+
+    if (i->qtype.getCode() == QType::NS && i->qname != di->zone) {
+      vector<string> changeAuth;
+      di->backend->listSubZone(i->qname, di->id);
+      DNSResourceRecord rec;
+      while (di->backend->get(rec)) {
+        changeAuth.push_back(rec.qname);
+      }
+      for (vector<string>::const_iterator qname=changeAuth.begin(); qname!=changeAuth.end(); ++qname) {
+        if(haveNSEC3)  {
+          string hashed;
+          if(!narrow) 
+            hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr->d_iterations, ns3pr->d_salt, *qname)));
+      
+          di->backend->updateDNSSECOrderAndAuthAbsolute(di->id, *qname, hashed, true);
+        }
+        else // NSEC
+          di->backend->updateDNSSECOrderAndAuth(di->id, di->zone, *qname, true);
+      }
+    }
+  }
+
+  // Clear cache section
+  if (rLabel[0] == 0x2a) {// PC doesn't handle wildcards, so we remove via suffic matching.
+    rLabel.erase(0, 2);
+    rLabel.append("$");
+  }
+  PC.purge(rLabel);
+
+  return updatedRecords;
+}
+
+int PacketHandler::processUpdate(DNSPacket *p) {
+  if (::arg().mustDo("disable-rfc2136"))
+    return RCode::Refused;
+  
+  string msgPrefix="UPDATE from " + p->getRemote() + " for " + p->qdomain + ": ";
+  L<<Logger::Info<<msgPrefix<<"Processing started."<<endl;
+
+  // Check permissions - IP based
+  vector<string> allowedRanges;
+  B.getDomainMetadata(p->qdomain, "ALLOW-2136-FROM", allowedRanges);
+  if (! ::arg()["allow-2136-from"].empty()) 
+    stringtok(allowedRanges, ::arg()["allow-2136-from"], ", \t" );
+
+  NetmaskGroup ng;
+  for(vector<string>::const_iterator i=allowedRanges.begin(); i != allowedRanges.end(); i++)
+    ng.addMask(*i);
+    
+  if ( ! ng.match(&p->d_remote)) {
+    L<<Logger::Error<<msgPrefix<<"Remote not listed in allow-2136-from or domainmetadata. Sending REFUSED"<<endl;
+    return RCode::Refused;
+  }
+
+
+  // Check permissions - TSIG based.
+  vector<string> tsigKeys;
+  B.getDomainMetadata(p->qdomain, "TSIG-ALLOW-2136", tsigKeys);
+  if (tsigKeys.size() > 0) {
+    bool validKey = false;
+    
+    TSIGRecordContent trc;
+    string inputkey, message;
+    if (! p->getTSIGDetails(&trc,  &inputkey, &message)) {
+      L<<Logger::Error<<msgPrefix<<"TSIG key required, but packet does not contain key. Sending REFUSED"<<endl;
+      return RCode::Refused;
+    }
+
+    for(vector<string>::const_iterator key=tsigKeys.begin(); key != tsigKeys.end(); key++) {
+      if (inputkey == *key) // because checkForCorrectTSIG has already been performed earlier on, if the names of the ky match with the domain given. THis is valid.
+        validKey=true;
+    }
+
+    if (!validKey) {
+      L<<Logger::Error<<msgPrefix<<"TSIG key ("<<inputkey<<") required, but no matching key found in domainmetadata, tried "<<tsigKeys.size()<<". Sending REFUSED"<<endl;
+      return RCode::Refused;
+    }
+  }
+
+  if (tsigKeys.size() == 0 && p->d_havetsig)
+    L<<Logger::Warning<<msgPrefix<<"TSIG is provided, but domain is not secured with TSIG. Processing continues"<<endl;
+
+  // RFC2136 uses the same DNS Header and Message as defined in RFC1035.
+  // This means we can use the MOADNSParser to parse the incoming packet. The result is that we have some different 
+  // variable names during the use of our MOADNSParser.
+  MOADNSParser mdp(p->getString());
+  if (mdp.d_header.qdcount != 1) {
+    L<<Logger::Warning<<msgPrefix<<"Zone Count is not 1, sending FormErr"<<endl;
+    return RCode::FormErr;
+  }     
+
+  if (p->qtype.getCode() != QType::SOA) { // RFC2136 2.3 - ZTYPE must be SOA
+    L<<Logger::Warning<<msgPrefix<<"Query ZTYPE is not SOA, sending FormErr"<<endl;
+    return RCode::FormErr;
+  }
+
+  if (p->qclass != QClass::IN) {
+    L<<Logger::Warning<<msgPrefix<<"Class is not IN, sending NotAuth"<<endl;
+    return RCode::NotAuth;
+  }
+
+  DomainInfo di;
+  di.backend=0;
+  if(!B.getDomainInfo(p->qdomain, di) || !di.backend) {
+    L<<Logger::Error<<msgPrefix<<"Can't determine backend for domain '"<<p->qdomain<<"'"<<endl;
+    return RCode::NotAuth;
+  }
+
+  if (di.kind == DomainInfo::Slave) { //TODO: We do not support the forwarding to master stuff.. which we should ;-)
+    L<<Logger::Error<<msgPrefix<<"We are slave for the domain and do not support forwarding to master, sending NotImp"<<endl;
+    return RCode::NotImp;
+  }
+
+  // Check if all the records provided are within the zone 
+  for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
+    const DNSRecord *rr = &i->first;
+    // Skip this check for other field types (like the TSIG -  which is in the additional section)
+    // For a TSIG, the label is the dnskey.
+    if (! (rr->d_place == DNSRecord::Answer || rr->d_place == DNSRecord::Nameserver)) 
+      continue;
+
+    string label = stripDot(rr->d_label);
+
+    if (!endsOn(label, di.zone)) {
+      L<<Logger::Error<<msgPrefix<<"Received update/record out of zone, sending NotZone."<<endl;
+      return RCode::NotZone;
+    }
+  }
+
+  //TODO: Start a lock here, to make section 3.7 correct???
+  L<<Logger::Info<<msgPrefix<<"starting transaction."<<endl;
+  if (!di.backend->startTransaction(p->qdomain, -1)) { // Not giving the domain_id means that we do not delete the records.
+    L<<Logger::Error<<msgPrefix<<"Backend for domain "<<p->qdomain<<" does not support transaction. Can't do Update packet."<<endl;
+    return RCode::NotImp;
+  }
+
+  // 3.2.1 and 3.2.2 - Prerequisite check 
+  for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
+    const DNSRecord *rr = &i->first;
+    if (rr->d_place == DNSRecord::Answer) {
+      int res = updatePrerequisitesCheck(rr, &di);
+      if (res>0) {
+        L<<Logger::Error<<msgPrefix<<"Failed PreRequisites check, returning "<<res<<endl;
+        di.backend->abortTransaction();
+        return res;
+      }
+    } 
+  }
+
+  // 3.2.3 - Prerequisite check - this is outside of updatePrequisitesCheck because we check an RRSet and not the RR.
+  typedef pair<string, QType> rrSetKey_t;
+  typedef vector<DNSResourceRecord> rrVector_t;
+  typedef std::map<rrSetKey_t, rrVector_t> RRsetMap_t;
+  RRsetMap_t preReqRRsets;
+  for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
+    const DNSRecord *rr = &i->first;
+    if (rr->d_place == DNSRecord::Answer) {
+      // Last line of 3.2.3
+      if (rr->d_class != QClass::IN && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY) 
+        return RCode::FormErr;
+
+      if (rr->d_class == QClass::IN) {
+        rrSetKey_t key = make_pair(stripDot(rr->d_label), rr->d_type);
+        rrVector_t *vec = &preReqRRsets[key];
+        vec->push_back(DNSResourceRecord(*rr));
+      }
+    }
+  }
+
+  if (preReqRRsets.size() > 0) {
+    RRsetMap_t zoneRRsets;
+    for (RRsetMap_t::iterator preRRSet = preReqRRsets.begin(); preRRSet != preReqRRsets.end(); ++preRRSet) {
+      rrSetKey_t rrSet=preRRSet->first;
+      rrVector_t *vec = &preRRSet->second;
+
+      DNSResourceRecord rec;
+      di.backend->lookup(QType(QType::ANY), rrSet.first);
+      uint16_t foundRR=0, matchRR=0;
+      while (di.backend->get(rec)) {
+        if (rec.qtype == rrSet.second) {
+          foundRR++;
+          for(rrVector_t::iterator rrItem=vec->begin(); rrItem != vec->end(); ++rrItem) {
+            rrItem->ttl = rec.ttl; // The compare one line below also compares TTL, so we make them equal because TTL is not user within prerequisite checks.
+            if (*rrItem == rec) 
+              matchRR++;
+          }
+        }
+      }
+      if (matchRR != foundRR || foundRR != vec->size()) {
+        L<<Logger::Error<<msgPrefix<<"Failed PreRequisites check, returning NXRRSet"<<endl;
+        di.backend->abortTransaction();
+        return RCode::NXRRSet;
+      }
+    }
+  }
+
+
+
+  // 3.4 - Prescan & Add/Update/Delete records
+  uint16_t updateRecords = 0;
+  bool updatedSerial=false;
+  NSEC3PARAMRecordContent ns3pr;
+  bool narrow; 
+  bool haveNSEC3 = d_dk.getNSEC3PARAM(di.zone, &ns3pr, &narrow);
+  for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
+    const DNSRecord *rr = &i->first;
+    if (rr->d_place == DNSRecord::Nameserver) {
+      // 3.4.1 - Prescan
+      int res = updatePrescanCheck(rr);
+      if (res>0) {
+        L<<Logger::Error<<msgPrefix<<"Failed prescan check, returning "<<res<<endl;
+        di.backend->abortTransaction();
+        return res;
+      }
+
+      // 3.4.2 - Update
+      try {
+        updateRecords += performUpdate(rr, &di, narrow, haveNSEC3, &ns3pr, &updatedSerial);
+      }
+      catch (AhuException &e) {
+        L<<Logger::Error<<msgPrefix<<"Caught AhuException: "<<e.reason<<"; Sending ServFail!"<<endl;
+        di.backend->abortTransaction();
+        return RCode::ServFail;
+      }
+      catch (...) {
+        L<<Logger::Error<<msgPrefix<<"Caught unknown exception when performing update. Sending ServFail!"<<endl;
+        di.backend->abortTransaction();
+        return RCode::ServFail;
+      }
+    }
+  }
+
+  // Section 3.6 - Update the soa
+  if (updateRecords > 0 && !updatedSerial)
+    increaseSerial(di);
+
+  if (!di.backend->commitTransaction()) {
+    L<<Logger::Error<<msgPrefix<<"Failed to commit update for domain "<<di.zone<<"!"<<endl;
+    return RCode::ServFail;
+  }
+  L<<Logger::Info<<msgPrefix<<"Update completed, "<<updateRecords<<" changed records commited."<<endl;
+  return RCode::NoError; //rfc 2136 3.4.2.5
+}
+
+void PacketHandler::increaseSerial(const DomainInfo& di) {
+  DNSResourceRecord rec, newRec;
+  di.backend->lookup(QType(QType::SOA), di.zone);
+  bool foundSOA=false;
+  while (di.backend->get(rec)) {
+    newRec = rec;
+    foundSOA=true;
+  }
+  if (!foundSOA) {
+    throw AhuException("SOA-Serial update failed because there was no SOA. Wowie.");
+  }
+  SOAData soa2Update;
+  fillSOAData(rec.content, soa2Update);
+  uint32_t newser = soa2Update.serial;
+
+  vector<string> soaEdit2136Setting;
+  B.getDomainMetadata(di.zone, "SOA-EDIT-2136", soaEdit2136Setting);
+  string soaEdit2136 = "DEFAULT";
+  string soaEdit;
+  if (!soaEdit2136Setting.empty()) {
+    soaEdit2136 = soaEdit2136Setting[0];
+    if (pdns_iequals(soaEdit2136, "SOA-EDIT") || pdns_iequals(soaEdit2136,"SOA-EDIT-INCREASE") ){
+      vector<string> soaEditSetting;
+      B.getDomainMetadata(di.zone, "SOA-EDIT", soaEditSetting);
+      if (soaEditSetting.empty()) {
+        L<<Logger::Error<<"Using "<<soaEdit2136<<" for SOA-EDIT-2136 increase on RFC2136, but SOA-EDIT is not set for domain. Using DEFAULT for SOA-EDIT-2136"<<endl;
+        soaEdit2136 = "DEFAULT";
+      } else
+        soaEdit = soaEditSetting[0];
+    }
+  }
+
+
+  if (pdns_iequals(soaEdit2136, "INCREASE"))
+    soa2Update.serial++;
+  else if (pdns_iequals(soaEdit2136, "SOA-EDIT-INCREASE")) {
+    uint32_t newSer = calculateEditSOA(soa2Update, soaEdit);
+    if (newSer <= soa2Update.serial)
+      soa2Update.serial++;
+    else
+      soa2Update.serial = newSer;
+  } else if (pdns_iequals(soaEdit2136, "SOA-EDIT"))
+    soa2Update.serial = calculateEditSOA(soa2Update, soaEdit);
+  else if (pdns_iequals(soaEdit2136, "EPOCH"))
+    soa2Update.serial = time(0);
+  else {
+    time_t now = time(0);
+    struct tm tm;
+    localtime_r(&now, &tm);
+    boost::format fmt("%04d%02d%02d%02d");
+    string newserdate=(fmt % (tm.tm_year+1900) % (tm.tm_mon +1 )% tm.tm_mday % 1).str();
+    uint32_t newser = atol(newserdate.c_str());
+    if (newser <= soa2Update.serial)
+      soa2Update.serial++;
+    else
+      soa2Update.serial = newser;
+  }
+  
+
+  newRec.content = serializeSOAData(soa2Update);
+
+  di.backend->updateRecord(rec, newRec);
+  PC.purge(newRec.qname); 
+}
+
+
 int PacketHandler::processNotify(DNSPacket *p)
 {
   /* now what? 
@@ -1103,7 +1638,12 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
       r=p->replyPacket();  // generate an empty reply packet
       if(d_logDNSDetails)
         L<<Logger::Error<<"Received a TSIG signed message with a non-validating key"<<endl;
-      r->setRcode(RCode::NotAuth);
+
+      // RFC3007 describes that a non-secure message should be sending Refused for DNS Updates
+      if (p->d.opcode == Opcode::Update)
+        r->setRcode(RCode::Refused); 
+      else 
+        r->setRcode(RCode::NotAuth);
       return r;
     }
     p->setTSIGDetails(trc, keyname, secret, trc.d_mac); // this will get copied by replyPacket()
@@ -1125,10 +1665,15 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
     }
     if(p->d.opcode) { // non-zero opcode (again thanks RA!)
       if(p->d.opcode==Opcode::Update) {
-        if(::arg().mustDo("log-failed-updates"))
-          L<<Logger::Notice<<"Received an UPDATE opcode from "<<p->getRemote()<<" for "<<p->qdomain<<", sending NOTIMP"<<endl;
-        r->setRcode(RCode::NotImp); // notimp;
-        return r; 
+        S.inc("rfc2136-queries");
+        int res=processUpdate(p);
+        if (res == RCode::Refused)
+          S.inc("rfc2136-refused");
+        else if (res != RCode::ServFail)
+          S.inc("rfc2136-answers");
+        r->setRcode(res);
+        r->setOpcode(Opcode::Update);
+        return r;
       }
       else if(p->d.opcode==Opcode::Notify) {
         int res=processNotify(p);

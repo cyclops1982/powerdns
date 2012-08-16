@@ -25,6 +25,7 @@ public:
   virtual string sqlEscape(const string &name);
   void lookup(const QType &, const string &qdomain, DNSPacket *p=0, int zoneId=-1);
   bool list(const string &target, int domain_id);
+  bool listSubZone(const string &zone, int domain_id); 
   bool get(DNSResourceRecord &r);
   void getAllDomains(vector<DomainInfo> *domains);
   bool isMaster(const string &domain, const string &ip);
@@ -40,6 +41,8 @@ public:
   void getUpdatedMasters(vector<DomainInfo> *updatedDomains);
   bool getDomainInfo(const string &domain, DomainInfo &di);
   void setNotified(uint32_t domain_id, uint32_t serial);
+  bool removeRecord(const DNSResourceRecord &rr);
+  bool updateRecord(const DNSResourceRecord &oldRR, const DNSResourceRecord &newRR);
   virtual bool getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after);
   bool updateDNSSECOrderAndAuth(uint32_t domain_id, const std::string& zonename, const std::string& qname, bool auth);
   virtual bool updateDNSSECOrderAndAuthAbsolute(uint32_t domain_id, const std::string& qname, const std::string& ordername, bool auth);
@@ -73,6 +76,7 @@ private:
   string d_noWildCardANYIDQuery;
   string d_wildCardANYIDQuery;
   string d_listQuery;
+  string d_listSubZone;
   string d_logprefix;
   
   string d_MasterOfDomainsZoneQuery;
@@ -83,8 +87,11 @@ private:
   string d_InsertRecordQuery;
   string d_UpdateSerialOfZoneQuery;
   string d_UpdateLastCheckofZoneQuery;
+  string d_UpdateRecordQuery;
+  string d_UpdateRecordQueryNoPrio;
   string d_InfoOfAllMasterDomainsQuery;
   string d_DeleteZoneQuery;		
+  string d_DeleteRecordQuery;
   string d_ZoneLastChangeQuery;
   
   string d_firstOrderQuery;
@@ -107,6 +114,7 @@ private:
   string d_getTSIGKeyQuery;
 
   string d_getAllDomainsQuery;
+
 
 protected:  
   bool d_dnssecQueries;

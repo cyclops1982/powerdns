@@ -34,6 +34,7 @@
 #include <unistd.h>
 #include "misc.hh"
 #include "dnsbackend.hh"
+#include "dnsrecords.hh"
 
 #include "namespaces.hh"
 using namespace ::boost::multi_index;
@@ -77,7 +78,6 @@ struct Bind2DNSCompare : std::less<Bind2DNSRecord>
 }; 
 
 struct HashedTag{};
-
 typedef multi_index_container<
   Bind2DNSRecord,
   indexed_by  <
@@ -120,7 +120,7 @@ private:
 };
 
 class SSQLite3;
-class NSEC3PARAMRecordContent;
+//class NSEC3PARAMRecordContent;
 
 class Bind2Backend : public DNSBackend
 {
@@ -144,11 +144,11 @@ public:
   void setFresh(uint32_t domain_id);
   void setNotified(uint32_t id, uint32_t serial);
   bool startTransaction(const string &qname, int id);
-  //  bool Bind2Backend::stopTransaction(const string &qname, int id);
   bool feedRecord(const DNSResourceRecord &r);
+  bool updateRecord(const DNSResourceRecord &oldR, const DNSResourceRecord &r);
+  bool removeRecord(const DNSResourceRecord &r);
   bool commitTransaction();
   bool abortTransaction();
-  bool updateDNSSECOrderAndAuthAbsolute(uint32_t domain_id, const std::string& qname, const std::string& ordername, bool auth);
   void alsoNotifies(const string &domain, set<string> *ips);
 
 // the DNSSEC related (getDomainMetadata has broader uses too)
@@ -173,7 +173,7 @@ public:
     id_zone_map_t id_zone_map;
   };
 
-  static void insert(shared_ptr<State> stage, int id, const string &qname, const QType &qtype, const string &content, int ttl=300, int prio=25, const std::string& hashed=string());  
+  
   void rediscover(string *status=0);
 
   bool isMaster(const string &name, const string &ip);
@@ -183,6 +183,9 @@ public:
   bool createSlaveDomain(const string &ip, const string &domain, const string &account);
   
 private:
+  Bind2DNSRecord createRecord(const string &domain, const string &qnameu, const QType &qtype, const string &content, uint32_t ttl, uint16_t prio, const string &hashed);
+  static void insert(shared_ptr<State> stage, int id, const string &qname, const QType &qtype, const string &content, uint32_t ttl=300, uint16_t prio=25, const std::string& hashed=string());  
+  void writeRecord(const string &domain, const string &qname, const uint32_t ttl, const QType &qtype, uint16_t prio, const string &content);
   void setupDNSSEC();
   shared_ptr<SSQLite3> d_dnssecdb;
   bool getNSEC3PARAM(const std::string& zname, NSEC3PARAMRecordContent* ns3p);
@@ -233,8 +236,13 @@ private:
 
   set<string> alsoNotify; //!< this is used to store the also-notify list of interested peers.
 
+  // Useful variables for zone transfer! 
   int d_transaction_id;
   string d_transaction_tmpname;
+  string d_transaction_zone;
+  NSEC3PARAMRecordContent d_transaction_ns3p;
+  bool d_transaction_nsec3zone;
+  vector<Bind2DNSRecord> d_transRecords;
 
   ofstream *d_of;
   handle d_handle;

@@ -84,8 +84,14 @@ public:
   int trySuperMasterSynchronous(DNSPacket *p);
 
 private:
+  int updatePrerequisitesCheck(const DNSRecord *rr, DomainInfo *di);
+  uint16_t performUpdate(const DNSRecord *rr, DomainInfo *di, bool narrow, bool haveNSEC3, const NSEC3PARAMRecordContent *ns3pr, bool *updatedSerial);
+
+  int updatePrescanCheck(const DNSRecord *rr);
   int trySuperMaster(DNSPacket *p);
   int processNotify(DNSPacket *);
+  int processUpdate(DNSPacket *p);
+  void increaseSerial(const DomainInfo& di);
   void addRootReferral(DNSPacket *r);
   int makeCanonic(DNSPacket *p, DNSPacket *r, string &target);
   int findMboxFW(DNSPacket *p, DNSPacket *r, string &target);
