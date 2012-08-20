@@ -25,7 +25,6 @@ cleandig d.host.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
 zone test.dyndns
-update delete add-delete.test.dyndns.
 update delete d.host.test.dyndns. 3600 A 127.0.0.1
 send
 answer
