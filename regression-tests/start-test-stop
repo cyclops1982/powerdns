@@ -174,7 +174,7 @@ __EOF__
 			[ -z "$GPGSQLUSER" ] && GPGSQLUSER=$(whoami)
 
 			dropdb --user="$GPGSQLUSER" "$GPGSQLDB"	|| echo ignoring mysqladmin drop failure
-			createdb --user="$GPGSQLUSER" "$GPGSQLDB"	|| echo ignoring mysqladmin drop failure
+			createdb -l C -T template0 --user="$GPGSQLUSER" "$GPGSQLDB"  || echo ignoring mysqladmin drop failure
 			psql --user="$GPGSQLUSER" "$GPGSQLDB" < ../pdns/no-dnssec.schema.pgsql.sql
 			psql --user="$GPGSQLUSER" "$GPGSQLDB" < ../pdns/dnssec.schema.pgsql.sql
 

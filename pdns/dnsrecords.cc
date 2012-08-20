@@ -71,7 +71,6 @@ string DNSResourceRecord::getZoneRepresentation() {
     string llabel=toLower(qname);
     string rlabel=toLower(rhs.qname);
       
-    cerr<<llabel<<qtype.getCode()<<lcontent<<ttl<<priority<<" VS "<<rlabel<<rhs.qtype.getCode()<<rcontent<<rhs.ttl<<rhs.priority<<endl;
     return 
       tie(llabel, qtype, lcontent, ttl, priority) ==
       tie(rlabel, rhs.qtype, rcontent, rhs.ttl, rhs.priority);

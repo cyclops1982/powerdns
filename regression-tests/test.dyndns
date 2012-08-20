@@ -27,3 +27,5 @@ delete-add		IN	A	127.0.0.108
 delete-add		IN	TXT	"Should be gone after a while"
 ttl			IN	A	127.0.0.1
 *.wild			IN	A	127.0.1.255
+a.host			IN	A	1.1.1.1
+e.host			IN	A	1.1.1.1

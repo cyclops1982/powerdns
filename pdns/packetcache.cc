@@ -239,17 +239,15 @@ int PacketCache::purge(const string &match)
   */
   if(ends_with(match, "$")) {
     string suffix(match);
-    suffix.resize(suffix.size()-1);
+    suffix.resize(suffix.size()-1); // strip of the $
 
     cmap_t::const_iterator iter = d_map.lower_bound(tie(suffix));
     cmap_t::const_iterator start=iter;
     string dotsuffix = "."+suffix;
 
     for(; iter != d_map.end(); ++iter) {
-      if(!pdns_iequals(iter->qname, suffix) && !iends_with(iter->qname, dotsuffix)) {
-        //	cerr<<"Stopping!"<<endl;
+      if(!pdns_iequals(iter->qname, suffix) && !iends_with(iter->qname, dotsuffix))
         break;
-      }
       delcount++;
     }
     d_map.erase(start, iter);
@@ -262,6 +260,30 @@ int PacketCache::purge(const string &match)
   *d_statnumentries=d_map.size();
   return delcount;
 }
+
+
+int PacketCache::purge(const string &begin, const string &end, const string &zone) {
+  WriteLock l(&d_mut);
+  int delcount=0;
+
+  cmap_t::const_iterator beginIter = d_map.lower_bound(tie(begin));
+  cmap_t::const_iterator endIter = beginIter;
+  bool foundBeginOfEnd=false;
+
+  for (; endIter != d_map.end(); ++endIter) {
+    if ((foundBeginOfEnd && !iends_with(endIter->qname, end)) || !iends_with(endIter->qname, zone))
+      break;
+
+    if (iends_with(endIter->qname, end))
+      foundBeginOfEnd=true;
+    delcount++;
+  }
+  d_map.erase(beginIter, endIter);
+
+  *d_statnumentries=d_map.size();
+  return delcount;
+}
+
 // called from ueberbackend
 bool PacketCache::getEntry(const string &qname, const QType& qtype, CacheEntryType cet, string& value, int zoneID, bool meritsRecursion, 
   unsigned int maxReplyLen, bool dnssecOk)

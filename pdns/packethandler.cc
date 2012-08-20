@@ -864,6 +864,11 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
 
   string rLabel = stripDot(rr->d_label);
 
+  // We get the prev/next records BEFORE we do anything.
+  string before, after;
+  di->backend->getBeforeAndAfterNames(di->id, di->zone, rLabel, before, after);
+
+
   if (rr->d_class == QClass::IN) { // 3.4.2.2, Add/update records.
     bool foundRecord=false;
     vector<pair<DNSResourceRecord, DNSResourceRecord> > recordsToUpdate;
@@ -1036,12 +1041,18 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
     }
   }
 
-  // Clear cache section
-  if (rLabel[0] == 0x2a) {// PC doesn't handle wildcards, so we remove via suffic matching.
-    rLabel.erase(0, 2);
+  // Clean the caches..
+  if (haveNSEC3) {
+    string zone(di->zone);
+    zone.append("$");
+    PC.purge(zone);  // For NSEC3, nuke the complete zone.
+  } else {
     rLabel.append("$");
+    if (rLabel[0] == 0x2a) // PC doesn't handle wildcards, so we remove via suffic matching.
+      rLabel.erase(0, 2);
+    PC.purge(rLabel);
+    PC.purge(before, after, di->zone);
   }
-  PC.purge(rLabel);
 
   return updatedRecords;
 }
@@ -1271,7 +1282,6 @@ void PacketHandler::increaseSerial(const DomainInfo& di) {
   }
   SOAData soa2Update;
   fillSOAData(rec.content, soa2Update);
-  uint32_t newser = soa2Update.serial;
 
   vector<string> soaEdit2136Setting;
   B.getDomainMetadata(di.zone, "SOA-EDIT-2136", soaEdit2136Setting);

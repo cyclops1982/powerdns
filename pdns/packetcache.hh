@@ -82,6 +82,7 @@ public:
   void cleanup(); //!< force the cache to preen itself from expired packets
   int purge();
   int purge(const string &match);
+  int purge(const string &begin, const string &end, const string &zone);
 
   map<char,int> getCounts();
 private:
@@ -118,12 +119,19 @@ private:
                         member<CacheEntry,bool, &CacheEntry::meritsRecursion>,
                         member<CacheEntry,unsigned int, &CacheEntry::maxReplyLen>,
                         member<CacheEntry,bool, &CacheEntry::dnssecOk>
-                        >,
-                        composite_key_compare<CIBackwardsStringCompare, std::less<uint16_t>, std::less<uint16_t>, std::less<int>, std::less<bool>, 
-                          std::less<unsigned int>, std::less<bool> >
-                            >,
-                           sequenced<>
-                           >
+                      >,
+                      composite_key_compare<
+                        CIBackwardsStringCompare,
+                        std::less<uint16_t>,
+                        std::less<uint16_t>,
+                        std::less<int>,
+                        std::less<bool>, 
+                        std::less<unsigned int>,
+                        std::less<bool> 
+                      >
+                >,
+                sequenced<>
+               >
   > cmap_t;
 
 
