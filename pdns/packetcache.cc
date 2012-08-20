@@ -263,10 +263,11 @@ int PacketCache::purge(const string &match)
 
 int PacketCache::purge(const string &begin, const string &end, const string &zone) {
   WriteLock l(&d_mut);
-  int delcount=0;
+  int size=d_map.size();
 
   cmap_t::const_iterator beginIter = d_map.lower_bound(tie(begin));
   cmap_t::const_iterator endIter = beginIter;
+
   bool foundBeginOfEnd=false;
 
   for (; endIter != d_map.end(); ++endIter) {
@@ -275,12 +276,12 @@ int PacketCache::purge(const string &begin, const string &end, const string &zon
 
     if (iends_with(endIter->qname, end))
       foundBeginOfEnd=true;
-    delcount++;
   }
   d_map.erase(beginIter, endIter);
 
   *d_statnumentries=d_map.size();
-  return delcount;
+
+  return size - *d_statnumentries;
 }
 
 // called from ueberbackend
