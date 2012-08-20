@@ -265,18 +265,24 @@ int PacketCache::purge(const string &begin, const string &end, const string &zon
   WriteLock l(&d_mut);
   int size=d_map.size();
 
+  // Search for the beginning. Might not be found. At that point we go for the beginning of the zone.
   cmap_t::const_iterator beginIter = d_map.lower_bound(tie(begin));
+  if (beginIter == d_map.end())
+    beginIter = d_map.lower_bound(tie(zone));
+
   cmap_t::const_iterator endIter = beginIter;
 
-  bool foundBeginOfEnd=false;
-
+  // From that point forwards, we search for the end. After we found that, we make sure we run all the way to the end (because the first match might be a different qtype)
+  bool endIterFound=false;
   for (; endIter != d_map.end(); ++endIter) {
-    if ((foundBeginOfEnd && !iends_with(endIter->qname, end)) || !iends_with(endIter->qname, zone))
+    if ((endIterFound && !iends_with(endIter->qname, end)) || !iends_with(endIter->qname, zone))
       break;
 
     if (iends_with(endIter->qname, end))
-      foundBeginOfEnd=true;
+      endIterFound=true;
   }
+
+  // Finally erase things.
   d_map.erase(beginIter, endIter);
 
   *d_statnumentries=d_map.size();
