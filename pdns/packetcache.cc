@@ -171,10 +171,9 @@ void PacketCache::insert(const string &qname, const QType& qtype, CacheEntryType
 /* ONLY USE FOR DEBUGGING! */
 void PacketCache::dumpCache() {
   WriteLock l(&d_mut);
-  DLOG(L<<"Dumping packetcache:"<<endl);
-  for (cmap_t::const_iterator iter = d_map.begin(); iter != d_map.end(); iter++) {
-    DLOG(L<<iter->ctype<<":"<<iter->qname<<" - "<<iter->qtype<<" - "<<iter->ttd<<endl);
-  }
+  cerr<<"[dumpCache] Dumping packetcache:"<<endl;
+  for (cmap_t::const_iterator iter = d_map.begin(); iter != d_map.end(); iter++)
+    cerr<<"[dumpCache] "<<iter->ctype<<":"<<iter->qname<<" - "<<iter->qtype<<" - "<<iter->ttd<<endl;
 }
 
 
