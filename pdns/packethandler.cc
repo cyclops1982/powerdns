@@ -1041,17 +1041,18 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
     }
   }
 
-  // Clean the caches..
-  if (haveNSEC3) {
-    string zone(di->zone);
-    zone.append("$");
-    PC.purge(zone);  // For NSEC3, nuke the complete zone.
-  } else {
-    rLabel.append("$");
-    if (rLabel[0] == 0x2a) // PC doesn't handle wildcards, so we remove via suffic matching.
-      rLabel.erase(0, 2);
-    PC.purge(rLabel);
-    PC.purge(before, after, di->zone);
+  if (updatedRecords > 0) {   // Clean the caches if we actually did something.
+    if (haveNSEC3) {
+      string zone(di->zone);
+      zone.append("$");
+      PC.purge(zone);  // For NSEC3, nuke the complete zone.
+    } else {
+      rLabel.append("$");
+      if (rLabel[0] == 0x2a) // PC doesn't handle wildcards, so we remove via suffic matching.
+        rLabel.erase(0, 2);
+      PC.purge(rLabel);
+      PC.purge(before, after, di->zone);
+    }
   }
 
   return updatedRecords;
