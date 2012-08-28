@@ -1227,45 +1227,45 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   // 3.4 - Prescan & Add/Update/Delete records
   uint16_t updateRecords = 0;
   bool updatedSerial=false;
-  NSEC3PARAMRecordContent ns3pr;
-  bool narrow; 
-  bool haveNSEC3 = d_dk.getNSEC3PARAM(di.zone, &ns3pr, &narrow);
-  for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
-    const DNSRecord *rr = &i->first;
-    if (rr->d_place == DNSRecord::Nameserver) {
-      // 3.4.1 - Prescan
-      int res = updatePrescanCheck(rr);
-      if (res>0) {
-        L<<Logger::Error<<msgPrefix<<"Failed prescan check, returning "<<res<<endl;
-        di.backend->abortTransaction();
-        return res;
-      }
-
-      // 3.4.2 - Update
-      try {
+  try {
+    NSEC3PARAMRecordContent ns3pr;
+    bool narrow; 
+    bool haveNSEC3 = d_dk.getNSEC3PARAM(di.zone, &ns3pr, &narrow);
+    for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
+      const DNSRecord *rr = &i->first;
+      if (rr->d_place == DNSRecord::Nameserver) {
+        // 3.4.1 - Prescan
+        int res = updatePrescanCheck(rr);
+        if (res>0) {
+          L<<Logger::Error<<msgPrefix<<"Failed prescan check, returning "<<res<<endl;
+          di.backend->abortTransaction();
+          return res;
+        }
+        // 3.4.2 - Update
         updateRecords += performUpdate(rr, &di, narrow, haveNSEC3, &ns3pr, &updatedSerial);
       }
-      catch (AhuException &e) {
-        L<<Logger::Error<<msgPrefix<<"Caught AhuException: "<<e.reason<<"; Sending ServFail!"<<endl;
-        di.backend->abortTransaction();
-        return RCode::ServFail;
-      }
-      catch (...) {
-        L<<Logger::Error<<msgPrefix<<"Caught unknown exception when performing update. Sending ServFail!"<<endl;
-        di.backend->abortTransaction();
-        return RCode::ServFail;
-      }
     }
+
+    // Section 3.6 - Update the soa
+    if (updateRecords > 0 && !updatedSerial)
+      increaseSerial(di);
   }
-
-  // Section 3.6 - Update the soa
-  if (updateRecords > 0 && !updatedSerial)
-    increaseSerial(di);
-
+  catch (AhuException &e) {
+    L<<Logger::Error<<msgPrefix<<"Caught AhuException: "<<e.reason<<"; Sending ServFail!"<<endl;
+    di.backend->abortTransaction();
+    return RCode::ServFail;
+  }
+  catch (...) {
+    L<<Logger::Error<<msgPrefix<<"Caught unknown exception when performing update. Sending ServFail!"<<endl;
+    di.backend->abortTransaction();
+    return RCode::ServFail;
+  }
+  
   if (!di.backend->commitTransaction()) {
     L<<Logger::Error<<msgPrefix<<"Failed to commit update for domain "<<di.zone<<"!"<<endl;
     return RCode::ServFail;
   }
+ 
   L<<Logger::Info<<msgPrefix<<"Update completed, "<<updateRecords<<" changed records commited."<<endl;
   return RCode::NoError; //rfc 2136 3.4.2.5
 }
