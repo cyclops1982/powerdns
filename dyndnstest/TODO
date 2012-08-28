@@ -1,4 +1,5 @@
 TODO (in order of importance):
+- Check if the SOA-edit is an MUST or SHOULD. If it's should, we should have an option to not update the soa.
 - Create 'how to' section in docs.
 - use msgPrefix everywhere.
 - Packet forwarding - not sure what to do. If not support, then document.
