@@ -11955,7 +11955,7 @@ zone 1.168.192.in-addr.arpa. {
         <para>This concludes the changes that are needed to the <command>dhcpd</command> configuration file.</para>
       </sect2>
       <sect2 id="rfc2136-howto-powerdns"><title>Setting up PowerDNS</title>
-        <para>A number of small changes are needed to powerdns to make it accept dynamic updates from <command>dhcpd</comand>.</para>
+        <para>A number of small changes are needed to powerdns to make it accept dynamic updates from <command>dhcpd</command>.</para>
         <para>
          Enabled RFC2136 (dynamic update) support functionality in PowerDNS by adding the following to the 
          PowerDNS configuration file (pdns.conf).
@@ -11965,13 +11965,40 @@ allow-2136-from=
 </programlisting>
          This tells PowerDNS to:
          <orderedlist>
-           <listitem><para>Enable RFC2136 support(<command>disable-rfc21356</command>)</para><listitem>
+           <listitem><para>Enable RFC2136 support(<command>disable-rfc21356</command>)</para></listitem>
            <listitem><para>Allow updates from NO ip-address (<command>allow-2136-from=</command>)</para></listitem>
          </orderedlist>
         </para>
-        <para>We just told powerdns (via the configuration file) that we do 
-TODO
+        <para>
+          We just told powerdns (via the configuration file) that we accept updates from nobody via the 
+          <command>allow-2136-from</command> parameter. That's not very useful, so we're going to give permissions
+          per zone, via the domainmetadata table.
+<programlisting>
+sql> select id from domains where name='powerdnssec.org';
+5
+sql> insert into domainmetadata(domain_id, kind, content) values(5, ‘ALLOW-2136-FROM’,’127.0.0.1’);
+</programlisting>
+          This gives the ip '127.0.0.1' access to send update messages. Make sure you use the ip address of the machine that
+          runs <command>dhcpd</command>.
         </para>
+        <para>
+          Another thing we want to do, is add TSIG security. This can only be done via the domainmetadata table:
+<programlisting>
+sql> insert into tsigkeys (name, algorithm, secret) values ('dhcpdupdate', 'hmac-md5', 'FYhvwsW1ZtFZqWzsMpqhbg==');
+sql> select id from domains where name='powerdnssec.org';
+5
+sql> insert into domainmetadata (domain_id, kind, content) values (5, 'TSIG-ALLOW-2136', 'dhcpdupdate');
+sql> select id from domains where name='1.168.192.in-addr.arpa';
+6
+sql> insert into domainmetadata (domain_id, kind, content) values (6, 'TSIG-ALLOW-2136', 'dhcpdupdate');
+</programlisting>
+          This will:
+          <orderedlist>
+            <listitem><para>Add the 'dhcpdupdate' key to our PowerDNSinstallation</para></listitem>
+            <listitem><para>Associate the domains with the given TSIG key</para></listitem>
+          </orderedlist> 
+        </para>
+        <para>Restart PowerDNS and you should be ready to go!</para>
       </sect2> 
     </sect1>
  
