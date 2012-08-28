@@ -1,7 +1,6 @@
 TODO (in order of importance):
 - use msgPrefix everywhere.
 - Packet forwarding - not sure what to do. If not support, then document.
-- check (and resolve) how we handle backends that do not support dyndns (send notimpl)
 - Re-read the howto section - and decide if it should be in the doc or not.
 - WKS record is not supported (document this)
 

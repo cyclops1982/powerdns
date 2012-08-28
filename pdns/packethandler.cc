@@ -1130,7 +1130,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   DomainInfo di;
   di.backend=0;
   if(!B.getDomainInfo(p->qdomain, di) || !di.backend) {
-    L<<Logger::Error<<msgPrefix<<"Can't determine backend for domain '"<<p->qdomain<<"'"<<endl;
+    L<<Logger::Error<<msgPrefix<<"Can't determine backend for domain '"<<p->qdomain<<"' (or backend does not support RFC2136 operation)"<<endl;
     return RCode::NotAuth;
   }
 
