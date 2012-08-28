@@ -261,7 +261,7 @@ int PacketCache::purge(const string &match)
 }
 
 
-int PacketCache::purge(const string &begin, const string &end, const string &zone) {
+int PacketCache::purgeRange(const string &begin, const string &end, const string &zone) {
   WriteLock l(&d_mut);
   int size=d_map.size();
 

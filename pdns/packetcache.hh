@@ -82,7 +82,7 @@ public:
   void cleanup(); //!< force the cache to preen itself from expired packets
   int purge();
   int purge(const string &match);
-  int purge(const string &begin, const string &end, const string &zone);
+  int purgeRange(const string &begin, const string &end, const string &zone);
 
   map<char,int> getCounts();
 private:

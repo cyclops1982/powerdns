@@ -1051,7 +1051,7 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
       if (rLabel[0] == 0x2a) // PC doesn't handle wildcards, so we remove via suffic matching.
         rLabel.erase(0, 2);
       PC.purge(rLabel);
-      PC.purge(before, after, di->zone);
+      PC.purgeRange(before, after, di->zone);
     }
   }
 
