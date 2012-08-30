@@ -1,13 +1,16 @@
 1	delete-add.test.dyndns.	IN	NSEC	3600	a.host.test.dyndns. A TXT RRSIG NSEC
 1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
-0	a.host.test.dyndns.	IN	NSEC	3600	d.host.test.dyndns. A RRSIG NSEC
-1	a.host.test.dyndns.	IN	NSEC	3600	d.host.test.dyndns. A RRSIG NSEC
-1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
-1	a.host.test.dyndns.	IN	NSEC	3600	d.host.test.dyndns. A RRSIG NSEC
-1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
-1	a.host.test.dyndns.	IN	NSEC	3600	d.host.test.dyndns. A RRSIG NSEC
+0	a.host.test.dyndns.	IN	NSEC	3600	e.host.test.dyndns. A RRSIG NSEC
+1	a.host.test.dyndns.	IN	NSEC	3600	e.host.test.dyndns. A RRSIG NSEC
 1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 1	a.host.test.dyndns.	IN	NSEC	3600	e.host.test.dyndns. A RRSIG NSEC
+1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
+1	a.host.test.dyndns.	IN	NSEC	3600	e.host.test.dyndns. A RRSIG NSEC
+1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
+1	a.host.test.dyndns.	IN	NSEC	3600	e.host.test.dyndns. A RRSIG NSEC
+1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
+0	e.host.test.dyndns.	IN	NSEC	3600	host-1.test.dyndns. A RRSIG NSEC
+1	e.host.test.dyndns.	IN	NSEC	3600	host-1.test.dyndns. A RRSIG NSEC
 1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 Answer:
 ;; ->>HEADER<<- opcode: UPDATE, status: NOERROR ID_REPLACED
@@ -25,6 +28,9 @@ Answer:
 1	a.host.test.dyndns.	IN	NSEC	3600	d.host.test.dyndns. A RRSIG NSEC
 1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 0	d.host.test.dyndns.	IN	NSEC	3600	e.host.test.dyndns. A RRSIG NSEC
+0	e.host.test.dyndns.	IN	NSEC	3600	host-1.test.dyndns. A RRSIG NSEC
+1	e.host.test.dyndns.	IN	NSEC	3600	host-1.test.dyndns. A RRSIG NSEC
+1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 Answer:
 ;; ->>HEADER<<- opcode: UPDATE, status: NOERROR ID_REPLACED
 ;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
@@ -33,12 +39,15 @@ Answer:
 
 1	delete-add.test.dyndns.	IN	NSEC	3600	a.host.test.dyndns. A TXT RRSIG NSEC
 1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
-0	a.host.test.dyndns.	IN	NSEC	3600	d.host.test.dyndns. A RRSIG NSEC
-1	a.host.test.dyndns.	IN	NSEC	3600	d.host.test.dyndns. A RRSIG NSEC
-1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
-1	a.host.test.dyndns.	IN	NSEC	3600	d.host.test.dyndns. A RRSIG NSEC
-1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
-1	a.host.test.dyndns.	IN	NSEC	3600	d.host.test.dyndns. A RRSIG NSEC
+0	a.host.test.dyndns.	IN	NSEC	3600	e.host.test.dyndns. A RRSIG NSEC
+1	a.host.test.dyndns.	IN	NSEC	3600	e.host.test.dyndns. A RRSIG NSEC
 1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 1	a.host.test.dyndns.	IN	NSEC	3600	e.host.test.dyndns. A RRSIG NSEC
+1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
+1	a.host.test.dyndns.	IN	NSEC	3600	e.host.test.dyndns. A RRSIG NSEC
+1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
+1	a.host.test.dyndns.	IN	NSEC	3600	e.host.test.dyndns. A RRSIG NSEC
+1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
+0	e.host.test.dyndns.	IN	NSEC	3600	host-1.test.dyndns. A RRSIG NSEC
+1	e.host.test.dyndns.	IN	NSEC	3600	host-1.test.dyndns. A RRSIG NSEC
 1	test.dyndns.	IN	NSEC	3600	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY

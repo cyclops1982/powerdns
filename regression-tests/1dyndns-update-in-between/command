@@ -6,6 +6,8 @@ cleandig a.a.host.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
 cleandig c.host.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
 cleandig a.c.host.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
 cleandig d.host.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
+cleandig e.host.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
+cleandig f.host.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
 
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
@@ -21,6 +23,8 @@ cleandig a.a.host.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
 cleandig c.host.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
 cleandig a.c.host.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
 cleandig d.host.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
+cleandig e.host.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
+cleandig f.host.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
 
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
@@ -36,3 +40,5 @@ cleandig a.a.host.test.dyndns ANY dnssec  | egrep 'IN[[:space:]]+NSEC'
 cleandig c.host.test.dyndns ANY dnssec  | egrep 'IN[[:space:]]+NSEC'
 cleandig a.c.host.test.dyndns ANY dnssec  | egrep 'IN[[:space:]]+NSEC'
 cleandig d.host.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
+cleandig e.host.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'
+cleandig f.host.test.dyndns ANY dnssec | egrep 'IN[[:space:]]+NSEC'

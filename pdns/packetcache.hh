@@ -85,8 +85,9 @@ public:
   int purgeRange(const string &begin, const string &end, const string &zone);
 
   map<char,int> getCounts();
-private:
   void dumpCache(); // for the weak who don't have a multi_index_container in their head. ONLY USE FOR DEBUGGING!
+private:
+  
   bool getEntryLocked(const string &content, const QType& qtype, CacheEntryType cet, string& entry, int zoneID=-1, 
     bool meritsRecursion=false, unsigned int maxReplyLen=512, bool dnssecOk=false);
   struct CacheEntry

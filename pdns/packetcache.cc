@@ -264,6 +264,8 @@ int PacketCache::purge(const string &match)
 int PacketCache::purgeRange(const string &begin, const string &end, const string &zone) {
   WriteLock l(&d_mut);
   int size=d_map.size();
+  if (size == 0)
+    return 0;
 
   // Search for the beginning. Might not be found. At that point we go for the beginning of the zone.
   cmap_t::const_iterator beginIter = d_map.lower_bound(tie(begin));
@@ -280,12 +282,14 @@ int PacketCache::purgeRange(const string &begin, const string &end, const string
 
     if (iends_with(endIter->qname, end))
       endIterFound=true;
+
   }
 
   // Finally erase things.
   d_map.erase(beginIter, endIter);
-
+ 
   *d_statnumentries=d_map.size();
+
 
   return size - *d_statnumentries;
 }

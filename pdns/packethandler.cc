@@ -856,15 +856,13 @@ int PacketHandler::updatePrescanCheck(const DNSRecord *rr) {
 }
 
 // Implements section 3.4.2 of RFC2136
-uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool narrow, bool haveNSEC3, const NSEC3PARAMRecordContent *ns3pr, bool *updatedSerial) {
+uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, DomainInfo *di, bool narrow, bool haveNSEC3, const NSEC3PARAMRecordContent *ns3pr, bool *updatedSerial) {
   //TODO: Add DLOG/verbose logging to this, so we know what is actually performed.
   //cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rr->d_type<<endl;
   DNSResourceRecord rec;
-  uint16_t updatedRecords = 0;
+  uint16_t updatedRecords = 0, deletedRecords = 0, insertedRecords = 0;
 
   string rLabel = stripDot(rr->d_label);
-
-  // We get the prev/next records BEFORE we do anything.
   string before, after;
   di->backend->getBeforeAndAfterNames(di->id, di->zone, rLabel, before, after);
 
@@ -886,7 +884,7 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
           *updatedSerial = true;
         }
         else
-          L<<Logger::Notice<<"Provided serial ("<<sdUpdate.serial<<") is older than the current serial ("<<sdOld.serial<<"), ignoring SOA update."<<endl;
+          L<<Logger::Notice<<msgPrefix<<"Provided serial ("<<sdUpdate.serial<<") is older than the current serial ("<<sdOld.serial<<"), ignoring SOA update."<<endl;
 
       } else if (rr->d_type == QType::CNAME && rec.qtype == QType::CNAME) {
         DNSResourceRecord newRec = rec;
@@ -908,7 +906,7 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
       DNSResourceRecord newRec(*rr);
       newRec.domain_id = di->id;
       di->backend->feedRecord(newRec);
-      updatedRecords++;
+      insertedRecords++;
     }
 
     // Perform updates on the backend
@@ -917,7 +915,7 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
       updatedRecords++;
     }
     
-    if (updatedRecords > 0) {
+    if (updatedRecords > 0 || insertedRecords > 0) {
       string shorter(rLabel);
       bool auth=true;
       if (shorter != di->zone && rr->d_type != QType::DS) {
@@ -988,7 +986,7 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
     di->backend->lookup(QType(QType::ANY), rLabel);
     while (di->backend->get(rec)) {
       if (rLabel == di->zone && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
-        continue;
+        continue; // always leave the SOA and NS record
 
       if (rr->d_type == QType::ANY || rr->d_type == rec.qtype.getCode())
         recordsToDelete.push_back(rec);
@@ -1002,9 +1000,9 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
     while(di->backend->get(rec)) {
       if (rLabel == di->zone) {
         if (rec.qtype.getCode() == QType::SOA)
-          continue;
+          continue; // always leave the SOA record
         if (rec.qtype.getCode() == QType::NS && !skippedNS) {
-          skippedNS=true;
+          skippedNS=true; //always leave 1 NS
           continue;
         }
       }
@@ -1015,10 +1013,10 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
     }
   }
 
-  // Perform removes on the backend.
+  // Perform removes on the backend and fix auth/ordername
   for(vector<DNSResourceRecord>::const_iterator i=recordsToDelete.begin(); i!=recordsToDelete.end(); ++i){
     di->backend->removeRecord(*i);
-    updatedRecords++;
+    deletedRecords++;
 
     if (i->qtype.getCode() == QType::NS && i->qname != di->zone) {
       vector<string> changeAuth;
@@ -1037,16 +1035,24 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
         }
         else // NSEC
           di->backend->updateDNSSECOrderAndAuth(di->id, di->zone, *qname, true);
-      }
+      }   
     }
   }
 
-  if (updatedRecords > 0) {   // Clean the caches if we actually did something.
+  L<<Logger::Notice<<msgPrefix<<"Added "<<insertedRecords<<"; Updated: "<<updatedRecords<<"; Deleted:"<<deletedRecords<<endl;
+
+  if (updatedRecords > 0 || deletedRecords > 0 || insertedRecords > 0) {   // Clean the caches if we actually did something.
     if (haveNSEC3) {
       string zone(di->zone);
       zone.append("$");
       PC.purge(zone);  // For NSEC3, nuke the complete zone.
     } else {
+      if (deletedRecords > 0) {
+        string postAfter, postBefore;
+        di->backend->getBeforeAndAfterNames(di->id, di->zone, rLabel, postBefore, postAfter);
+        before = postBefore;
+      }
+
       rLabel.append("$");
       if (rLabel[0] == 0x2a) // PC doesn't handle wildcards, so we remove via suffic matching.
         rLabel.erase(0, 2);
@@ -1055,7 +1061,7 @@ uint16_t PacketHandler::performUpdate(const DNSRecord *rr, DomainInfo *di, bool 
     }
   }
 
-  return updatedRecords;
+  return updatedRecords + deletedRecords + insertedRecords;
 }
 
 int PacketHandler::processUpdate(DNSPacket *p) {
@@ -1242,7 +1248,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
           return res;
         }
         // 3.4.2 - Update
-        updateRecords += performUpdate(rr, &di, narrow, haveNSEC3, &ns3pr, &updatedSerial);
+        updateRecords += performUpdate(msgPrefix, rr, &di, narrow, haveNSEC3, &ns3pr, &updatedSerial);
       }
     }
 
