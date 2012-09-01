@@ -272,7 +272,6 @@ int PacketCache::purgeRange(const string &begin, const string &end, const string
   // Search for the beginning for the purge range
   cmap_t::const_iterator beginIter = d_map.lower_bound(tie(begin));
   if (beginIter == d_map.end() || !iends_with(beginIter->qname,zone)) {
-    cerr<<"Re-searching for BeginInter:"<<iends_with(beginIter->qname,zone)<<" - "<<(beginIter == d_map.end())<<endl;
     beginIter = d_map.lower_bound(tie(zone));
   }
 

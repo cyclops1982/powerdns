@@ -1,25 +1,36 @@
 #!/bin/sh
 cleandig a.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 cleandig b.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig c.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 cleandig d.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 cleandig e.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 cleandig f.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig a.a.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig b.b.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig c.c.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig d.d.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig e.e.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
 zone test.dyndns
 update add c.host.test.dyndns 3600 NS ns1.c.host.test.dyndns
-update add ns1.c.host.delegate1.test.dyndns 3600 A 127.0.0.2
+update add ns1.c.host.test.dyndns 3600 A 127.0.0.2
 send
 answer
 !
 
 cleandig a.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 cleandig b.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig c.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 cleandig d.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 cleandig e.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 cleandig f.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
-
+cleandig a.a.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig b.b.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig c.c.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig d.d.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig e.e.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
@@ -31,9 +42,15 @@ answer
 
 cleandig a.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 cleandig b.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig c.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 cleandig d.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 cleandig e.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 cleandig f.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig a.a.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig b.b.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig c.c.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig d.d.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig e.e.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
@@ -42,3 +59,15 @@ update delete ns1.c.host.test.dyndns A
 send
 answer
 !
+
+cleandig a.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig b.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig c.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig d.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig e.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig f.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig a.a.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig b.b.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig c.c.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig d.d.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig e.e.host.test.dyndns ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
