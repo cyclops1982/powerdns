@@ -1,5 +1,4 @@
 TODO (in order of importance):
-- Bind-dnssec test still fails the 1dyndns-update-in-between
 - Look at 1dyndns-update-in-between nsec3 test and see if it's expected_result.nsec3 is correct
 - Look at 1dyndns-update-in-between narrow test. Why is the TTL different?
 - use msgPrefix everywhere.
@@ -12,3 +11,5 @@ Run the full test suite! ;-)
 rm *.xml *.tar
 for d in bind bind-dnssec bind-dnssec-nsec3 gmysql-nodnssec gmysql gmysql-nsec3 gmysql-nsec3-narrow gpgsql-nodnssec gpgsql gpgsql-nsec3 gsqlite3-nodnssec gsqlite3 gsqlite3-nsec3 tinydns ; do killall -9 pdns_server ; ./start-test-stop 5300 $d nowait 600; done
 LC_ALL=C grep -w error *.xml
+
+

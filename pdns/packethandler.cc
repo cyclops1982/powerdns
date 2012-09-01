@@ -869,9 +869,6 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
   uint16_t updatedRecords = 0, deletedRecords = 0, insertedRecords = 0;
 
   string rLabel = stripDot(rr->d_label);
-  string before, after;
-  di->backend->getBeforeAndAfterNames(di->id, di->zone, rLabel, before, after);
-
 
   if (rr->d_class == QClass::IN) { // 3.4.2.2, Add/update records.
     bool foundRecord=false;
@@ -1047,26 +1044,6 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
 
   L<<Logger::Notice<<msgPrefix<<"Added "<<insertedRecords<<"; Updated: "<<updatedRecords<<"; Deleted:"<<deletedRecords<<endl;
 
-  if (updatedRecords > 0 || deletedRecords > 0 || insertedRecords > 0) {   // Clean the caches if we actually did something.
-    if (haveNSEC3) {
-      string zone(di->zone);
-      zone.append("$");
-      PC.purge(zone);  // For NSEC3, nuke the complete zone.
-    } else {
-      if (deletedRecords > 0) {
-        string postAfter, postBefore;
-        di->backend->getBeforeAndAfterNames(di->id, di->zone, rLabel, postBefore, postAfter);
-        before = postBefore;
-      }
-
-      rLabel.append("$");
-      if (rLabel[0] == 0x2a) // PC doesn't handle wildcards, so we remove via suffic matching.
-        rLabel.erase(0, 2);
-      PC.purge(rLabel);
-      PC.purgeRange(before, after, di->zone);
-    }
-  }
-
   return updatedRecords + deletedRecords + insertedRecords;
 }
 
@@ -1237,29 +1214,64 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
 
   // 3.4 - Prescan & Add/Update/Delete records
-  uint16_t updateRecords = 0;
-  bool updatedSerial=false;
+  uint16_t changedRecords = 0;
   try {
-    NSEC3PARAMRecordContent ns3pr;
-    bool narrow; 
-    bool haveNSEC3 = d_dk.getNSEC3PARAM(di.zone, &ns3pr, &narrow);
+
+    // 3.4.1 - Prescan section
     for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
       const DNSRecord *rr = &i->first;
       if (rr->d_place == DNSRecord::Nameserver) {
-        // 3.4.1 - Prescan
         int res = updatePrescanCheck(rr);
         if (res>0) {
           L<<Logger::Error<<msgPrefix<<"Failed prescan check, returning "<<res<<endl;
           di.backend->abortTransaction();
           return res;
         }
-        // 3.4.2 - Update
-        updateRecords += performUpdate(msgPrefix, rr, &di, narrow, haveNSEC3, &ns3pr, &updatedSerial);
       }
     }
 
-    // Section 3.6 - Update the soa
-    if (updateRecords > 0 && !updatedSerial)
+    bool updatedSerial=false;
+    NSEC3PARAMRecordContent ns3pr;
+    bool narrow; 
+    bool haveNSEC3 = d_dk.getNSEC3PARAM(di.zone, &ns3pr, &narrow);
+
+    // We get all the before/after fields before doing anything to the db.
+    // We can't do this inside performUpdate() because when we remove a delegate, the before/after result is different to what it should be
+    // to purge the cache correctly - One update/delete might cause a before/after to be created which is before/after the original before/after.
+    vector< pair<string, string> > beforeAfterSet;
+    if (!haveNSEC3) {
+      for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
+        const DNSRecord *rr = &i->first;
+        if (rr->d_place == DNSRecord::Nameserver) {
+          string before, after;
+          di.backend->getBeforeAndAfterNames(di.id, di.zone, stripDot(rr->d_label), before, after, (rr->d_class != QClass::IN));
+          beforeAfterSet.push_back(make_pair(before, after));
+        }
+      }
+    }
+
+    // 3.4.2 - Perform the updates \0/
+    for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
+      const DNSRecord *rr = &i->first;
+      if (rr->d_place == DNSRecord::Nameserver) {
+        changedRecords += performUpdate(msgPrefix, rr, &di, narrow, haveNSEC3, &ns3pr, &updatedSerial);
+      }
+    }
+
+    // Purge the records!
+    if (changedRecords > 0) {
+      if (haveNSEC3) {
+        string zone(di.zone);
+        zone.append("$");
+        PC.purge(zone);  // For NSEC3, nuke the complete zone.
+      } else {
+        for(vector< pair<string, string> >::const_iterator i=beforeAfterSet.begin(); i != beforeAfterSet.end(); i++)
+          PC.purgeRange(i->first, i->second, di.zone);
+      }
+    }
+
+    // Section 3.6 - Update the SOA serial - outside of performUpdate because we do a SOA update for the complete update message
+    if (changedRecords > 0 && !updatedSerial)
       increaseSerial(di);
   }
   catch (AhuException &e) {
@@ -1278,7 +1290,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     return RCode::ServFail;
   }
  
-  L<<Logger::Info<<msgPrefix<<"Update completed, "<<updateRecords<<" changed records commited."<<endl;
+  L<<Logger::Info<<msgPrefix<<"Update completed, "<<changedRecords<<" changed records commited."<<endl;
   return RCode::NoError; //rfc 2136 3.4.2.5
 }
 

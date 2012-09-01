@@ -937,7 +937,7 @@ void Bind2Backend::queueReload(BB2DomainInfo *bbd)
   }
 }
 
-bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::string& qname, std::string& unhashed, std::string& before, std::string& after)
+bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::string& qname, std::string& before, std::string& after, bool beforeCurrent)
 {
   string domain=toLower(qname);
 
@@ -946,6 +946,9 @@ bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::str
   recordstorage_t::const_iterator iter = bbd.d_records->lower_bound(domain);
 
   while(iter == bbd.d_records->end() || (iter->qname) > domain || (!(iter->auth) && !(iter->qtype == QType::NS)))
+    iter--;
+
+  if (beforeCurrent && iter != bbd.d_records->begin())
     iter--;
 
   before=iter->qname;
@@ -970,14 +973,14 @@ bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::str
         break;
       }
     }
-    after = (iter)->qname;
+    after = iter->qname;
   }
 
   //cerr<<"Before: '"<<before<<"', after: '"<<after<<"'\n";
   return true;
 }
 
-bool Bind2Backend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after)
+bool Bind2Backend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after, bool beforeCurrent)
 {
   shared_ptr<State> state = s_state;
   BB2DomainInfo& bbd = state->id_zone_map[id];  
@@ -986,7 +989,7 @@ bool Bind2Backend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string
     
   if(!getNSEC3PARAM(auth, &ns3pr)) {
     //cerr<<"in bind2backend::getBeforeAndAfterAbsolute: no nsec3 for "<<auth<<endl;
-    return findBeforeAndAfterUnhashed(bbd, qname, unhashed, before, after);
+    return findBeforeAndAfterUnhashed(bbd, qname, before, after, beforeCurrent);
   
   }
   else {

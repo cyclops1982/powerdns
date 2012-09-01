@@ -117,14 +117,14 @@ public:
 
   virtual bool getTSIGKey(const string& name, string* algorithm, string* content) { return false; }
 
-  virtual bool getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after)
+  virtual bool getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after, bool beforeCurrent=false)
   {
     std::cerr<<"Default beforeAndAfterAbsolute called!"<<std::endl;
     abort();
     return false;
   }
 
-  bool getBeforeAndAfterNames(uint32_t id, const std::string& zonename, const std::string& qname, std::string& before, std::string& after);
+  bool getBeforeAndAfterNames(uint32_t id, const std::string& zonename, const std::string& qname, std::string& before, std::string& after, bool beforeCurrent=false);
 
   virtual bool updateDNSSECOrderAndAuth(uint32_t domain_id, const std::string& zonename, const std::string& qname, bool auth)
   {

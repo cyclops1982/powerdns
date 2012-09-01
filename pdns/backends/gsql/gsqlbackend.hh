@@ -43,7 +43,7 @@ public:
   void setNotified(uint32_t domain_id, uint32_t serial);
   bool removeRecord(const DNSResourceRecord &rr);
   bool updateRecord(const DNSResourceRecord &oldRR, const DNSResourceRecord &newRR);
-  virtual bool getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after);
+  virtual bool getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after, bool beforeCurrent = false);
   bool updateDNSSECOrderAndAuth(uint32_t domain_id, const std::string& zonename, const std::string& qname, bool auth);
   virtual bool updateDNSSECOrderAndAuthAbsolute(uint32_t domain_id, const std::string& qname, const std::string& ordername, bool auth);
   virtual bool nullifyDNSSECOrderNameAndAuth(uint32_t domain_id, const std::string& qname, const std::string& type);
@@ -96,6 +96,7 @@ private:
   
   string d_firstOrderQuery;
   string d_beforeOrderQuery;
+  string d_beforeCurrentOrderQuery;
   string d_afterOrderQuery;
   string d_lastOrderQuery;
   string d_setOrderAuthQuery;

@@ -269,12 +269,14 @@ int PacketCache::purgeRange(const string &begin, const string &end, const string
 
   // Search for the beginning. Might not be found. At that point we go for the beginning of the zone.
   cmap_t::const_iterator beginIter = d_map.lower_bound(tie(begin));
-  if (beginIter == d_map.end())
+  if (beginIter == d_map.end() || !iends_with(beginIter->qname,zone))
     beginIter = d_map.lower_bound(tie(zone));
 
-  cmap_t::const_iterator endIter = beginIter;
+  if (beginIter == d_map.end()) // Couldn't find begin and not the zone? This thing is simply not in the cache!
+    return 0;
 
-  // From that point forwards, we search for the end. After we found that, we make sure we run all the way to the end (because the first match might be a different qtype)
+  // Search for the end. We make sure we run all the way to the end (because the first match might be a different qtype)
+  cmap_t::const_iterator endIter = beginIter;
   bool endIterFound=false;
   for (; endIter != d_map.end(); ++endIter) {
     if ((endIterFound && !iends_with(endIter->qname, end)) || !iends_with(endIter->qname, zone))
@@ -282,15 +284,11 @@ int PacketCache::purgeRange(const string &begin, const string &end, const string
 
     if (iends_with(endIter->qname, end))
       endIterFound=true;
-
   }
 
   // Finally erase things.
   d_map.erase(beginIter, endIter);
- 
   *d_statnumentries=d_map.size();
-
-
   return size - *d_statnumentries;
 }
 

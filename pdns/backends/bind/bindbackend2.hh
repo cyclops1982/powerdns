@@ -132,7 +132,7 @@ public:
   bool getDomainInfo(const string &domain, DomainInfo &di);
   time_t getCtime(const string &fname);
   // DNSSEC
-  virtual bool getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after);
+  virtual bool getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after, bool beforeCurrent=false);
   void lookup(const QType &, const string &qdomain, DNSPacket *p=0, int zoneId=-1);
   bool list(const string &target, int id);
   bool get(DNSResourceRecord &);
@@ -248,7 +248,7 @@ private:
   handle d_handle;
 
   void queueReload(BB2DomainInfo *bbd);
-  bool findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::string& qname, std::string& unhashed, std::string& before, std::string& after);
+  bool findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::string& qname, std::string& before, std::string& after, bool beforeCurrent);
   void reload();
   static string DLDomStatusHandler(const vector<string>&parts, Utility::pid_t ppid);
   static string DLListRejectsHandler(const vector<string>&parts, Utility::pid_t ppid);
