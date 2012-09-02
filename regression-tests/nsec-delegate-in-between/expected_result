@@ -1,0 +1,29 @@
+0	a.host.wtest.com.	IN	A	3600	1.1.1.1
+0	a.host.wtest.com.	IN	NSEC	3600	c.host.wtest.com. A RRSIG NSEC
+2	.	IN	OPT	32768	
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Reply to question for qname='a.host.wtest.com.', qtype=ANY
+0	b.host.wtest.com.	IN	CNAME	3600	server1.wtest.com.
+0	server1.wtest.com.	IN	A	3600	1.2.3.4
+0	server1.wtest.com.	IN	NSEC	3600	something.wtest.com. A RRSIG NSEC
+1	a.host.wtest.com.	IN	NSEC	3600	c.host.wtest.com. A RRSIG NSEC
+2	.	IN	OPT	32768	
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Reply to question for qname='b.host.wtest.com.', qtype=ANY
+1	c.host.wtest.com.	IN	NS	3600	ns1.c.host.wtest.com.
+1	c.host.wtest.com.	IN	NSEC	3600	d.host.wtest.com. NS RRSIG NSEC
+2	.	IN	OPT	32768	
+2	ns1.c.host.wtest.com.	IN	A	3600	2.2.2.2
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 0, opcode: 0
+Reply to question for qname='c.host.wtest.com.', qtype=ANY
+0	d.host.wtest.com.	IN	A	3600	3.3.3.3
+0	d.host.wtest.com.	IN	NSEC	3600	secure.wtest.com. A RRSIG NSEC
+2	.	IN	OPT	32768	
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Reply to question for qname='d.host.wtest.com.', qtype=ANY
+1	c.host.wtest.com.	IN	NS	3600	ns1.c.host.wtest.com.
+1	c.host.wtest.com.	IN	NSEC	3600	d.host.wtest.com. NS RRSIG NSEC
+2	.	IN	OPT	32768	
+2	ns1.c.host.wtest.com.	IN	A	3600	2.2.2.2
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 0, opcode: 0
+Reply to question for qname='c.c.host.wtest.com.', qtype=ANY

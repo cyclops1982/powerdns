@@ -24,3 +24,8 @@ c.d.e			IN	TXT	"non-empty"
 b.c.d.e			IN	TXT	"non-empty"
 a.b.c.d.e			IN	TXT	"non-empty"
 a.something		IN	A	10.11.12.13
+a.host			IN	A	1.1.1.1
+c.host			IN	NS	ns1.c.host.wtest.com.
+ns1.c.host		IN	A	2.2.2.2
+d.host			IN	A	3.3.3.3
+
