@@ -1,4 +1,4 @@
 #!/bin/sh
-cleandig host-bogus.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig host-invalid.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
 $testname/sendupdate.pl $nameserver $port
-cleandig host-bogus.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig host-invalid.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
