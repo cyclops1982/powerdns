@@ -1,4 +1,4 @@
-#!/bin/sh -ex
+#!/bin/bash -ex
 
 tosql ()
 {
@@ -32,29 +32,41 @@ gsqlite3-nodnssec gsqlite3 gsqlite3-nsec3
 opendbx-sqlite3
 tinydns
 
-Add 'wait' (literally) after the context to not kill
-pdns_server immediately after testing. 'nowait' will kill it.
+* Add -presigned to any gmysql test (except narrow) to 
+  test presigned operation
 
-A cachettl can be supplied if you want to run tests with a ttl setting set.
-The default cachettl is 0.
+* Add 'wait' (literally) after the context to not kill 
+  pdns_server immediately after testing. 'nowait' will kill it.
 
-Specifictest can be used to run only one single test.
+* A cachettl can be supplied if you want to run tests with a 
+  ttl setting set. The default cachettl is 0.
+
+* Specifictest can be used to run only one single test.
 __EOF__
 	exit 1
 fi
-
 
 # Copy zones because the test might modify them (well only the dyndns stuff, but let's make this work for others as well)
 for zone in $(grep zone named.conf  | cut -f2 -d\")
 do
 	cp $zone $zone.backup
 done
+rm -f pdns*.pid
+
+presigned=no
+
+if [ ${context: -10} = "-presigned" ]
+then
+	presigned=yes
+	port=$((port-100))
+	context=${context%-presigned}
+fi
 
 case $context in
 		bind)
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=bind --bind-config=./named.conf                \
-				--fancy-records --query-logging --send-root-referral --loglevel=9    \
+				--fancy-records --send-root-referral    \
 				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no &
 			skipreasons="nodnssec"
@@ -74,7 +86,7 @@ case $context in
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=bind --bind-config=./named.conf       \
 				--bind-dnssec-db=./dnssec.sqlite3 \
-				--query-logging --send-root-referral --loglevel=9    \
+			 	--send-root-referral    \
 				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no &
 			skipreasons=
@@ -96,7 +108,7 @@ case $context in
 
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gmysql \
-				--fancy-records --query-logging --send-root-referral --loglevel=9 \
+				--fancy-records --send-root-referral \
 				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gmysql-dbname="$GMYSQLDB" \
@@ -149,7 +161,7 @@ __EOF__
 
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gmysql --gmysql-dnssec \
-				--fancy-records --query-logging --send-root-referral --loglevel=9 \
+				--fancy-records --send-root-referral \
 				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gmysql-dbname="$GMYSQLDB" \
@@ -173,8 +185,8 @@ __EOF__
 			[ -z "$GPGSQLDB" ] && GPGSQLDB=pdnstest
 			[ -z "$GPGSQLUSER" ] && GPGSQLUSER=$(whoami)
 
-			dropdb --user="$GPGSQLUSER" "$GPGSQLDB"	|| echo ignoring pgsql dropdb failure
-			createdb -l C -T template0 --user="$GPGSQLUSER" "$GPGSQLDB"  || echo ignoring pgsql createdb failure
+			dropdb --user="$GPGSQLUSER" "$GPGSQLDB"	|| echo ignoring dropdb failure
+			createdb --user="$GPGSQLUSER" "$GPGSQLDB" || echo ignoring createdb failure # FIXME
 			psql --user="$GPGSQLUSER" "$GPGSQLDB" < ../pdns/no-dnssec.schema.pgsql.sql
 			psql --user="$GPGSQLUSER" "$GPGSQLDB" < ../pdns/dnssec.schema.pgsql.sql
 
@@ -198,7 +210,7 @@ __EOF__
 
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gpgsql --gpgsql-dnssec \
-				--fancy-records --query-logging --send-root-referral --loglevel=9 \
+				--fancy-records --send-root-referral \
 				--cache-ttl=$cachettl --no-config  \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gpgsql-dbname="$GPGSQLDB" \
@@ -231,7 +243,7 @@ gpgsql-user=$GPGSQLUSER
 __EOF__
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gpgsql \
-				--fancy-records --query-logging --send-root-referral --loglevel=9 \
+				--fancy-records --send-root-referral \
 				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gpgsql-dbname="$GPGSQLDB" \
@@ -248,7 +260,7 @@ __EOF__
 
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gsqlite3 \
-				--fancy-records --query-logging --send-root-referral --loglevel=9 \
+				--fancy-records --send-root-referral \
 				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gsqlite3-database=pdns.sqlite3 &
@@ -265,7 +277,7 @@ __EOF__
 
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=opendbx \
-				--fancy-records --query-logging --send-root-referral --loglevel=9 \
+				--fancy-records --send-root-referral \
 				--cache-ttl=$cachettl --no-config \
 				--opendbx-backend=sqlite3 --opendbx-host-read=./ --opendbx-host-write=./ \
 				--opendbx-database=pdns-opendbx.sqlite3 &
@@ -296,7 +308,7 @@ __EOF__
 
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gsqlite3 --gsqlite3-dnssec \
-				--fancy-records --query-logging --send-root-referral --loglevel=9 \
+				--fancy-records --send-root-referral \
 				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gsqlite3-database=pdns.sqlite3 &
@@ -310,7 +322,7 @@ __EOF__
 		tinydns)
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./ \
 				--no-shuffle --launch=tinydns \
-				--query-logging --loglevel=9 --cache-ttl=$cachettl --no-config \
+				--cache-ttl=$cachettl --no-config \
 				--send-root-referral \
 				--tinydns-dbfile=../modules/tinydnsbackend/data.cdb & 
 			skipreasons="nodnssec nodyndns"
@@ -328,6 +340,52 @@ export context
 export extracontexts
 export skipreasons
 
+if [ $presigned = yes ] && [ ${context:0:6} = gmysql ]
+then
+	context=${context}-presigned
+	[ -z "$GMYSQL2DB" ] && GMYSQL2DB=pdnstest2
+	[ -z "$GMYSQL2USER" ] && GMYSQL2USER=root
+	[ -z "$GMYSQL2HOST" ] && GMYSQL2HOST=localhost
+	[ -z "$GMYSQL2PASSWD" ] && GMYSQL2PASSWD=''
+
+	mysqladmin --user="$GMYSQL2USER" --password="$GMYSQL2PASSWD" --host="$GMYSQL2HOST" --force drop "$GMYSQL2DB" \
+		|| echo ignoring mysqladmin drop failure
+	mysqladmin --user="$GMYSQL2USER" --password="$GMYSQL2PASSWD" --host="$GMYSQL2HOST" create "$GMYSQL2DB"
+	mysql --user="$GMYSQL2USER" --password="$GMYSQL2PASSWD" --host="$GMYSQL2HOST" \
+		"$GMYSQL2DB" < ../pdns/no-dnssec.schema.mysql.sql
+	mysql --user="$GMYSQL2USER" --password="$GMYSQL2PASSWD" --host="$GMYSQL2HOST" \
+		"$GMYSQL2DB" < ../pdns/dnssec.schema.mysql.sql
+
+	for zone in $(grep zone named.conf  | cut -f2 -d\")
+	do
+		mysql --user="$GMYSQL2USER" --password="$GMYSQL2PASSWD" --host="$GMYSQL2HOST" \
+		"$GMYSQL2DB" \
+		-e "INSERT INTO domains (name, type, master) VALUES('$zone','SLAVE','127.0.0.1:$port')"
+	done
+
+	port=$((port+100))
+
+	$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
+		--no-shuffle --launch=gmysql --gmysql-dnssec \
+		--fancy-records --send-root-referral \
+		--cache-ttl=0 --query-cache-ttl=0 --no-config --slave --retrieval-threads=1 \
+		--gmysql-dbname="$GMYSQL2DB" \
+		--gmysql-user="$GMYSQL2USER" \
+		--gmysql-host="$GMYSQL2HOST" \
+		--gmysql-password="$GMYSQL2PASSWD" \
+		--config-name=gmysql2 |& egrep -v "update records set ordername|insert into records" &
+	echo 'waiting for zones to be slaved'
+	while sleep 10
+	do
+		todo=$(mysql --user="$GMYSQL2USER" --password="$GMYSQL2PASSWD" --host="$GMYSQl2HOST" \
+			   "$GMYSQL2DB" -ss -e 'SELECT COUNT(id) FROM domains WHERE last_check IS NULL')
+		if [ $todo = 0 ]
+		then
+			break
+		fi
+	done
+fi
+
 ## TODO: give pdns a few seconds to startup or fail, then check if it did not fail
 ## TODO: give sdig a timeout
 nameserver=127.0.0.1 ./runtests $spectest
@@ -338,7 +396,9 @@ then
 	echo tests done! push enter to terminate instance
 	read l
 fi
-kill $(cat pdns.pid)
+
+kill $(cat pdns*.pid)
+rm pdns*.pid
 
 for zone in $(grep zone named.conf  | cut -f2 -d\")
 do
