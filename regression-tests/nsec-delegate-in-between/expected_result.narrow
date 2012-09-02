@@ -1,0 +1,31 @@
+0	a.host.wtest.com.	IN	A	3600	1.1.1.1
+0	gcnk9sgmhmlhvtmc4cdtmetiqu4n99vh.wtest.com.	IN	NSEC3	3600	1 1 1 abcd GCNK9SGMHMLHVTMC4CDTMETIQU4N99VI A RRSIG
+2	.	IN	OPT	32768	
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Reply to question for qname='a.host.wtest.com.', qtype=ANY
+0	53i5j7tgm8qg2gbv716rvqvarqcijue2.wtest.com.	IN	NSEC3	3600	1 1 1 abcd 53I5J7TGM8QG2GBV716RVQVARQCIJUE3 A RRSIG
+0	b.host.wtest.com.	IN	CNAME	3600	server1.wtest.com.
+0	server1.wtest.com.	IN	A	3600	1.2.3.4
+1	d468a3tv5cmjd7kngdievdsuce1ls2e1.wtest.com.	IN	NSEC3	86400	1 1 1 abcd D468A3TV5CMJD7KNGDIEVDSUCE1LS2E3 RRSIG
+2	.	IN	OPT	32768	
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Reply to question for qname='b.host.wtest.com.', qtype=ANY
+1	c.host.wtest.com.	IN	NS	3600	ns1.c.host.wtest.com.
+1	d468a3tv5cmjd7kngdievdsuce1ls2e1.wtest.com.	IN	NSEC3	86400	1 1 1 abcd D468A3TV5CMJD7KNGDIEVDSUCE1LS2E3 RRSIG
+1	shegk154n8362ag22ar9vddrf3127m6i.wtest.com.	IN	NSEC3	3600	1 1 1 abcd SHEGK154N8362AG22AR9VDDRF3127M6J A NS SOA MX RRSIG DNSKEY NSEC3PARAM
+2	.	IN	OPT	32768	
+2	ns1.c.host.wtest.com.	IN	A	3600	2.2.2.2
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 0, opcode: 0
+Reply to question for qname='c.host.wtest.com.', qtype=ANY
+0	7hoe9bm9977952jpq6vnu6tibapegqpk.wtest.com.	IN	NSEC3	3600	1 1 1 abcd 7HOE9BM9977952JPQ6VNU6TIBAPEGQPL A RRSIG
+0	d.host.wtest.com.	IN	A	3600	3.3.3.3
+2	.	IN	OPT	32768	
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Reply to question for qname='d.host.wtest.com.', qtype=ANY
+1	c.host.wtest.com.	IN	NS	3600	ns1.c.host.wtest.com.
+1	d468a3tv5cmjd7kngdievdsuce1ls2e1.wtest.com.	IN	NSEC3	86400	1 1 1 abcd D468A3TV5CMJD7KNGDIEVDSUCE1LS2E3 RRSIG
+1	shegk154n8362ag22ar9vddrf3127m6i.wtest.com.	IN	NSEC3	3600	1 1 1 abcd SHEGK154N8362AG22AR9VDDRF3127M6J A NS SOA MX RRSIG DNSKEY NSEC3PARAM
+2	.	IN	OPT	32768	
+2	ns1.c.host.wtest.com.	IN	A	3600	2.2.2.2
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 0, opcode: 0
+Reply to question for qname='c.c.host.wtest.com.', qtype=ANY

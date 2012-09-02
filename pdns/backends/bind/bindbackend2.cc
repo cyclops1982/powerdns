@@ -595,8 +595,9 @@ void Bind2Backend::fixupAuth(shared_ptr<recordstorage_t> records)
     do {
       if(sqname.empty()) // this is auth of course!
         continue; 
-      if(bdr.qtype == QType::NS || nssets.count(sqname)) { // NS records which are not apex are unauth by definition
+      if(bdr.qtype == QType::NS || nssets.count(labelReverse(sqname))) { // NS records which are not apex are unauth by definition
         bdr.auth=false;
+        break;
       }
     } while(chopOff(sqname));
   }
