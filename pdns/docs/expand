@@ -1,8 +1,16 @@
 #!/bin/sh
 sed \
+'s|RFC\([0-9][0-9][0-9]*\)|IMSPECIAL\1|g' |
+sed \
+'s|rfc\([0-9][0-9][0-9]*\)|imspecial\1|g' |
+sed \
 's|c\([0-9][0-9][0-9]*\)|<ulink url="http://wiki.powerdns.com/projects/trac/changeset/\1">commit \1</ulink>|g' |
 sed \
 's|C\([0-9][0-9][0-9]*\)|<ulink url="http://wiki.powerdns.com/projects/trac/changeset/\1">\1</ulink>|g' |
+sed \
+'s|IMSPECIAL\([0-9][0-9][0-9]*\)|RFC\1|g' | 
+sed \
+'s|imspecial\([0-9][0-9][0-9]*\)|rfc\1|g' |
 sed \
 's|\sT\([0-9][0-9]*\)| <ulink url="http://wiki.powerdns.com/projects/trac/ticket/\1">\1</ulink>|g' |
 sed \

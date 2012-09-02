@@ -12,13 +12,17 @@ port=$1
 context=$2
 [ -z "$context" ] && context=bind-dnssec
 wait=$3
+[ -z "$wait" ] && wait=nowait
+cachettl=$4
+[ -z "$cachettl" ] && cachettl=0
+spectest=$5
 
 if [ "$port" = help ] || [ "$context" = help ]
 then
 	set +x
 	cat << '__EOF__'
 
-Usage: ./start-test-stop <port> [<context>] [wait]
+Usage: ./start-test-stop <port> [<context>] [wait|nowait] [<cachettl>] [<specifictest>]
 
 context is one of:
 bind bind-dnssec bind-dnssec-nsec3
@@ -28,19 +32,32 @@ gsqlite3-nodnssec gsqlite3 gsqlite3-nsec3
 opendbx-sqlite3
 tinydns
 
-add 'wait' (literally) after the context to not kill 
-pdns_server immediately after testing
+Add 'wait' (literally) after the context to not kill
+pdns_server immediately after testing. 'nowait' will kill it.
+
+A cachettl can be supplied if you want to run tests with a ttl setting set.
+The default cachettl is 0.
+
+Specifictest can be used to run only one single test.
 __EOF__
 	exit 1
 fi
+
+
+# Copy zones because the test might modify them (well only the dyndns stuff, but let's make this work for others as well)
+for zone in $(grep zone named.conf  | cut -f2 -d\")
+do
+	cp $zone $zone.backup
+done
 
 case $context in
 		bind)
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=bind --bind-config=./named.conf                \
 				--fancy-records --query-logging --send-root-referral --loglevel=9    \
-				--cache-ttl=0 --no-config &
-			skipreasons=nodnssec
+				--cache-ttl=$cachettl --no-config \
+				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no &
+			skipreasons="nodnssec"
 			;;
 		bind-dnssec | bind-dnssec-nsec3 )
 			./bind-dnssec-setup
@@ -58,7 +75,9 @@ case $context in
 				--no-shuffle --launch=bind --bind-config=./named.conf       \
 				--bind-dnssec-db=./dnssec.sqlite3 \
 				--query-logging --send-root-referral --loglevel=9    \
-				--cache-ttl=0 --no-config &
+				--cache-ttl=$cachettl --no-config \
+				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no &
+			skipreasons=
 			;;
 		gmysql-nodnssec)
 			[ -z "$GMYSQLDB" ] && GMYSQLDB=pdnstest
@@ -78,7 +97,8 @@ case $context in
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gmysql \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=$cachettl --no-config \
+				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gmysql-dbname="$GMYSQLDB" \
 				--gmysql-user="$GMYSQLUSER" \
 				--gmysql-host="$GMYSQLHOST" \
@@ -130,7 +150,8 @@ __EOF__
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gmysql --gmysql-dnssec \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=$cachettl --no-config \
+				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gmysql-dbname="$GMYSQLDB" \
 				--gmysql-user="$GMYSQLUSER" \
 				--gmysql-host="$GMYSQLHOST" \
@@ -152,8 +173,8 @@ __EOF__
 			[ -z "$GPGSQLDB" ] && GPGSQLDB=pdnstest
 			[ -z "$GPGSQLUSER" ] && GPGSQLUSER=$(whoami)
 
-			dropdb --user="$GPGSQLUSER" "$GPGSQLDB"	|| echo ignoring mysqladmin drop failure
-			createdb --user="$GPGSQLUSER" "$GPGSQLDB"	|| echo ignoring mysqladmin drop failure
+			dropdb --user="$GPGSQLUSER" "$GPGSQLDB"	|| echo ignoring pgsql dropdb failure
+			createdb -l C -T template0 --user="$GPGSQLUSER" "$GPGSQLDB"  || echo ignoring pgsql createdb failure
 			psql --user="$GPGSQLUSER" "$GPGSQLDB" < ../pdns/no-dnssec.schema.pgsql.sql
 			psql --user="$GPGSQLUSER" "$GPGSQLDB" < ../pdns/dnssec.schema.pgsql.sql
 
@@ -178,7 +199,8 @@ __EOF__
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gpgsql --gpgsql-dnssec \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=$cachettl --no-config  \
+				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gpgsql-dbname="$GPGSQLDB" \
 				--gpgsql-user="$GPGSQLUSER" &
 			if [ $context = gpgsql-nsec3 ]
@@ -210,7 +232,8 @@ __EOF__
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gpgsql \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=$cachettl --no-config \
+				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gpgsql-dbname="$GPGSQLDB" \
 				--gpgsql-user="$GPGSQLUSER" &
 			skipreasons=nodnssec
@@ -226,7 +249,8 @@ __EOF__
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gsqlite3 \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=$cachettl --no-config \
+				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gsqlite3-database=pdns.sqlite3 &
 			skipreasons=nodnssec
 
@@ -242,10 +266,10 @@ __EOF__
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=opendbx \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=$cachettl --no-config \
 				--opendbx-backend=sqlite3 --opendbx-host-read=./ --opendbx-host-write=./ \
 				--opendbx-database=pdns-opendbx.sqlite3 &
-			skipreasons=nodnssec
+			skipreasons="nodnssec nodyndns"
 
 			;;									
 		gsqlite3 | gsqlite3-nsec3)
@@ -273,7 +297,8 @@ __EOF__
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gsqlite3 --gsqlite3-dnssec \
 				--fancy-records --query-logging --send-root-referral --loglevel=9 \
-				--cache-ttl=0 --no-config \
+				--cache-ttl=$cachettl --no-config \
+				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gsqlite3-database=pdns.sqlite3 &
 			if [ $context = gsqlite3-nsec3 ]
 			then
@@ -285,10 +310,10 @@ __EOF__
 		tinydns)
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./ \
 				--no-shuffle --launch=tinydns \
-				--query-logging --loglevel=9 --cache-ttl=0 --no-config \
+				--query-logging --loglevel=9 --cache-ttl=$cachettl --no-config \
 				--send-root-referral \
 				--tinydns-dbfile=../modules/tinydnsbackend/data.cdb & 
-			skipreasons=nodnssec
+			skipreasons="nodnssec nodyndns"
 			;;
 		*)
 			echo unknown context $context
@@ -305,7 +330,7 @@ export skipreasons
 
 ## TODO: give pdns a few seconds to startup or fail, then check if it did not fail
 ## TODO: give sdig a timeout
-nameserver=127.0.0.1 ./runtests
+nameserver=127.0.0.1 ./runtests $spectest
 ./toxml
 ./totar
 if [ "$wait" = "wait" ]
@@ -314,3 +339,8 @@ then
 	read l
 fi
 kill $(cat pdns.pid)
+
+for zone in $(grep zone named.conf  | cut -f2 -d\")
+do
+	mv $zone.backup $zone
+done

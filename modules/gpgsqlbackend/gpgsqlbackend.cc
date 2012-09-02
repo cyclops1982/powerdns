@@ -60,7 +60,9 @@ public:
     declare(suffix,"wildcard-any-id-query","Wildcard ANY with ID query","select content,ttl,prio,type,domain_id,name from records where name like E'%s' and domain_id='%d'");
 
     declare(suffix,"list-query","AXFR query", "select content,ttl,prio,type,domain_id,name from records where domain_id='%d'");
-  
+    
+    declare(suffix,"list-subzone","Query that returns a sub-zone","select content,ttl,prio,type,domain_id,name from records where (name=E'%s' OR name like E'%s') and domain_id=%d");
+
     // and now with auth
     declare(suffix,"basic-query-auth","Basic query","select content,ttl,prio,type,domain_id,name, case when auth then 1 else 0 end as auth from records where type='%s' and name=E'%s'");
     declare(suffix,"id-query-auth","Basic with ID query","select content,ttl,prio,type,domain_id,name, case when auth then 1 else 0 end as auth from records where type='%s' and name=E'%s' and domain_id=%d");
@@ -73,7 +75,8 @@ public:
     declare(suffix,"wildcard-any-id-query-auth","Wildcard ANY with ID query","select content,ttl,prio,type,domain_id,name, case when auth then 1 else 0 end as auth from records where name like E'%s' and domain_id='%d'");
 
     declare(suffix,"list-query-auth","AXFR query", "select content,ttl,prio,type,domain_id,name, case when auth then 1 else 0 end as auth from records where domain_id='%d' order by name, type");
-    
+    declare(suffix,"list-subzone-auth","Query that returns a sub-zone","select content,ttl,prio,type,domain_id,name,auth from records where (name=E'%s' OR name like E'%s') and domain_id=%d");
+
     declare(suffix,"master-zone-query","Data", "select master from domains where name=E'%s' and type='SLAVE'");
 
     declare(suffix,"info-zone-query","","select id,name,master,last_check,notified_serial,type from domains where name=E'%s'");
@@ -86,6 +89,7 @@ public:
     
     declare(suffix,"get-order-first-query","DNSSEC Ordering Query, last", "select ordername, name from records where domain_id=%d and ordername is not null order by 1 asc limit 1");
     declare(suffix,"get-order-before-query","DNSSEC Ordering Query, before", "select ordername, name from records where ordername <= E'%s' and domain_id=%d and ordername is not null order by 1 desc limit 1");
+    declare(suffix,"get-order-before-current-query","DNSSEC Ordering Query, before", "select ordername, name from records where ordername < E'%s' and domain_id=%d and ordername is not null order by 1 desc limit 1");
     declare(suffix,"get-order-after-query","DNSSEC Ordering Query, after", "select min(ordername) from records where ordername > E'%s' and domain_id=%d and ordername is not null");
     declare(suffix,"get-order-last-query","DNSSEC Ordering Query, last", "select ordername, name from records where ordername != '' and domain_id=%d and ordername is not null order by 1 desc limit 1");
     declare(suffix,"set-order-and-auth-query", "DNSSEC set ordering query", "update records set ordername=E'%s',auth=(%d = 1) where name=E'%s' and domain_id='%d'");
@@ -94,9 +98,12 @@ public:
     
     declare(suffix,"update-serial-query","", "update domains set notified_serial=%d where id=%d");
     declare(suffix,"update-lastcheck-query","", "update domains set last_check=%d where id=%d");
+    declare(suffix,"update-record-query", "Query that updates records with the prio", "update records set content='%s', ttl=%d, prio=%d where name='%s' and type='%s' and domain_id=%d and prio=%d");
+    declare(suffix,"update-record-query-no-prio", "Query that updates record without the prio", "update records set content='%s', ttl=%d where name='%s' and type='%s' and domain_id=%d");
     declare(suffix,"zone-lastchange-query", "", "select max(change_date) from records where domain_id=%d");
     declare(suffix,"info-all-master-query","", "select id,name,master,last_check,notified_serial,type from domains where type='MASTER'");
     declare(suffix,"delete-zone-query","", "delete from records where domain_id=%d");
+    declare(suffix,"delete-record-query", "Delete a record for dyndns", "delete from records where domain_id=%d and name=E'%s' and type=E'%s' and content=E'%s' and prio=%d");
 
     declare(suffix,"add-domain-key-query","", "insert into cryptokeys (domain_id, flags, active, content) select id, %d, (%d = 1), '%s' from domains where name=E'%s'");
     declare(suffix,"list-domain-keys-query","", "select cryptokeys.id, flags, case when active then 1 else 0 end as active, content from domains, cryptokeys where domain_id=domains.id and name=E'%s'");

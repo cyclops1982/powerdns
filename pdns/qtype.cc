@@ -44,43 +44,68 @@ QType::QType()
   if(uninit)
     {
       uninit=false;
-      insert("A",1);
-      insert("NS",2);
-      insert("CNAME",5);
-      insert("SOA",6);
-      insert("MR",9);
-      insert("PTR",12);
-      insert("HINFO",13);
-      insert("MX",15);
-      insert("TXT",16);
-      insert("RP",17);
+      insert("A", 1);
+      insert("NS", 2);
+      insert("CNAME", 5);
+      insert("SOA", 6);
+      insert("MR", 9);
+      insert("PTR", 12);
+      insert("HINFO", 13);
+      insert("MX", 15);
+      insert("TXT", 16);
+      insert("RP", 17);
       insert("AFSDB", 18);
-      insert("SIG",24);
-      insert("KEY",25);
-      insert("AAAA",28);
-      insert("LOC",29);
-      insert("SRV",33);
+      insert("SIG", 24);
+      insert("KEY", 25);
+      insert("AAAA", 28);
+      insert("LOC", 29);
+      insert("SRV", 33);
+      insert("NAPTR", 35);
+      insert("KX", 36);
       insert("CERT", 37);
-      insert("A6",38);
-      insert("NAPTR",35);
+      insert("A6", 38);
+      insert("OPT", 41);
       insert("DS", 43);
       insert("SSHFP", 44);
+      insert("IPSECKEY", 45);
       insert("RRSIG", 46);
       insert("NSEC", 47);
       insert("DNSKEY", 48);
+      insert("DHCID", 49);
       insert("NSEC3", 50);
       insert("NSEC3PARAM", 51);
-      insert("TLSA",52);
-      insert("SPF",99);
-      insert("IXFR",251);
-      insert("AXFR",252);
-      insert("ANY",255);
-      insert("URL",256);
-      insert("MBOXFW",257);
-      insert("CURL",258);
-      insert("ADDR",259);
-      insert("DLV",32769);
+      insert("TLSA", 52);
+      insert("SPF", 99);
+      insert("TSIG", 250);
+      insert("IXFR", 251);
+      insert("AXFR", 252);
+      insert("MAILB", 253);
+      insert("MAILA", 254);
+      insert("ANY", 255);
+      insert("URL", 256);
+      insert("MBOXFW", 257);
+      insert("CURL", 258);
+      insert("ADDR", 259);
+      insert("DLV", 32769);
     }
+}
+
+bool QType::isSupportedType() {
+  for(vector<namenum>::iterator pos=names.begin();pos<names.end();++pos)
+    if(pos->second==code) 
+      return true;
+  return false;
+}
+
+bool QType::isMetadataType() {
+  if (code == QType::AXFR ||
+      code == QType::MAILA ||
+      code == QType::MAILB ||
+      code == QType::TSIG ||
+      code == QType::IXFR)  
+    return true;
+
+  return false;
 }
 
 uint16_t QType::getCode() const
@@ -128,10 +153,22 @@ QType &QType::operator=(const char *p)
   return *this;
 }
 
+bool QType::operator!=(const QType &comp) const
+{
+  return(comp.code!=code);
+}
+
 bool QType::operator==(const QType &comp) const
 {
   return(comp.code==code);
 }
+
+bool QType::operator==(const uint16_t comp) const
+{
+  return(comp==code);
+}
+
+
 
 QType &QType::operator=(const string &s)
 {

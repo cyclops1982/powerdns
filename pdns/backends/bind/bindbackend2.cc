@@ -84,6 +84,24 @@ string Bind2Backend::s_binddirectory;
 /* when a query comes in, we find the most appropriate zone and answer from that */
 
 
+
+//! lowercase, strip trailing .
+static string canonic(string ret)
+{
+  string::iterator i;
+
+  for(i=ret.begin();
+      i!=ret.end();
+      ++i)
+    *i=tolower(*i);
+
+
+  if(*(i-1)=='.')
+    ret.resize(i-ret.begin()-1);
+  return ret;
+}
+
+
 BB2DomainInfo::BB2DomainInfo()
 {
   d_loaded=false;
@@ -156,46 +174,80 @@ shared_ptr<Bind2Backend::State> Bind2Backend::getState()
 
 bool Bind2Backend::startTransaction(const string &qname, int id)
 {
-  if(id < 0) {
-    d_transaction_tmpname.clear();
-    d_transaction_id=id;
-    return true;
-  }
-  shared_ptr<State> state = getState(); 
+ 
+  d_transaction_id = id;
+  d_transaction_zone = qname;
+  if(d_transaction_zone.empty() && d_transaction_id < 0) // when we only want DNSSEC operation from pdnssec.cc
+    return false;
 
-  const BB2DomainInfo &bbd=state->id_zone_map[d_transaction_id=id];
+  shared_ptr<State> state = getState();
+  BB2DomainInfo &bbd = state->id_zone_map[state->name_id_map[d_transaction_zone]];
 
-  d_transaction_tmpname=bbd.d_filename+"."+itoa(random());
-  d_of=new ofstream(d_transaction_tmpname.c_str());
-  if(!*d_of) {
-    throw DBException("Unable to open temporary zonefile '"+d_transaction_tmpname+"': "+stringerror());
-    unlink(d_transaction_tmpname.c_str());
-    delete d_of;
-    d_of=0;
-  }
+  d_transaction_tmpname = bbd.d_filename+"."+itoa(random()); // we might not need this filename right away, but let's set it anyway ((c) codepoet)
+  d_transaction_nsec3zone = getNSEC3PARAM(bbd.d_name, &d_transaction_ns3p);
   
-  *d_of<<"; Written by PowerDNS, don't edit!"<<endl;
-  *d_of<<"; Zone '"+bbd.d_name+"' retrieved from master "<<endl<<"; at "<<nowTime()<<endl; // insert master info here again
 
+  if(d_transaction_id < 0) {
+    if (!bbd.d_loaded) {
+      queueReload(&bbd);
+      if (!bbd.d_loaded)
+        throw new DBException("Could not load zone '"+bbd.d_name+"' to create transaction, message: "+bbd.d_status);
+    }
+    d_transRecords.clear();
+    std::copy(bbd.d_records->begin(), bbd.d_records->end(), std::back_inserter(d_transRecords));
+  } else {
+    d_of=new ofstream(d_transaction_tmpname.c_str());
+    if(!*d_of) {
+      unlink(d_transaction_tmpname.c_str());
+      delete d_of;
+      d_of=0;
+      throw new DBException("Unable to open temporary zonefile '"+d_transaction_tmpname+"': "+stringerror());
+    }
+  
+    *d_of<<"; Written by PowerDNS, don't edit!"<<endl;
+    *d_of<<"; Zone '"+bbd.d_name+"' retrieved from master "<<endl<<"; at "<<nowTime()<<endl; // insert master info here again
+  }
   return true;
 }
 
+
 bool Bind2Backend::commitTransaction()
 {
-  if(d_transaction_id < 0)
+  if (d_transaction_zone.empty() && d_transaction_id < 0)
     return true;
+
+  shared_ptr<State> state = getState(); 
+  BB2DomainInfo &bbd = state->id_zone_map[state->name_id_map[d_transaction_zone]];
+  if(d_transaction_id < 0) {
+    d_of=new ofstream(d_transaction_tmpname.c_str()); // filename was already set in starTransaction
+    if(!*d_of) {
+      unlink(d_transaction_tmpname.c_str());
+      delete d_of;
+      d_of=0;
+      throw DBException("Unable to open temporary zonefile '"+d_transaction_tmpname+"': "+stringerror());
+    }
+    
+ 
+    *d_of<<"; Written by PowerDNS, don't edit!"<<endl;
+    *d_of<<"; Zone '"+bbd.d_name+"' retrieved from master "<<endl<<"; at "<<nowTime()<<endl; // insert master info here again
+
+    for (vector<Bind2DNSRecord>::const_iterator i = d_transRecords.begin(); i != d_transRecords.end(); i++) {
+      string qname = labelReverse(i->qname); // reverse the reversed label. yay :-)
+      qname = qname.empty() ? bbd.d_name : (qname+"."+bbd.d_name);
+      writeRecord(d_transaction_zone, qname, i->ttl, QType(i->qtype), i->priority, i->content);
+    }
+  } 
+  
   delete d_of;
   d_of=0;
-  shared_ptr<State> state = getState(); 
 
   // this might fail if s_state was cycled during the AXFR
-  if(rename(d_transaction_tmpname.c_str(), state->id_zone_map[d_transaction_id].d_filename.c_str())<0)
-    throw DBException("Unable to commit (rename to: '" + state->id_zone_map[d_transaction_id].d_filename+"') AXFRed zone: "+stringerror());
+  if(rename(d_transaction_tmpname.c_str(), bbd.d_filename.c_str())<0)
+    throw DBException("Unable to commit (rename to: '" + bbd.d_filename+"') AXFRed zone: "+stringerror());
 
-  queueReload(&state->id_zone_map[d_transaction_id]);
-
+  queueReload(&bbd);
   d_transaction_id=0;
-
+  
   return true;
 }
 
@@ -205,65 +257,115 @@ bool Bind2Backend::abortTransaction()
     delete d_of;
     d_of=0;
     unlink(d_transaction_tmpname.c_str());
-    d_transaction_id=0;
+  }
+  d_transRecords.clear();
+  d_transaction_id=0;
+  d_transaction_zone.clear();
+
+  return true;
+}
+
+bool Bind2Backend::updateRecord(const DNSResourceRecord &oldR, const DNSResourceRecord &r) {
+  if (d_transaction_id >= 0)
+    return false;
+
+  for (vector<Bind2DNSRecord>::iterator i = d_transRecords.begin(); i != d_transRecords.end(); i++) {
+    string qname = labelReverse(i->qname); // reverse the reversed label. yay :-)
+    qname = i->qname.empty() ? d_transaction_zone : (i->qname+"."+d_transaction_zone);
+    if (qname == oldR.qname && i->qtype == oldR.qtype.getCode() && i->priority == oldR.priority) {
+      i->content = r.content;
+      i->ttl = r.ttl;
+    }
+  }
+  return true;
+}
+
+bool Bind2Backend::removeRecord(const DNSResourceRecord &r) {
+  if (d_transaction_id >= 0)
+    return false;
+
+  for (vector<Bind2DNSRecord>::iterator i = d_transRecords.begin(); i != d_transRecords.end(); i++) {
+    string qname = labelReverse(i->qname); // reverse the reversed label. yay :-)
+    qname = qname.empty() ? d_transaction_zone : (qname+"."+d_transaction_zone);
+    if (qname == r.qname && i->qtype == r.qtype.getCode() && i->content == r.content) {
+      d_transRecords.erase(i);
+    }
   }
 
   return true;
 }
 
-bool Bind2Backend::updateDNSSECOrderAndAuthAbsolute(uint32_t domain_id, const std::string& qname, const std::string& ordername, bool auth)
-{
-  #if 0
-  const shared_ptr<State> state = getState();
-  BB2DomainInfo& bbd = state->id_zone_map[domain_id];
-
-  string sqname;
-
-  if(bbd.d_name.empty())
-    sqname=qname;
-  else if(strcasecmp(qname.c_str(), bbd.d_name.c_str()))
-    sqname=qname.substr(0,qname.size() - bbd.d_name.length()-1); // strip domain name
-
-  sqname = labelReverse(sqname);
-  
-  if(!auth)
-    d_authDelayed[sqname] = auth;
-  
-  #endif
-  return false;
-}
 
 bool Bind2Backend::feedRecord(const DNSResourceRecord &r)
 {
-  string qname=r.qname;
-
   const shared_ptr<State> state = getState();
-  string domain = state->id_zone_map[d_transaction_id].d_name;
+  if (d_transaction_id >= 0) {
+    writeRecord(state->id_zone_map[d_transaction_id].d_name, r.qname, r.ttl, r.qtype, r.priority, r.content);
+  } else {
+    string hashed;
+    if (d_transaction_nsec3zone)
+      hashed = toLower(toBase32Hex(hashQNameWithSalt(d_transaction_ns3p.d_iterations, d_transaction_ns3p.d_salt, r.qname)));
 
-  if(!stripDomainSuffix(&qname,domain)) 
-    throw DBException("out-of-zone data '"+qname+"' during AXFR of zone '"+domain+"'");
+    Bind2DNSRecord bdr;
 
-  string content=r.content;
+    bdr.qname=toLower(canonic(r.qname));
+    if(d_transaction_zone.empty())
+      ;
+    else if(bdr.qname==toLower(d_transaction_zone))
+      bdr.qname.clear();
+    else if(bdr.qname.length() > d_transaction_zone.length())
+      bdr.qname.resize(bdr.qname.length() - (d_transaction_zone.length() + 1));
+    else
+      throw AhuException("Trying to insert non-zone data, name='"+bdr.qname+"', qtype="+r.qtype.getName()+", zone='"+d_transaction_zone+"'");
 
-  // SOA needs stripping too! XXX FIXME - also, this should not be here I think
-  switch(r.qtype.getCode()) {
-  case QType::MX:
-    if(!stripDomainSuffix(&content, domain))
-      content+=".";
-  case QType::SRV:
-    *d_of<<qname<<"\t"<<r.ttl<<"\t"<<r.qtype.getName()<<"\t"<<r.priority<<"\t"<<content<<endl;
-    break;
-  case QType::CNAME:
-  case QType::NS:
-    if(!stripDomainSuffix(&content, domain))
-      content+=".";
-    *d_of<<qname<<"\t"<<r.ttl<<"\t"<<r.qtype.getName()<<"\t"<<content<<endl;
-    break;
-  default:
-    *d_of<<qname<<"\t"<<r.ttl<<"\t"<<r.qtype.getName()<<"\t"<<r.content<<endl;
-    break;
+    bdr.qname.swap(bdr.qname);
+    bdr.qname=labelReverse(bdr.qname);
+
+    bdr.qtype=r.qtype.getCode();
+    bdr.content=r.content; 
+    bdr.nsec3hash = hashed;
+
+    bdr.priority=r.priority;
+    //if(bdr.qtype==QType::CNAME || bdr.qtype==QType::MX || bdr.qtype==QType::NS || bdr.qtype==QType::AFSDB)
+    //  bdr.content=canonic(bdr.content); // I think this is wrong, the zoneparser should not come up with . terminated stuff XXX FIXME
+
+    bdr.ttl=r.ttl;
+ 
+    d_transRecords.push_back(bdr);
+
   }
   return true;
+}
+
+void Bind2Backend::writeRecord(const string &domain, const string &qname, const uint32_t ttl, const QType &qtype, uint16_t priority, const string &cont) {
+  if (! *d_of)
+    throw DBException("Tried to write records to file, but failed because file stream is not initalized. Should never happen!");
+  
+  string content = cont;
+  string name = qname;
+
+  if(!stripDomainSuffix(&name, domain)) 
+    throw DBException("out-of-zone data '"+qname+"' during AXFR of zone '"+domain+"'");
+
+
+  // SOA needs stripping too! XXX FIXME - also, this should not be here I think
+  switch(qtype.getCode()) {
+    case QType::SRV:
+    case QType::MX:
+      if(!stripDomainSuffix(&content, domain))
+        content+=".";
+      *d_of<<name<<"\t"<<ttl<<"\t"<<qtype.getName()<<"\t"<<priority<<"\t"<<content<<endl;
+      break;
+    case QType::CNAME:
+    case QType::NS:
+      if(!stripDomainSuffix(&content, domain))
+        content+=".";
+      *d_of<<name<<"\t"<<ttl<<"\t"<<qtype.getName()<<"\t"<<content<<endl;
+      break;
+    default:
+      *d_of<<name<<"\t"<<ttl<<"\t"<<qtype.getName()<<"\t"<<content<<endl;
+      break;
+  }
 }
 
 void Bind2Backend::getUpdatedMasters(vector<DomainInfo> *changedDomains)
@@ -388,31 +490,16 @@ void Bind2Backend::alsoNotifies(const string &domain, set<string> *ips)
   }   
 }
 
-//! lowercase, strip trailing .
-static string canonic(string ret)
-{
-  string::iterator i;
-
-  for(i=ret.begin();
-      i!=ret.end();
-      ++i)
-    *i=tolower(*i);
-
-
-  if(*(i-1)=='.')
-    ret.resize(i-ret.begin()-1);
-  return ret;
-}
 
 /** THIS IS AN INTERNAL FUNCTION! It does moadnsparser prio impedence matching
     This function adds a record to a domain with a certain id. 
     Much of the complication is due to the efforts to benefit from std::string reference counting copy on write semantics */
-void Bind2Backend::insert(shared_ptr<State> stage, int id, const string &qnameu, const QType &qtype, const string &content, int ttl, int prio, const std::string& hashed)
+void Bind2Backend::insert(shared_ptr<State> stage, int id, const string &qnameu, const QType &qtype, const string &content, uint32_t ttl, uint16_t prio, const std::string& hashed)
 {
   BB2DomainInfo bb2 = stage->id_zone_map[id];
-  Bind2DNSRecord bdr;
 
   recordstorage_t& records=*bb2.d_records; 
+  Bind2DNSRecord bdr;
 
   bdr.qname=toLower(canonic(qnameu));
   if(bb2.d_name.empty())
@@ -850,7 +937,7 @@ void Bind2Backend::queueReload(BB2DomainInfo *bbd)
   }
 }
 
-bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::string& qname, std::string& unhashed, std::string& before, std::string& after)
+bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::string& qname, std::string& before, std::string& after, bool beforeCurrent)
 {
   string domain=toLower(qname);
 
@@ -859,6 +946,9 @@ bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::str
   recordstorage_t::const_iterator iter = bbd.d_records->lower_bound(domain);
 
   while(iter == bbd.d_records->end() || (iter->qname) > domain || (!(iter->auth) && !(iter->qtype == QType::NS)))
+    iter--;
+
+  if (beforeCurrent && iter != bbd.d_records->begin())
     iter--;
 
   before=iter->qname;
@@ -883,14 +973,14 @@ bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::str
         break;
       }
     }
-    after = (iter)->qname;
+    after = iter->qname;
   }
 
   //cerr<<"Before: '"<<before<<"', after: '"<<after<<"'\n";
   return true;
 }
 
-bool Bind2Backend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after)
+bool Bind2Backend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after, bool beforeCurrent)
 {
   shared_ptr<State> state = s_state;
   BB2DomainInfo& bbd = state->id_zone_map[id];  
@@ -899,7 +989,7 @@ bool Bind2Backend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string
     
   if(!getNSEC3PARAM(auth, &ns3pr)) {
     //cerr<<"in bind2backend::getBeforeAndAfterAbsolute: no nsec3 for "<<auth<<endl;
-    return findBeforeAndAfterUnhashed(bbd, qname, unhashed, before, after);
+    return findBeforeAndAfterUnhashed(bbd, qname, before, after, beforeCurrent);
   
   }
   else {

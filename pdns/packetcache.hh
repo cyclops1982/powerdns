@@ -82,9 +82,12 @@ public:
   void cleanup(); //!< force the cache to preen itself from expired packets
   int purge();
   int purge(const string &match);
+  int purgeRange(const string &begin, const string &end, const string &zone);
 
   map<char,int> getCounts();
+  void dumpCache(); // for the weak who don't have a multi_index_container in their head. ONLY USE FOR DEBUGGING!
 private:
+  
   bool getEntryLocked(const string &content, const QType& qtype, CacheEntryType cet, string& entry, int zoneID=-1, 
     bool meritsRecursion=false, unsigned int maxReplyLen=512, bool dnssecOk=false);
   struct CacheEntry
@@ -117,12 +120,19 @@ private:
                         member<CacheEntry,bool, &CacheEntry::meritsRecursion>,
                         member<CacheEntry,unsigned int, &CacheEntry::maxReplyLen>,
                         member<CacheEntry,bool, &CacheEntry::dnssecOk>
-                        >,
-                        composite_key_compare<CIBackwardsStringCompare, std::less<uint16_t>, std::less<uint16_t>, std::less<int>, std::less<bool>, 
-                          std::less<unsigned int>, std::less<bool> >
-                            >,
-                           sequenced<>
-                           >
+                      >,
+                      composite_key_compare<
+                        CIBackwardsStringCompare,
+                        std::less<uint16_t>,
+                        std::less<uint16_t>,
+                        std::less<int>,
+                        std::less<bool>, 
+                        std::less<unsigned int>,
+                        std::less<bool> 
+                      >
+                >,
+                sequenced<>
+               >
   > cmap_t;
 
 
