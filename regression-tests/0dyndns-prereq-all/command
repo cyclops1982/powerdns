@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Check if the record really does not exist.
-cleandig host-255.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig host-255.test.dyndns ANY hidesoadetails 
 
 # check if a domain exists, this should result in an NXDomain (section 3.2.1)
 # if the check fails, it will delete a record, which should not happen.

@@ -14,7 +14,7 @@ answer
 !
 
 # check if the records are gone.
-cleandig delete-add.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig delete-add.test.dyndns ANY hidesoadetails
 
 # add-records that we deleted.
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'

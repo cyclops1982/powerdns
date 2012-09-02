@@ -1,5 +1,5 @@
 #!/bin/sh
-cleandig srv.test.dyndns SRV | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig srv.test.dyndns SRV hidesoadetails
 
 # Insert a SRV record
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
@@ -30,4 +30,4 @@ update delete srv.test.dyndns SRV
 send
 !
 
-cleandig srv.test.dyndns SRV | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig srv.test.dyndns SRV hidesoadetails
