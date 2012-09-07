@@ -1,0 +1,5 @@
+cleandig a.host.wtest.com ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.com. \)\([0-9]*\)/\12012060701/'
+cleandig b.host.wtest.com ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.com. \)\([0-9]*\)/\12012060701/'
+cleandig c.host.wtest.com ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.com. \)\([0-9]*\)/\12012060701/'
+cleandig d.host.wtest.com ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.com. \)\([0-9]*\)/\12012060701/'
+cleandig c.c.host.wtest.com ANY dnssec | egrep -v 'IN[[:space:]]+RRSIG' | sed 's/\(ahu.example.com. \)\([0-9]*\)/\12012060701/'
