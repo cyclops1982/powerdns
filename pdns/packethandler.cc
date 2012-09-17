@@ -452,15 +452,17 @@ void emitNSEC3(DNSBackend& B, const NSEC3PARAMRecordContent& ns3prc, const SOADa
   n3rc.d_iterations = ns3prc.d_iterations;
   n3rc.d_algorithm = 1; // SHA1, fixed in PowerDNS for now
 
-  DNSResourceRecord nsec3rr, rr;
-  B.lookup(QType(QType::ANY), unhashed);
-  while(B.get(rr)) {
-    n3rc.d_set.insert(rr.qtype.getCode());    
-  }
+  DNSResourceRecord rr;
+  if(!unhashed.empty()) {
+    B.lookup(QType(QType::ANY), unhashed);
+    while(B.get(rr)) {
+      n3rc.d_set.insert(rr.qtype.getCode());
+    }
 
-  if(unhashed == sd.qname) {
-    n3rc.d_set.insert(QType::NSEC3PARAM);
-    n3rc.d_set.insert(QType::DNSKEY);
+    if(unhashed == sd.qname) {
+      n3rc.d_set.insert(QType::NSEC3PARAM);
+      n3rc.d_set.insert(QType::DNSKEY);
+    }
   }
   
   n3rc.d_nexthash=end;
@@ -542,8 +544,10 @@ bool getNSEC3Hashes(bool narrow, DNSBackend* db, int id, const std::string& hash
   if(narrow) { // nsec3-narrow
     ret=true;
     before=hashed;
-    if(decrement)
+    if(decrement) {
       decrementHash(before);
+      unhashed.clear();
+    }
     after=hashed;
     incrementHash(after);
   }
