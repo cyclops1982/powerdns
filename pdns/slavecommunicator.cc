@@ -200,8 +200,7 @@ void CommunicatorClass::suck(const string &domain,const string &remote)
         } else if (i->qtype.getCode() == QType::NSEC) {
           dnssecZone = gotPresigned = true;
           continue;
-        } else if (!hadPresigned && (i->qtype.getCode() == QType::RRSIG || i->qtype.getCode() == QType::DNSKEY))
-          continue;
+        }
 
         if(!endsOn(i->qname, domain)) { 
           L<<Logger::Error<<"Remote "<<remote<<" tried to sneak in out-of-zone data '"<<i->qname<<"'|"<<i->qtype.getName()<<" during AXFR of zone '"<<domain<<"', ignoring"<<endl;

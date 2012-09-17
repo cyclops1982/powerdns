@@ -41,7 +41,7 @@ rm -f pdns*.pid
 
 presigned=no
 
-if [ ${context: -10} = "-presigned" ]
+if [ ${#context} -ge 10 ] && [ ${context: -10} = "-presigned" ]
 then
 	presigned=yes
 	port=$((port-100))
