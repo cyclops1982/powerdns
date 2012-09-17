@@ -288,6 +288,8 @@ GSQLBackend::GSQLBackend(const string &mode, const string &suffix)
     d_lastOrderQuery = getArg("get-order-last-query");
     d_setOrderAuthQuery = getArg("set-order-and-auth-query");
     d_nullifyOrderNameAndAuthQuery = getArg("nullify-ordername-and-auth-query");
+    d_deleteEmptyNonTerminalsQuery = getArg("delete-empty-non-terminals-query");
+    d_setEmptyNonTerminalQuery = getArg("set-empty-non-terminal-query");
     
     d_AddDomainKeyQuery = getArg("add-domain-key-query");
     d_ListDomainKeysQuery = getArg("list-domain-keys-query");
@@ -334,6 +336,36 @@ bool GSQLBackend::nullifyDNSSECOrderNameAndAuth(uint32_t domain_id, const std::s
 
   snprintf(output, sizeof(output)-1, d_nullifyOrderNameAndAuthQuery.c_str(), sqlEscape(qname).c_str(), sqlEscape(type).c_str(), domain_id);
   d_db->doCommand(output);
+  return true;
+}
+
+bool GSQLBackend::updateEmptyNonTerminals(uint32_t domain_id, const std::string& zonename, set<string>& qnames)
+{
+  if(!d_dnssecQueries)
+    return false;
+  char output[1024];
+
+  snprintf(output,sizeof(output)-1,d_deleteEmptyNonTerminalsQuery.c_str(), domain_id);
+  try {
+    d_db->doCommand(output);
+  }
+  catch (SSqlException &e) {
+    throw AhuException("GSQLBackend unable to delete empty non-terminal records from domain_id "+itoa(domain_id)+": "+e.txtReason());
+    return false;
+  }
+
+  BOOST_FOREACH(const string qname, qnames) {
+    snprintf(output,sizeof(output)-1,d_setEmptyNonTerminalQuery.c_str(), domain_id, sqlEscape(qname).c_str());
+    try {
+      d_db->doCommand(output);
+    }
+    catch (SSqlException &e) {
+      throw AhuException("GSQLBackend unable to insert empty non-terminal rr "+qname+" in domain_id "+itoa(domain_id)+": "+e.txtReason());
+      return false;
+    }
+    // L<<"empty non-terminal="<<qname<<endl;
+  }
+
   return true;
 }
 

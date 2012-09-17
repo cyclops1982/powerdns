@@ -136,6 +136,11 @@ public:
     return false;
   }
 
+  virtual bool updateEmptyNonTerminals(uint32_t domain_id, const std::string& zonename, set<string>& qnames)
+  {
+    return false;
+  }
+
   virtual bool nullifyDNSSECOrderNameAndAuth(uint32_t domain_id, const std::string& qname, const std::string& type)
   {
     return false;

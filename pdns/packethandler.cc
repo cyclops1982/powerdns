@@ -430,10 +430,8 @@ void PacketHandler::emitNSEC(const std::string& begin, const std::string& end, c
   
   nrc.d_next=end;
 
-  rr.ttl = sd.default_ttl;
-
   rr.qname=begin;
-  // we can leave ttl untouched, either it is the default, or it is what we retrieved above
+  rr.ttl = sd.default_ttl;
   rr.qtype=QType::NSEC;
   rr.content=nrc.getZoneRepresentation();
   rr.d_place = (mode == 5 ) ? DNSResourceRecord::ANSWER: DNSResourceRecord::AUTHORITY;
@@ -456,7 +454,8 @@ void emitNSEC3(DNSBackend& B, const NSEC3PARAMRecordContent& ns3prc, const SOADa
   if(!unhashed.empty()) {
     B.lookup(QType(QType::ANY), unhashed);
     while(B.get(rr)) {
-      n3rc.d_set.insert(rr.qtype.getCode());
+      if(rr.domain_id == sd.domain_id && rr.qtype.getCode() != 0) // skip out of zone data and empty non-terminals
+        n3rc.d_set.insert(rr.qtype.getCode());
     }
 
     if(unhashed == sd.qname) {
@@ -467,14 +466,13 @@ void emitNSEC3(DNSBackend& B, const NSEC3PARAMRecordContent& ns3prc, const SOADa
   
   n3rc.d_nexthash=end;
 
-  rr.ttl = sd.default_ttl;
   rr.qname=dotConcat(toLower(toBase32Hex(begin)), sd.qname);
-  
+  rr.ttl = sd.default_ttl;
   rr.qtype=QType::NSEC3;
   rr.content=n3rc.getZoneRepresentation();
-  
   rr.d_place = (mode == 5 ) ? DNSResourceRecord::ANSWER: DNSResourceRecord::AUTHORITY;
   rr.auth = true;
+  
   r->addRecord(rr);
 }
 
@@ -486,7 +484,7 @@ void PacketHandler::emitNSEC3(const NSEC3PARAMRecordContent& ns3prc, const SOADa
 
 /*
    mode 0 = No Data Responses, QTYPE is not DS
-   mode 1 = No Data Responses, QTYPE is DS (can we do this already?)
+   mode 1 = No Data Responses, QTYPE is DS
    mode 2 = Wildcard No Data Responses
    mode 3 = Wildcard Answer Responses
    mode 4 = Name Error Responses
