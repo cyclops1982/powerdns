@@ -602,6 +602,42 @@ void Bind2Backend::fixupAuth(shared_ptr<recordstorage_t> records)
   }
 }
 
+void Bind2Backend::doEmptyNonTerminals(shared_ptr<State> stage, int id, bool nsec3zone, NSEC3PARAMRecordContent ns3pr)
+{
+  BB2DomainInfo bb2 = stage->id_zone_map[id];
+
+  set<string> qnames, nonterm;
+  string qname, hashed;
+
+  BOOST_FOREACH(const Bind2DNSRecord& bdr, *bb2.d_records) {
+    qnames.insert(labelReverse(bdr.qname));
+  }
+
+  BOOST_FOREACH(const Bind2DNSRecord& bdr, *bb2.d_records) {
+    if(bdr.auth) {
+      qname=labelReverse(bdr.qname);
+
+      while(chopOff(qname)) {
+        if(!qnames.count(qname) && !nonterm.count(qname)){
+                nonterm.insert(qname);
+        }
+      }
+    }
+  }
+
+  DNSResourceRecord rr;
+  rr.qtype="#0";
+  rr.content="";
+  rr.ttl=0;
+  rr.priority=0;
+  BOOST_FOREACH(const string& qname, nonterm) {
+    rr.qname=qname+"."+bb2.d_name+".";
+    if(nsec3zone)
+      hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr.d_iterations, ns3pr.d_salt, rr.qname)));
+    insert(stage, id, rr.qname, rr.qtype, rr.content, rr.ttl, rr.priority, hashed);
+  }
+}
+
 void Bind2Backend::loadConfig(string* status)
 {
   // Interference with createSlaveDomain()
@@ -702,8 +738,8 @@ void Bind2Backend::loadConfig(string* status)
         
             // sort(staging->id_zone_map[bbd->d_id].d_records->begin(), staging->id_zone_map[bbd->d_id].d_records->end());
             
-            shared_ptr<recordstorage_t > records=staging->id_zone_map[bbd->d_id].d_records;
-            fixupAuth(records);
+            fixupAuth(staging->id_zone_map[bbd->d_id].d_records);
+            doEmptyNonTerminals(staging, bbd->d_id, nsec3zone, ns3pr);
             
             staging->id_zone_map[bbd->d_id].setCtime();
             staging->id_zone_map[bbd->d_id].d_loaded=true; 
@@ -827,6 +863,7 @@ void Bind2Backend::queueReload(BB2DomainInfo *bbd)
     // cerr<<"Sorting done"<<endl;
     
     fixupAuth(staging->id_zone_map[bbd->d_id].d_records);
+    doEmptyNonTerminals(staging, bbd->d_id, nsec3zone, ns3pr);
     staging->id_zone_map[bbd->d_id].setCtime();
 
     s_state->id_zone_map[bbd->d_id]=staging->id_zone_map[bbd->d_id]; // move over
