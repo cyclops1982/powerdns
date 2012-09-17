@@ -110,7 +110,7 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
   sd.db->list(zone, sd.domain_id);
   DNSResourceRecord rr;
 
-  set<string> qnames, nsset, dsnames;
+  set<string> qnames, nsset, dsnames, nonterm;
   
   while(sd.db->get(rr)) {
     qnames.insert(rr.qname);
@@ -133,20 +133,27 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
   
   if(doTransaction)
     sd.db->startTransaction("", -1);
+    
+  bool realrr=true;
+  dononterm:;
   BOOST_FOREACH(const string& qname, qnames)
   {
-    string shorter(qname);
     bool auth=true;
+    string shorter(qname);
 
-    do {
-      if(nsset.count(shorter)) {  
-        auth=false;
-        break;
-      }
-    }while(chopOff(shorter));
+    if(realrr) {
+      do {
+        if(nsset.count(shorter)) {
+          auth=false;
+          break;
+        }
+      }while(chopOff(shorter));
 
-    if(dsnames.count(qname))
-      auth=true;
+      if(dsnames.count(qname))
+        auth=true;
+    }
+    else
+      auth=false;
 
     if(haveNSEC3)
     {
@@ -156,7 +163,7 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
           cerr<<"'"<<qname<<"' -> '"<< hashed <<"'"<<endl;
       }
       sd.db->updateDNSSECOrderAndAuthAbsolute(sd.domain_id, qname, hashed, auth);
-      if(!auth || dsnames.count(qname))
+      if((!auth || dsnames.count(qname)) && realrr)
       {
         sd.db->nullifyDNSSECOrderNameAndAuth(sd.domain_id, qname, "NS");
         sd.db->nullifyDNSSECOrderNameAndAuth(sd.domain_id, qname, "A");
@@ -166,13 +173,31 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
     else // NSEC
     {
       sd.db->updateDNSSECOrderAndAuth(sd.domain_id, zone, qname, auth);
-      if(!auth || dsnames.count(qname))
+      if((!auth || dsnames.count(qname)) && realrr)
       {
         sd.db->nullifyDNSSECOrderNameAndAuth(sd.domain_id, qname, "A");
         sd.db->nullifyDNSSECOrderNameAndAuth(sd.domain_id, qname, "AAAA");
       }
     }
+
+    if(auth) {
+      shorter=qname;
+
+      while(!pdns_iequals(shorter, zone) && chopOff(shorter)) {
+        if(!qnames.count(shorter) + nonterm.count(shorter))
+          nonterm.insert(shorter);
+      }
+    }
   }
+
+  if(!nonterm.empty() && realrr) {
+    if(sd.db->updateEmptyNonTerminals(sd.domain_id, zone, nonterm)) {
+      realrr=false;
+      qnames=nonterm;
+      goto dononterm;
+    }
+  }
+
   if(doTransaction)
     sd.db->commitTransaction();
 }

@@ -647,6 +647,9 @@ int TCPNameserver::doAXFR(const string &target, shared_ptr<DNSPacket> q, int out
     if(rr.qtype.getCode() == QType::SOA)
       continue; // skip SOA - would indicate end of AXFR
 
+    if(rr.qtype.getCode() == 0)
+          continue; // FIXME this is a hack to ignore empty no-terminals.
+
     if(csp.submit(rr)) {
       for(;;) {
         outpacket->getRRS() = csp.getChunk();
