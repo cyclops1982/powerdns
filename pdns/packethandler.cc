@@ -424,7 +424,7 @@ void PacketHandler::emitNSEC(const std::string& begin, const std::string& end, c
   DNSResourceRecord rr;
   B.lookup(QType(QType::ANY), begin);
   while(B.get(rr)) {
-    if(rr.domain_id == sd.domain_id && (rr.qtype.getCode() == QType::NS || rr.auth)) 
+    if(rr.domain_id == sd.domain_id && (rr.qtype.getCode() == QType::NS || rr.auth) && rr.qtype.getCode())
       nrc.d_set.insert(rr.qtype.getCode());    
   }
   
@@ -454,7 +454,7 @@ void emitNSEC3(DNSBackend& B, const NSEC3PARAMRecordContent& ns3prc, const SOADa
   if(!unhashed.empty()) {
     B.lookup(QType(QType::ANY), unhashed);
     while(B.get(rr)) {
-      if(rr.domain_id == sd.domain_id && rr.qtype.getCode() != 0) // skip out of zone data and empty non-terminals
+      if(rr.domain_id == sd.domain_id && rr.qtype.getCode()) // skip out of zone data and empty non-terminals
         n3rc.d_set.insert(rr.qtype.getCode());
     }
 
