@@ -1,0 +1,7 @@
+0	someting.a.b.c.test.com.	IN	A	3600	8.7.6.5
+0	someting.a.b.c.test.com.	IN	RRSIG	3600	A 8 5 3600 [expiry] [inception] [keytag] test.com. ...
+1	2eu2gulbu53h9uvhfalshpbo2a83t6l2.test.com.	IN	NSEC3	86400	1 1 1 abcd 79U3DAS6UCCTNS1BR3TVD8QKANNI351L NS SOA MX RRSIG DNSKEY NSEC3PARAM
+1	2eu2gulbu53h9uvhfalshpbo2a83t6l2.test.com.	IN	RRSIG	86400	NSEC3 8 3 86400 [expiry] [inception] [keytag] test.com. ...
+2	.	IN	OPT	32768	
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Reply to question for qname='someting.a.b.c.test.com.', qtype=A
