@@ -1,4 +1,4 @@
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012060701 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='delegate1.test.dyndns.', qtype=ANY
 Answer:
@@ -31,10 +31,10 @@ Answer:
 ;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012060701 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='delegate2.test.dyndns.', qtype=ANY
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012060701 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='delegate1.test.dyndns.', qtype=ANY
 0	ns1.delegate1.test.dyndns.	IN	A	3600	127.0.0.1
@@ -55,15 +55,15 @@ Answer:
 ;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012060701 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='ns1.delegate1.test.dyndns.', qtype=ANY
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012060701 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='ns2.delegate1.test.dyndns.', qtype=ANY
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012060701 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='ns1.delegate2.test.dyndns.', qtype=ANY
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012060701 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='ns2.delegate2.test.dyndns.', qtype=ANY
