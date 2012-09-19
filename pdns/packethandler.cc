@@ -444,7 +444,6 @@ void emitNSEC3(DNSBackend& B, const NSEC3PARAMRecordContent& ns3prc, const SOADa
 {
 //  cerr<<"We should emit NSEC3 '"<<toLower(toBase32Hex(begin))<<"' - ('"<<toNSEC3<<"') - '"<<toLower(toBase32Hex(end))<<"' (unhashed: '"<<unhashed<<"')"<<endl;
   NSEC3RecordContent n3rc;
-  n3rc.d_set.insert(QType::RRSIG);
   n3rc.d_salt=ns3prc.d_salt;
   n3rc.d_flags = ns3prc.d_flags;
   n3rc.d_iterations = ns3prc.d_iterations;
@@ -463,6 +462,9 @@ void emitNSEC3(DNSBackend& B, const NSEC3PARAMRecordContent& ns3prc, const SOADa
       n3rc.d_set.insert(QType::DNSKEY);
     }
   }
+
+  if (n3rc.d_set.size())
+    n3rc.d_set.insert(QType::RRSIG);
   
   n3rc.d_nexthash=end;
 

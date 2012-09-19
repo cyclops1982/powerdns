@@ -679,7 +679,8 @@ int TCPNameserver::doAXFR(const string &target, shared_ptr<DNSPacket> q, int out
       for(nsecxrepo_t::const_iterator iter = nsecxrepo.begin(); iter != nsecxrepo.end(); ++iter) {
         NSEC3RecordContent n3rc;
         n3rc.d_set = iter->second.d_set;
-        n3rc.d_set.insert(QType::RRSIG);
+        if (n3rc.d_set.size())
+          n3rc.d_set.insert(QType::RRSIG);
         n3rc.d_salt=ns3pr.d_salt;
         n3rc.d_flags = ns3pr.d_flags;
         n3rc.d_iterations = ns3pr.d_iterations;
