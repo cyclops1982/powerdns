@@ -1,4 +1,4 @@
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012060701 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='host-255.test.dyndns.', qtype=ANY
 Answer:
@@ -8,7 +8,7 @@ Answer:
 ;test.dyndns.			IN	SOA
 
 0	host-1.test.dyndns.	IN	A	3600	127.0.0.101
-0	tdhv9cbk13jg8drivldhsl3mji8qqqe2.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd TNTCBDFSIHHD24NT96BQ9973VD019U43 A RRSIG
+0	tdhv9cbk13jg8drivldhsl3mji8qqqe2.test.dyndns.	IN	NSEC3	86400	1 1 1 abcd TNTCBDFSIHHD24NT96BQ9973VD019U43 A RRSIG
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='host-1.test.dyndns.', qtype=ANY
 Answer:
@@ -18,11 +18,11 @@ Answer:
 ;test.dyndns.			IN	SOA
 
 0	host-1.test.dyndns.	IN	A	3600	127.0.0.101
-0	tdhv9cbk13jg8drivldhsl3mji8qqqe2.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd TNTCBDFSIHHD24NT96BQ9973VD019U43 A RRSIG
+0	tdhv9cbk13jg8drivldhsl3mji8qqqe2.test.dyndns.	IN	NSEC3	86400	1 1 1 abcd TNTCBDFSIHHD24NT96BQ9973VD019U43 A RRSIG
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='host-1.test.dyndns.', qtype=ANY
 0	host-2.test.dyndns.	IN	A	3600	127.0.0.102
-0	s30oprhqrekh5suh6l530kd668elk9os.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd SLSCK1ENIA56LRKR5GEP7CLU9J1O5IFN A RRSIG
+0	s30oprhqrekh5suh6l530kd668elk9os.test.dyndns.	IN	NSEC3	86400	1 1 1 abcd SLSCK1ENIA56LRKR5GEP7CLU9J1O5IFN A RRSIG
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='host-2.test.dyndns.', qtype=ANY
 Answer:
@@ -32,7 +32,7 @@ Answer:
 ;test.dyndns.			IN	SOA
 
 0	host-2.test.dyndns.	IN	A	3600	127.0.0.102
-0	s30oprhqrekh5suh6l530kd668elk9os.test.dyndns.	IN	NSEC3	3600	1 1 1 abcd SLSCK1ENIA56LRKR5GEP7CLU9J1O5IFN A RRSIG
+0	s30oprhqrekh5suh6l530kd668elk9os.test.dyndns.	IN	NSEC3	86400	1 1 1 abcd SLSCK1ENIA56LRKR5GEP7CLU9J1O5IFN A RRSIG
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='host-2.test.dyndns.', qtype=ANY
 Answer:

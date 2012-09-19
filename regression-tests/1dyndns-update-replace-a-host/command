@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # query current value.
-cleandig replace.test.dyndns ANY
+cleandig replace.test.dyndns A
 
 # replace the value
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
@@ -13,7 +13,7 @@ send
 answer
 !
 
-cleandig replace.test.dyndns ANY
+cleandig replace.test.dyndns A
 
 
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
@@ -26,4 +26,4 @@ send
 answer
 !
 
-cleandig replace.test.dyndns ANY
+cleandig replace.test.dyndns A
