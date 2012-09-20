@@ -654,35 +654,23 @@ void PacketHandler::addNSEC(DNSPacket *p, DNSPacket *r, const string& target, co
 
   string before,after;
   //cerr<<"Calling getBeforeandAfter!"<<endl;
+
   if (mode == 2) {
+    // wildcard NO-DATA
     sd.db->getBeforeAndAfterNames(sd.domain_id, auth, p->qdomain, before, after);
+    emitNSEC(before, after, target, sd, r, mode);
+    sd.db->getBeforeAndAfterNames(sd.domain_id, auth, target, before, after);
   }
   else {
     sd.db->getBeforeAndAfterNames(sd.domain_id, auth, target, before, after);
   }
-  // cerr<<"Done calling, before='"<<before<<"', after='"<<after<<"'"<<endl;
-
-  // this stuff is wrong (but it appears to work)
+  emitNSEC(before, after, target, sd, r, mode);
   
-  if(mode == 0 || mode == 1 || mode == 5)
-    emitNSEC(target, after, target, sd, r, mode);
-  
-  if(mode == 2 || mode == 4)  {
-    emitNSEC(before, after, target, sd, r, mode);
-
-    if (mode == 2) {
-      sd.db->getBeforeAndAfterNames(sd.domain_id, auth, target, before, after);
-      emitNSEC(target, after, auth, sd, r, mode);
-    }
-    else {
+  if (mode == 4) {
       // this one does wildcard denial, if applicable
       sd.db->getBeforeAndAfterNames(sd.domain_id, auth, auth, before, after);
       emitNSEC(auth, after, auth, sd, r, mode);
-    }
   }
-
-  if(mode == 3)
-    emitNSEC(before, after, target, sd, r, mode);
 
   return;
 }

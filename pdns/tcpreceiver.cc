@@ -639,16 +639,18 @@ int TCPNameserver::doAXFR(const string &target, shared_ptr<DNSPacket> q, int out
       continue;
     records++;
     if(securedZone && (rr.auth || (!NSEC3Zone && rr.qtype.getCode() == QType::NS) || rr.qtype.getCode() == QType::DS || !rr.qtype.getCode())) { // this is probably NSEC specific, NSEC3 is different
-      keyname = NSEC3Zone ? hashQNameWithSalt(ns3pr.d_iterations, ns3pr.d_salt, rr.qname) : labelReverse(rr.qname);
-      NSECXEntry& ne = nsecxrepo[keyname];
-      ne.d_ttl = sd.default_ttl;
-      if (rr.qtype.getCode()) {
-        ne.d_set.insert(rr.qtype.getCode());
+      if (NSEC3Zone || rr.qtype.getCode()) {
+        keyname = NSEC3Zone ? hashQNameWithSalt(ns3pr.d_iterations, ns3pr.d_salt, rr.qname) : labelReverse(rr.qname);
+        NSECXEntry& ne = nsecxrepo[keyname];
+        ne.d_ttl = sd.default_ttl;
+        if (rr.qtype.getCode()) {
+          ne.d_set.insert(rr.qtype.getCode());
+        }
       }
-     }
+    }
 
-     if (!rr.qtype.getCode())
-       continue; // skip empty non-terminals
+    if (!rr.qtype.getCode())
+      continue; // skip empty non-terminals
 
     if(rr.qtype.getCode() == QType::SOA)
       continue; // skip SOA - would indicate end of AXFR
