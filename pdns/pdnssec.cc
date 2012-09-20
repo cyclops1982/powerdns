@@ -172,7 +172,8 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
     }
     else // NSEC
     {
-      sd.db->updateDNSSECOrderAndAuth(sd.domain_id, zone, qname, auth);
+      if (realrr)
+        sd.db->updateDNSSECOrderAndAuth(sd.domain_id, zone, qname, auth);
       if((!auth || dsnames.count(qname)) && realrr)
       {
         sd.db->nullifyDNSSECOrderNameAndAuth(sd.domain_id, qname, "A");

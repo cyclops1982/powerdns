@@ -279,7 +279,8 @@ void CommunicatorClass::suck(const string &domain,const string &remote)
       }
       else // NSEC
       {
-        di.backend->updateDNSSECOrderAndAuth(domain_id, domain, qname, auth);
+        if (realrr)
+          di.backend->updateDNSSECOrderAndAuth(domain_id, domain, qname, auth);
         if((!auth || dsnames.count(qname)) && realrr)
         {
           di.backend->nullifyDNSSECOrderNameAndAuth(domain_id, qname, "A");
