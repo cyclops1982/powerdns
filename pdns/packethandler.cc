@@ -424,7 +424,7 @@ void PacketHandler::emitNSEC(const std::string& begin, const std::string& end, c
   DNSResourceRecord rr;
   B.lookup(QType(QType::ANY), begin);
   while(B.get(rr)) {
-    if(rr.domain_id == sd.domain_id && (rr.qtype.getCode() == QType::NS || rr.auth) && rr.qtype.getCode())
+    if(rr.domain_id == sd.domain_id && (rr.qtype.getCode() == QType::NS || rr.auth))
       nrc.d_set.insert(rr.qtype.getCode());    
   }
   

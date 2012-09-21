@@ -261,8 +261,6 @@ void CommunicatorClass::suck(const string &domain,const string &remote)
         if(dsnames.count(qname))
           auth=true;
       }
-      else
-        auth=false;
 
       if(dnssecZone && haveNSEC3)
       {

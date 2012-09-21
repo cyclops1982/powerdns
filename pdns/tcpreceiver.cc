@@ -638,7 +638,7 @@ int TCPNameserver::doAXFR(const string &target, shared_ptr<DNSPacket> q, int out
     if (rr.qtype.getCode() == QType::RRSIG)
       continue;
     records++;
-    if(securedZone && (rr.auth || (!NSEC3Zone && rr.qtype.getCode() == QType::NS) || rr.qtype.getCode() == QType::DS || !rr.qtype.getCode())) { // this is probably NSEC specific, NSEC3 is different
+    if(securedZone && (rr.auth || (!NSEC3Zone && rr.qtype.getCode() == QType::NS) || rr.qtype.getCode() == QType::DS)) { // this is probably NSEC specific, NSEC3 is different
       if (NSEC3Zone || rr.qtype.getCode()) {
         keyname = NSEC3Zone ? hashQNameWithSalt(ns3pr.d_iterations, ns3pr.d_salt, rr.qname) : labelReverse(rr.qname);
         NSECXEntry& ne = nsecxrepo[keyname];
