@@ -626,7 +626,7 @@ void Bind2Backend::doEmptyNonTerminals(shared_ptr<State> stage, int id, bool nse
   }
 
   DNSResourceRecord rr;
-  rr.qtype="";
+  rr.qtype="0";
   rr.content="";
   rr.ttl=0;
   rr.priority=0;
@@ -740,6 +740,7 @@ void Bind2Backend::loadConfig(string* status)
             
             fixupAuth(staging->id_zone_map[bbd->d_id].d_records);
             doEmptyNonTerminals(staging, bbd->d_id, nsec3zone, ns3pr);
+            fixupAuth(staging->id_zone_map[bbd->d_id].d_records);
             
             staging->id_zone_map[bbd->d_id].setCtime();
             staging->id_zone_map[bbd->d_id].d_loaded=true; 
@@ -864,6 +865,7 @@ void Bind2Backend::queueReload(BB2DomainInfo *bbd)
     
     fixupAuth(staging->id_zone_map[bbd->d_id].d_records);
     doEmptyNonTerminals(staging, bbd->d_id, nsec3zone, ns3pr);
+    fixupAuth(staging->id_zone_map[bbd->d_id].d_records);
     staging->id_zone_map[bbd->d_id].setCtime();
 
     s_state->id_zone_map[bbd->d_id]=staging->id_zone_map[bbd->d_id]; // move over
