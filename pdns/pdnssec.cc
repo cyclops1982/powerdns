@@ -152,8 +152,6 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
       if(dsnames.count(qname))
         auth=true;
     }
-    else
-      auth=false;
 
     if(haveNSEC3)
     {
