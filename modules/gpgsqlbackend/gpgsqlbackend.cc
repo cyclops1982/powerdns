@@ -92,7 +92,7 @@ public:
 
     declare(suffix,"nullify-ordername-and-auth-query", "DNSSEC nullify ordername query", "update records set ordername=NULL,auth=false where name=E'%s' and type=E'%s' and domain_id='%d'");
     declare(suffix,"delete-empty-non-terminals-query", "remove empty non-terminals from zone", "delete from records where domain_id='%d' and type is null");
-    declare(suffix,"set-empty-non-terminal-query", "insert empty non-terminal in zone", "insert into records (domain_id,name) values ('%d','%s')");
+    declare(suffix,"set-empty-non-terminal-query", "insert empty non-terminal in zone", "insert into records (domain_id,name,auth) values ('%d','%s',true)");
     
     declare(suffix,"update-serial-query","", "update domains set notified_serial=%d where id=%d");
     declare(suffix,"update-lastcheck-query","", "update domains set last_check=%d where id=%d");

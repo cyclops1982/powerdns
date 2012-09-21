@@ -170,27 +170,32 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
     }
     else // NSEC
     {
-      if (realrr)
-        sd.db->updateDNSSECOrderAndAuth(sd.domain_id, zone, qname, auth);
-      if((!auth || dsnames.count(qname)) && realrr)
+      if(realrr)
       {
-        sd.db->nullifyDNSSECOrderNameAndAuth(sd.domain_id, qname, "A");
-        sd.db->nullifyDNSSECOrderNameAndAuth(sd.domain_id, qname, "AAAA");
+        sd.db->updateDNSSECOrderAndAuth(sd.domain_id, zone, qname, auth);
+        if(!auth || dsnames.count(qname))
+        {
+          sd.db->nullifyDNSSECOrderNameAndAuth(sd.domain_id, qname, "A");
+          sd.db->nullifyDNSSECOrderNameAndAuth(sd.domain_id, qname, "AAAA");
+        }
       }
     }
 
-    if(auth) {
+    if(auth & realrr)
+    {
       shorter=qname;
-
-      while(!pdns_iequals(shorter, zone) && chopOff(shorter)) {
+      while(!pdns_iequals(shorter, zone) && chopOff(shorter))
+      {
         if(!qnames.count(shorter) + nonterm.count(shorter))
           nonterm.insert(shorter);
       }
     }
   }
 
-  if(!nonterm.empty() && realrr) {
-    if(sd.db->updateEmptyNonTerminals(sd.domain_id, zone, nonterm)) {
+  if(!nonterm.empty() && realrr)
+  {
+    if(sd.db->updateEmptyNonTerminals(sd.domain_id, zone, nonterm))
+    {
       realrr=false;
       qnames=nonterm;
       goto dononterm;
