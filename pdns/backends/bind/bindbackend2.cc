@@ -437,6 +437,9 @@ void Bind2Backend::insert(shared_ptr<State> stage, int id, const string &qnameu,
   bdr.qtype=qtype.getCode();
   bdr.content=content; 
   bdr.nsec3hash = hashed;
+  
+  if (!qtype.getCode()) // Set auth on empty non-terminals
+    bdr.auth=true;
 
   if(bdr.qtype == QType::MX || bdr.qtype == QType::SRV) { 
     prio=atoi(bdr.content.c_str());
@@ -740,7 +743,6 @@ void Bind2Backend::loadConfig(string* status)
             
             fixupAuth(staging->id_zone_map[bbd->d_id].d_records);
             doEmptyNonTerminals(staging, bbd->d_id, nsec3zone, ns3pr);
-            fixupAuth(staging->id_zone_map[bbd->d_id].d_records);
             
             staging->id_zone_map[bbd->d_id].setCtime();
             staging->id_zone_map[bbd->d_id].d_loaded=true; 
@@ -865,7 +867,6 @@ void Bind2Backend::queueReload(BB2DomainInfo *bbd)
     
     fixupAuth(staging->id_zone_map[bbd->d_id].d_records);
     doEmptyNonTerminals(staging, bbd->d_id, nsec3zone, ns3pr);
-    fixupAuth(staging->id_zone_map[bbd->d_id].d_records);
     staging->id_zone_map[bbd->d_id].setCtime();
 
     s_state->id_zone_map[bbd->d_id]=staging->id_zone_map[bbd->d_id]; // move over
