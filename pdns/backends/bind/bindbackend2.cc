@@ -626,7 +626,7 @@ void Bind2Backend::doEmptyNonTerminals(shared_ptr<State> stage, int id, bool nse
   }
 
   DNSResourceRecord rr;
-  rr.qtype="#0";
+  rr.qtype="";
   rr.content="";
   rr.ttl=0;
   rr.priority=0;
@@ -895,7 +895,7 @@ bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::str
 
   recordstorage_t::const_iterator iter = bbd.d_records->upper_bound(domain);
 
-  while(iter == bbd.d_records->end() || (iter->qname) > domain || (!(iter->auth) && (!(iter->qtype == QType::NS))) || (iter->qtype == 0))
+  while(iter == bbd.d_records->end() || (iter->qname) > domain || (!(iter->auth) && (!(iter->qtype == QType::NS))) || (!(iter->qtype)))
     iter--;
 
   before=iter->qname;
@@ -911,7 +911,7 @@ bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::str
     //cerr<<"\tFound: '"<<(iter->qname)<<"' (nsec3hash='"<<(iter->nsec3hash)<<"')"<<endl;
     // this iteration is theoretically unnecessary - glue always sorts right behind a delegation
     // so we will never get here. But let's do it anyway.
-    while((!(iter->auth) && (!(iter->qtype == QType::NS))) || (iter->qtype == 0))
+    while((!(iter->auth) && (!(iter->qtype == QType::NS))) || (!(iter->qtype)))
     {
       iter++;
       if(iter == bbd.d_records->end())
