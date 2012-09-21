@@ -277,27 +277,32 @@ void CommunicatorClass::suck(const string &domain,const string &remote)
       }
       else // NSEC
       {
-        if (realrr)
-          di.backend->updateDNSSECOrderAndAuth(domain_id, domain, qname, auth);
-        if((!auth || dsnames.count(qname)) && realrr)
+        if(realrr)
         {
-          di.backend->nullifyDNSSECOrderNameAndAuth(domain_id, qname, "A");
-          di.backend->nullifyDNSSECOrderNameAndAuth(domain_id, qname, "AAAA");
+          di.backend->updateDNSSECOrderAndAuth(domain_id, domain, qname, auth);
+          if(!auth || dsnames.count(qname))
+          {
+            di.backend->nullifyDNSSECOrderNameAndAuth(domain_id, qname, "A");
+            di.backend->nullifyDNSSECOrderNameAndAuth(domain_id, qname, "AAAA");
+          }
         }
       }
 
-      if(auth) {
+      if(auth && realrr)
+      {
         shorter=qname;
-
-        while(!pdns_iequals(shorter, domain) && chopOff(shorter)) {
+        while(!pdns_iequals(shorter, domain) && chopOff(shorter))
+        {
           if(!qnames.count(shorter) + nonterm.count(shorter))
             nonterm.insert(shorter);
         }
       }
     }
 
-    if(!nonterm.empty() && realrr) {
-      if(di.backend->updateEmptyNonTerminals(domain_id, domain, nonterm)) {
+    if(!nonterm.empty() && realrr)
+    {
+      if(di.backend->updateEmptyNonTerminals(domain_id, domain, nonterm))
+      {
         realrr=false;
         qnames=nonterm;
         goto dononterm;
