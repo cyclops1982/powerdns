@@ -609,21 +609,32 @@ void Bind2Backend::doEmptyNonTerminals(shared_ptr<State> stage, int id, bool nse
 {
   BB2DomainInfo bb2 = stage->id_zone_map[id];
 
+  bool doent=true;
   set<string> qnames, nonterm;
   string qname, hashed;
 
-  BOOST_FOREACH(const Bind2DNSRecord& bdr, *bb2.d_records) {
-    qnames.insert(labelReverse(bdr.qname));
-  }
+  uint32_t maxent = ::arg().asNum("max-ent-entries");
 
   BOOST_FOREACH(const Bind2DNSRecord& bdr, *bb2.d_records) {
-    if(bdr.auth) {
-      qname=labelReverse(bdr.qname);
+    if (bdr.qtype) {
+      qnames.insert(labelReverse(bdr.qname));
+      if(bdr.auth) {
+        qname=labelReverse(bdr.qname);
 
-      while(chopOff(qname)) {
-        if(!qnames.count(qname) && !nonterm.count(qname)){
-                nonterm.insert(qname);
+        while(chopOff(qname)) {
+          if(!qnames.count(qname) && !nonterm.count(qname)){
+            nonterm.insert(qname);
+            --maxent;
+            if(!(maxent))
+            {
+              L<<Logger::Error<<"Zone '"<<bb2.d_name<<"' has too many empty non terminals."<<endl;
+              doent=false;
+              break;
+            }
+          }
         }
+        if(!(doent))
+          return;
       }
     }
   }

@@ -242,9 +242,11 @@ void CommunicatorClass::suck(const string &domain,const string &remote)
       haveNSEC3 = false;
     }
 
+    bool doent=true;
     bool realrr=true;
-    dononterm:;
     string hashed;
+
+    dononterm:;
     BOOST_FOREACH(const string& qname, qnames)
     {
       bool auth=true;
@@ -288,18 +290,30 @@ void CommunicatorClass::suck(const string &domain,const string &remote)
         }
       }
 
-      if(auth && realrr)
+      if(auth && realrr && doent)
       {
+        uint32_t maxent = ::arg().asNum("max-ent-entries");
+
         shorter=qname;
         while(!pdns_iequals(shorter, domain) && chopOff(shorter))
         {
-          if(!qnames.count(shorter) + nonterm.count(shorter))
+          if(!qnames.count(shorter) && !nonterm.count(shorter))
+          {
+            if(!(maxent))
+            {
+              L<<Logger::Error<<"AXFR zone "<<domain<<" has too many empty non terminals."<<endl;
+              nonterm.empty();
+              doent=false;
+              break;
+            }
             nonterm.insert(shorter);
+            --maxent;
+          }
         }
       }
     }
 
-    if(!nonterm.empty() && realrr)
+    if(!nonterm.empty() && realrr && doent)
     {
       if(di.backend->updateEmptyNonTerminals(domain_id, domain, nonterm))
       {
