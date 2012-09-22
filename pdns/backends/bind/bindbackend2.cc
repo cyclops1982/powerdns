@@ -611,32 +611,34 @@ void Bind2Backend::doEmptyNonTerminals(shared_ptr<State> stage, int id, bool nse
 
   bool doent=true;
   set<string> qnames, nonterm;
-  string qname, hashed;
+  string qname, shorter, hashed;
 
   uint32_t maxent = ::arg().asNum("max-ent-entries");
 
-  BOOST_FOREACH(const Bind2DNSRecord& bdr, *bb2.d_records) {
-    if (bdr.qtype) {
+  BOOST_FOREACH(const Bind2DNSRecord& bdr, *bb2.d_records)
+    if (bdr.auth)
       qnames.insert(labelReverse(bdr.qname));
-      if(bdr.auth) {
-        qname=labelReverse(bdr.qname);
 
-        while(chopOff(qname)) {
-          if(!qnames.count(qname) && !nonterm.count(qname)){
-            nonterm.insert(qname);
-            --maxent;
-            if(!(maxent))
-            {
-              L<<Logger::Error<<"Zone '"<<bb2.d_name<<"' has too many empty non terminals."<<endl;
-              doent=false;
-              break;
-            }
-          }
+  BOOST_FOREACH(const string& qname, qnames)
+  {
+    shorter=qname;
+
+    while(chopOff(shorter))
+    {
+      if(!qnames.count(shorter) && !nonterm.count(shorter))
+      {
+        if(!(maxent))
+        {
+          L<<Logger::Error<<"Zone '"<<bb2.d_name<<"' has too many empty non terminals."<<endl;
+          doent=false;
+          break;
         }
-        if(!(doent))
-          return;
+        nonterm.insert(shorter);
+        --maxent;
       }
     }
+    if(!doent)
+      return;
   }
 
   DNSResourceRecord rr;
@@ -644,7 +646,8 @@ void Bind2Backend::doEmptyNonTerminals(shared_ptr<State> stage, int id, bool nse
   rr.content="";
   rr.ttl=0;
   rr.priority=0;
-  BOOST_FOREACH(const string& qname, nonterm) {
+  BOOST_FOREACH(const string& qname, nonterm)
+  {
     rr.qname=qname+"."+bb2.d_name+".";
     if(nsec3zone)
       hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr.d_iterations, ns3pr.d_salt, rr.qname)));
