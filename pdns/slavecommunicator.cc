@@ -246,6 +246,8 @@ void CommunicatorClass::suck(const string &domain,const string &remote)
     bool realrr=true;
     string hashed;
 
+    uint32_t maxent = ::arg().asNum("max-ent-entries");
+
     dononterm:;
     BOOST_FOREACH(const string& qname, qnames)
     {
@@ -292,8 +294,6 @@ void CommunicatorClass::suck(const string &domain,const string &remote)
 
       if(auth && realrr && doent)
       {
-        uint32_t maxent = ::arg().asNum("max-ent-entries");
-
         shorter=qname;
         while(!pdns_iequals(shorter, domain) && chopOff(shorter))
         {
