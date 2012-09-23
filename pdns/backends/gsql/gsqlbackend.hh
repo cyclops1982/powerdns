@@ -44,7 +44,7 @@ public:
   bool updateDNSSECOrderAndAuth(uint32_t domain_id, const std::string& zonename, const std::string& qname, bool auth);
   virtual bool updateDNSSECOrderAndAuthAbsolute(uint32_t domain_id, const std::string& qname, const std::string& ordername, bool auth);
   virtual bool nullifyDNSSECOrderNameAndAuth(uint32_t domain_id, const std::string& qname, const std::string& type);
-  virtual bool updateEmptyNonTerminals(uint32_t domain_id, const std::string& zonename, set<string>& qnames);
+  virtual bool updateEmptyNonTerminals(uint32_t domain_id, const std::string& zonename, set<string>& insert ,set<string>& erase, bool remove);
 
   virtual bool calculateSOASerial(const string& domain, const SOAData& sd, time_t& serial);
 
@@ -94,8 +94,9 @@ private:
   string d_lastOrderQuery;
   string d_setOrderAuthQuery;
   string d_nullifyOrderNameAndAuthQuery;
-  string d_deleteEmptyNonTerminalsQuery;
-  string d_setEmptyNonTerminalQuery;
+  string d_removeEmptyNonTerminalsFromZoneQuery;
+  string d_insertEmptyNonTerminalQuery;
+  string d_deleteEmptyNonTerminalQuery;
 
   string d_AddDomainKeyQuery;
   string d_ListDomainKeysQuery;
