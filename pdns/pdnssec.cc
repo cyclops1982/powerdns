@@ -109,9 +109,9 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
     return;
   } 
   sd.db->list(zone, sd.domain_id);
-  DNSResourceRecord rr;
 
-  set<string> qnames, nsset, dsnames, nonterm;
+  DNSResourceRecord rr;
+  set<string> qnames, nsset, dsnames, nonterm, insnonterm, delnonterm;
   
   while(sd.db->get(rr)) {
     if (rr.qtype.getCode())
@@ -122,6 +122,8 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
       if(rr.qtype.getCode() == QType::DS)
         dsnames.insert(rr.qname);
     }
+    else
+      delnonterm.insert(rr.qname);
   }
 
   NSEC3PARAMRecordContent ns3pr;
@@ -155,7 +157,7 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
           auth=false;
           break;
         }
-      }while(chopOff(shorter));
+      } while(chopOff(shorter));
 
       if(dsnames.count(qname))
         auth=true;
@@ -187,6 +189,10 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
           sd.db->nullifyDNSSECOrderNameAndAuth(sd.domain_id, qname, "AAAA");
         }
       }
+      else
+      {
+        sd.db->updateDNSSECOrderAndAuthAbsolute(sd.domain_id, qname, hashed, auth);
+      }
     }
 
     if(auth && realrr && doent)
@@ -199,20 +205,28 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
           if(!(maxent))
           {
             cerr<<"Zone '"<<zone<<"' has too many empty non terminals."<<endl;
-            nonterm.empty();
+            insnonterm.empty();
+            delnonterm=nonterm;
             doent=false;
             break;
           }
           nonterm.insert(shorter);
+          if (!delnonterm.count(shorter))
+            insnonterm.insert(shorter);
+          else
+            delnonterm.erase(shorter);
           --maxent;
         }
       }
     }
   }
 
-  if(!nonterm.empty() && realrr && doent)
+  if(realrr)
   {
-    if(sd.db->updateEmptyNonTerminals(sd.domain_id, zone, nonterm))
+    //cerr<<"Total: "<<nonterm.size()<<" Insert: "<<insnonterm.size()<<" Delete: "<<delnonterm.size()<<endl;
+    if(!insnonterm.empty() || !delnonterm.empty() || !doent)
+      sd.db->updateEmptyNonTerminals(sd.domain_id, zone, insnonterm, delnonterm, !doent);
+    if(doent)
     {
       realrr=false;
       qnames=nonterm;

@@ -113,7 +113,7 @@ void CommunicatorClass::suck(const string &domain,const string &remote)
     domain_id=di.id;
 
     Resolver::res_t recs;
-    set<string> nsset, qnames, dsnames, nonterm;
+    set<string> nsset, qnames, dsnames, nonterm, delnonterm;
     
     ComboAddress raddr(remote, 53);
     
@@ -315,7 +315,7 @@ void CommunicatorClass::suck(const string &domain,const string &remote)
 
     if(!nonterm.empty() && realrr && doent)
     {
-      if(di.backend->updateEmptyNonTerminals(domain_id, domain, nonterm))
+      if(di.backend->updateEmptyNonTerminals(domain_id, domain, nonterm, delnonterm, false))
       {
         realrr=false;
         qnames=nonterm;

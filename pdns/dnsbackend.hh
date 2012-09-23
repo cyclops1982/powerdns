@@ -136,7 +136,7 @@ public:
     return false;
   }
 
-  virtual bool updateEmptyNonTerminals(uint32_t domain_id, const std::string& zonename, set<string>& qnames)
+  virtual bool updateEmptyNonTerminals(uint32_t domain_id, const std::string& zonename, set<string>& insert, set<string>& erase, bool remove)
   {
     return false;
   }
