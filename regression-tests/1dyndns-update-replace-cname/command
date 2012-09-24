@@ -1,5 +1,5 @@
 #!/bin/sh
-cleandig cname1.test.dyndns ANY
+cleandig cname1.test.dyndns CNAME
 
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
@@ -9,7 +9,7 @@ send
 answer
 !
 
-cleandig cname1.test.dyndns ANY
+cleandig cname1.test.dyndns CNAME
 
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
@@ -19,4 +19,4 @@ send
 answer
 !
 
-cleandig cname1.test.dyndns ANY
+cleandig cname1.test.dyndns CNAME

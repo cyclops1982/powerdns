@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # Check if the record really does not exist.
-cleandig host-255.test.dyndns ANY | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig host-255.test.dyndns ANY hidesoadetails
 
 # check if a domain exists, this should result in an NXDomain (section 3.2.1)
 # if the check fails, it will delete a record, which should not happen.
@@ -29,8 +29,8 @@ answer
 !
 
 # check if the records still exists, and query the record record to be deleted.
-cleandig host-1.test.dyndns ANY 
-cleandig host-2.test.dyndns ANY
+cleandig host-1.test.dyndns A
+cleandig host-2.test.dyndns A
 
 # check if host-2 does not exist, if so, delete host-2.
 # this checks section 3.2.2
@@ -44,7 +44,7 @@ answer
 !
 
 # if the check worked, this record is still there.
-cleandig host-2.test.dyndns ANY
+cleandig host-2.test.dyndns A
 
 # check if the specific record type styll exists, if not the case, delete it.
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'

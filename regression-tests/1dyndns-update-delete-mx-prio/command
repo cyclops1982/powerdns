@@ -1,5 +1,5 @@
 #!/bin/sh
-cleandig test.dyndns MX | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig test.dyndns MX hidesoadetails
 
 # Insert a MX record for the test.
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
@@ -35,4 +35,4 @@ answer
 !
 
 #check that it's gone.
-cleandig test.dyndns MX | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig test.dyndns MX hidesoadetails

@@ -1,5 +1,5 @@
 #!/bin/sh
-cleandig test.dyndns SOA | sed 's/\(ahu.example.dyndns. \)\([0-9]*\)/\12012060701/'
+cleandig test.dyndns SOA hidesoadetails
 
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
