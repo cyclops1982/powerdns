@@ -355,17 +355,18 @@ bool GSQLBackend::updateEmptyNonTerminals(uint32_t domain_id, const std::string&
       throw AhuException("GSQLBackend unable to delete empty non-terminal records from domain_id "+itoa(domain_id)+": "+e.txtReason());
       return false;
     }
-    return true;
   }
-
-  BOOST_FOREACH(const string qname, erase) {
-    snprintf(output,sizeof(output)-1,d_deleteEmptyNonTerminalQuery.c_str(), domain_id, sqlEscape(qname).c_str());
-    try {
-      d_db->doCommand(output);
-    }
-    catch (SSqlException &e) {
-      throw AhuException("GSQLBackend unable to delete empty non-terminal rr "+qname+" from domain_id "+itoa(domain_id)+": "+e.txtReason());
-      return false;
+  else
+  {
+    BOOST_FOREACH(const string qname, erase) {
+      snprintf(output,sizeof(output)-1,d_deleteEmptyNonTerminalQuery.c_str(), domain_id, sqlEscape(qname).c_str());
+      try {
+        d_db->doCommand(output);
+      }
+      catch (SSqlException &e) {
+        throw AhuException("GSQLBackend unable to delete empty non-terminal rr "+qname+" from domain_id "+itoa(domain_id)+": "+e.txtReason());
+        return false;
+      }
     }
   }
 
