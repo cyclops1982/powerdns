@@ -205,8 +205,6 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
           if(!(maxent))
           {
             cerr<<"Zone '"<<zone<<"' has too many empty non terminals."<<endl;
-            insnonterm.empty();
-            delnonterm=nonterm;
             doent=false;
             break;
           }
@@ -225,7 +223,14 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
   {
     //cerr<<"Total: "<<nonterm.size()<<" Insert: "<<insnonterm.size()<<" Delete: "<<delnonterm.size()<<endl;
     if(!insnonterm.empty() || !delnonterm.empty() || !doent)
+    {
+      if(!doent)
+      {
+        insnonterm.clear();
+        delnonterm.clear();
+      }
       sd.db->updateEmptyNonTerminals(sd.domain_id, zone, insnonterm, delnonterm, !doent);
+    }
     if(doent)
     {
       realrr=false;
