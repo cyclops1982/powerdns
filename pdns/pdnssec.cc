@@ -112,6 +112,7 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
 
   DNSResourceRecord rr;
   set<string> qnames, nsset, dsnames, nonterm, insnonterm, delnonterm;
+  bool doent=true;
   
   while(sd.db->get(rr)) {
     if (rr.qtype.getCode())
@@ -123,7 +124,8 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
         dsnames.insert(rr.qname);
     }
     else
-      delnonterm.insert(rr.qname);
+      if(doent)
+        delnonterm.insert(rr.qname);
   }
 
   NSEC3PARAMRecordContent ns3pr;
@@ -139,7 +141,6 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
   if(doTransaction)
     sd.db->startTransaction("", -1);
     
-  bool doent=true;
   bool realrr=true;
   string hashed;
 
@@ -205,6 +206,8 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
           if(!(maxent))
           {
             cerr<<"Zone '"<<zone<<"' has too many empty non terminals."<<endl;
+            insnonterm.clear();
+            delnonterm.clear();
             doent=false;
             break;
           }
@@ -224,11 +227,6 @@ void rectifyZone(DNSSECKeeper& dk, const std::string& zone)
     //cerr<<"Total: "<<nonterm.size()<<" Insert: "<<insnonterm.size()<<" Delete: "<<delnonterm.size()<<endl;
     if(!insnonterm.empty() || !delnonterm.empty() || !doent)
     {
-      if(!doent)
-      {
-        insnonterm.clear();
-        delnonterm.clear();
-      }
       sd.db->updateEmptyNonTerminals(sd.domain_id, zone, insnonterm, delnonterm, !doent);
     }
     if(doent)
