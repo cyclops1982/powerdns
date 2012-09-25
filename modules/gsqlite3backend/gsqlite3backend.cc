@@ -96,6 +96,13 @@ public:
     
     declare(suffix, "master-zone-query", "Data", "select master from domains where name='%s' and type='SLAVE'");
 
+    declare(suffix,"nullify-ordername-and-auth-query", "DNSSEC nullify ordername query", "update records set ordername=NULL,auth=0 where name='%s' and type='%s' and domain_id='%d'");
+    declare(suffix,"remove-empty-non-terminals-from-zone-query", "remove all empty non-terminals from zone", "delete from records where domain_id='%d' and type is null");
+    declare(suffix,"insert-empty-non-terminal-query", "insert empty non-terminal in zone", "insert into records (domain_id,name,auth) values ('%d','%s','1')");
+    declare(suffix,"delete-empty-non-terminal-query", "delete empty non-terminal from zone", "delete from records where domain_id='%d' and name='%s' and type is null");
+    
+    declare( suffix, "master-zone-query", "Data", "select master from domains where name='%s' and type='SLAVE'");
+
     declare(suffix, "info-zone-query", "","select id,name,master,last_check,notified_serial,type from domains where name='%s'");
 
     declare(suffix, "info-all-slaves-query", "","select id,name,master,last_check,type from domains where type='SLAVE'");

@@ -419,3 +419,4 @@ for zone in $(grep zone named.conf  | cut -f2 -d\")
 do
 	mv $zone.backup $zone
 done
+
