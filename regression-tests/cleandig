@@ -17,6 +17,6 @@ then
 fi
 if [ -f $testname/use.drill ]
 then
-	cat $testname/drill.out
+	cat $testname/drill.out | sed 's/ ;.*//'
 fi
 grep -i bogus $testname/*.out
