@@ -825,9 +825,12 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
 
   if (rr->d_class == QClass::IN) { // 3.4.2.2, Add/update records.
     bool foundRecord=false;
+    set<string> delnonterm;
     vector<pair<DNSResourceRecord, DNSResourceRecord> > recordsToUpdate;
     di->backend->lookup(QType(QType::ANY), rLabel);
     while (di->backend->get(rec)) {
+      if (!rec.qtype.getCode())
+        delnonterm.insert(rec.qname); // we're inserting a record which is a ENT, so we must delete that.
       if (rr->d_type == QType::SOA && rec.qtype == QType::SOA) {
         foundRecord = true;
         DNSResourceRecord newRec = rec;
@@ -875,18 +878,29 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
     if (insertedRecords > 0) {
       string shorter(rLabel);
       bool auth=true;
+
+      set<string> insnonterm;
       if (shorter != di->zone && rr->d_type != QType::DS) {
+        DNSResourceRecord rec;
         do {
           if (shorter == di->zone)
             break;
 
-          di->backend->lookup(QType(QType::NS), shorter);
-          DNSResourceRecord rec;
+          bool foundShorter = false;
+          di->backend->lookup(QType(QType::ANY), shorter);
           while (di->backend->get(rec)) {
-            auth=false;
+            if (rec.qname != rLabel)
+              foundShorter = true;
+            if (rec.qtype == QType::NS)
+              auth=false;
+          }
+          if (!foundShorter && shorter != rLabel) {
+            insnonterm.insert(shorter);
           }
         } while(chopOff(shorter));
       }
+
+
       if(haveNSEC3)
       {
         string hashed;
@@ -934,16 +948,32 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
           di->backend->nullifyDNSSECOrderNameAndAuth(di->id, *qname, "A");
         }
       }
+
+      if (insnonterm.size() > 0 || delnonterm.size() > 0) {
+        di->backend->updateEmptyNonTerminals(di->id, di->zone, insnonterm, delnonterm, false);
+        for (set<string>::const_iterator i=insnonterm.begin(); i!=insnonterm.end(); i++) {
+          string hashed;
+          if(haveNSEC3)
+          {
+            string hashed;
+            if(!narrow) 
+              hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr->d_iterations, ns3pr->d_salt, *i)));
+            di->backend->updateDNSSECOrderAndAuthAbsolute(di->id, *i, hashed, false);
+          }
+        }
+      }
     }
   } // rr->d_class == QClass::IN
 
   vector<DNSResourceRecord> recordsToDelete;
-  //Section 3.4.2.3: Delete RRs based on name and (if provided) type, but never delete NS or SOA of the zone.
+  //Section 3.4.2.3: Delete RRs based on name and (if provided) type, but never delete NS or SOA at the zone apex.
   if (rr->d_class == QClass::ANY) { 
     di->backend->lookup(QType(QType::ANY), rLabel);
     while (di->backend->get(rec)) {
+      if (!rec.qtype.getCode())
+        continue;
       if (rLabel == di->zone && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
-        continue; // always leave the SOA and NS record
+        continue; // always leave the SOA and NS records at the zone apex.
 
       if (rr->d_type == QType::ANY || rr->d_type == rec.qtype.getCode())
         recordsToDelete.push_back(rec);
@@ -955,11 +985,13 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
     di->backend->lookup(QType(QType::ANY), rLabel);
     bool skippedNS=true;
     while(di->backend->get(rec)) {
+      if (!rec.qtype.getCode())
+        continue;
       if (rLabel == di->zone) {
         if (rec.qtype.getCode() == QType::SOA)
-          continue; // always leave the SOA record
+          continue; // always leave the SOA record at the zone apex.
         if (rec.qtype.getCode() == QType::NS && !skippedNS) {
-          skippedNS=true; //always leave 1 NS
+          skippedNS=true; //always leave 1 NS at the zone apex.
           continue;
         }
       }
@@ -971,14 +1003,17 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
   }
 
   // Perform removes on the backend and fix auth/ordername
+  set<string> insnonterm, delnonterm;
   for(vector<DNSResourceRecord>::const_iterator i=recordsToDelete.begin(); i!=recordsToDelete.end(); ++i){
     di->backend->removeRecord(*i);
     deletedRecords++;
 
+    DNSResourceRecord rec;
+
     if (i->qtype.getCode() == QType::NS && i->qname != di->zone) {
       vector<string> changeAuth;
       di->backend->listSubZone(i->qname, di->id);
-      DNSResourceRecord rec;
+    
       while (di->backend->get(rec)) {
         changeAuth.push_back(rec.qname);
       }
@@ -992,9 +1027,59 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
         }
         else // NSEC
           di->backend->updateDNSSECOrderAndAuth(di->id, di->zone, *qname, true);
-      }   
+      }
     }
   }
+
+  if (recordsToDelete.size()) {
+    //We check with the listSubZone if there are records below the current level. If there are records, we need to insert ENT.
+    bool insertEnt = false;
+    di->backend->listSubZone(rLabel, di->id);
+    while (di->backend->get(rec)) {
+      if (rec.qname != rLabel)
+        insertEnt = true;
+    }
+
+    if (insertEnt)
+      insnonterm.insert(rLabel);
+
+
+    /*
+    If we're not removing something in between (no ENT insert needed), we might need to move up the tree to remove other ENT records
+    We do this with the while(chopOff(shorter)) loop until we find a real record BELOW the shortened. The reason we search for shorter and below is because
+    you might have a deep tree where we remove part of a branch */
+    if (insnonterm.size() == 0) {
+      string shorter(rLabel);
+      bool realrrBelow=false;
+      do {
+        if (shorter == di->zone)
+          break;
+        di->backend->listSubZone(shorter, di->id);
+        while (di->backend->get(rec)) {
+          if (rec.qtype.getCode())
+            realrrBelow=true;
+        }
+        if (!realrrBelow)
+          delnonterm.insert(shorter);
+        else
+          break;
+      }while(chopOff(shorter));
+    }
+
+    if (insnonterm.size() > 0 || delnonterm.size() > 0) {
+      di->backend->updateEmptyNonTerminals(di->id, di->zone, insnonterm, delnonterm, false);
+      for (set<string>::const_iterator i=insnonterm.begin(); i!=insnonterm.end(); i++) {
+        string hashed;
+        if(haveNSEC3)
+        {
+          string hashed;
+          if(!narrow) 
+            hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr->d_iterations, ns3pr->d_salt, *i)));
+          di->backend->updateDNSSECOrderAndAuthAbsolute(di->id, *i, hashed, false);
+        }
+      }
+    }
+    }
 
   L<<Logger::Notice<<msgPrefix<<"Added "<<insertedRecords<<"; Updated: "<<updatedRecords<<"; Deleted:"<<deletedRecords<<endl;
 
