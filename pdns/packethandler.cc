@@ -829,6 +829,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
     di->backend->lookup(QType(QType::ANY), rLabel);
     while (di->backend->get(rec)) {
       if (rr->d_type == QType::SOA && rec.qtype == QType::SOA) {
+        foundRecord = true;
         DNSResourceRecord newRec = rec;
         newRec.setContent(rr->d_content->getZoneRepresentation());
         newRec.ttl = rr->d_ttl;
@@ -841,8 +842,8 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
         }
         else
           L<<Logger::Notice<<msgPrefix<<"Provided serial ("<<sdUpdate.serial<<") is older than the current serial ("<<sdOld.serial<<"), ignoring SOA update."<<endl;
-
       } else if (rr->d_type == QType::CNAME && rec.qtype == QType::CNAME) {
+        foundRecord = true;
         DNSResourceRecord newRec = rec;
         newRec.ttl = rr->d_ttl;
         newRec.setContent(rr->d_content->getZoneRepresentation());
@@ -850,15 +851,15 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
       } else if (rec.qtype == rr->d_type) {
         string content = rr->d_content->getZoneRepresentation();
         if (rec.getZoneRepresentation() == content) {
+          foundRecord=true;
           DNSResourceRecord newRec = rec;
           newRec.ttl = rr->d_ttl;
           newRec.setContent(content);
           recordsToUpdate.push_back(make_pair(rec, newRec));
-          foundRecord=true;
         }
       }
     }
-    if (! foundRecord && rr->d_type != QType::SOA && rr->d_type != QType::CNAME) {
+    if (! foundRecord && rr->d_type != QType::SOA) {
       DNSResourceRecord newRec(*rr);
       newRec.domain_id = di->id;
       di->backend->feedRecord(newRec);
@@ -871,7 +872,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
       updatedRecords++;
     }
     
-    if (updatedRecords > 0 || insertedRecords > 0) {
+    if (insertedRecords > 0) {
       string shorter(rLabel);
       bool auth=true;
       if (shorter != di->zone && rr->d_type != QType::DS) {
