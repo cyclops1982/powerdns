@@ -830,7 +830,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
     di->backend->lookup(QType(QType::ANY), rLabel);
     while (di->backend->get(rec)) {
       if (!rec.qtype.getCode())
-        delnonterm.insert(rec.qname); // we're inserting a record which is a ENT, so we must delete that.
+        delnonterm.insert(rec.qname); // we're inserting a record which is a ENT, so we must delete that ENT
       if (rr->d_type == QType::SOA && rec.qtype == QType::SOA) {
         foundRecord = true;
         DNSResourceRecord newRec = rec;
@@ -929,7 +929,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
         di->backend->listSubZone(rLabel, di->id);
         DNSResourceRecord rec;
         while(di->backend->get(rec)) {
-          if (rec.qtype.getCode() != QType::DS)
+          if (rec.qtype.getCode() && rec.qtype.getCode() != QType::DS)
             qnames.push_back(rec.qname);
         }
         for(vector<string>::const_iterator qname=qnames.begin(); qname != qnames.end(); ++qname) {
@@ -970,7 +970,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
   if (rr->d_class == QClass::ANY) { 
     di->backend->lookup(QType(QType::ANY), rLabel);
     while (di->backend->get(rec)) {
-      if (!rec.qtype.getCode())
+      if (!rec.qtype.getCode()) //Skip ENT records in search
         continue;
       if (rLabel == di->zone && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
         continue; // always leave the SOA and NS records at the zone apex.
@@ -985,7 +985,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
     di->backend->lookup(QType(QType::ANY), rLabel);
     bool skippedNS=true;
     while(di->backend->get(rec)) {
-      if (!rec.qtype.getCode())
+      if (!rec.qtype.getCode()) // Skip ENT records in search
         continue;
       if (rLabel == di->zone) {
         if (rec.qtype.getCode() == QType::SOA)
@@ -1015,7 +1015,8 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
       di->backend->listSubZone(i->qname, di->id);
     
       while (di->backend->get(rec)) {
-        changeAuth.push_back(rec.qname);
+        if (!rec.qtype.getCode()) // skip ENT records
+          changeAuth.push_back(rec.qname);
       }
       for (vector<string>::const_iterator qname=changeAuth.begin(); qname!=changeAuth.end(); ++qname) {
         if(haveNSEC3)  {
@@ -1075,7 +1076,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
           string hashed;
           if(!narrow) 
             hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr->d_iterations, ns3pr->d_salt, *i)));
-          di->backend->updateDNSSECOrderAndAuthAbsolute(di->id, *i, hashed, false);
+          di->backend->updateDNSSECOrderAndAuthAbsolute(di->id, *i, hashed, true);
         }
       }
     }
