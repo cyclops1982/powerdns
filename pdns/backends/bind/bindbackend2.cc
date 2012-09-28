@@ -999,7 +999,6 @@ bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::str
   //cout<<"starting lower bound for: '"<<domain<<"'"<<endl;
 
   recordstorage_t::const_iterator iter = bbd.d_records->upper_bound(domain);
-
   while(iter == bbd.d_records->end() || (iter->qname) > domain || (!(iter->auth) && (!(iter->qtype == QType::NS))) || (!(iter->qtype)))
     iter--;
 
