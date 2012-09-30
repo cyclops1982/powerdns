@@ -1281,14 +1281,20 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
       }
     }
     else if(weDone) {
+      bool haveRecords = false;
       BOOST_FOREACH(rr, rrset) {
-        if((p->qtype.getCode() == QType::ANY || rr.qtype == p->qtype) && rr.qtype.getCode() && rr.auth)
+        if((p->qtype.getCode() == QType::ANY || rr.qtype == p->qtype) && rr.qtype.getCode() && rr.auth) {
           r->addRecord(rr);
+          haveRecords = true;
+        }
       }
 
-      if(p->qtype.getCode() == QType::ANY) {
-        completeANYRecords(p, r, sd, target);
+      if (haveRecords) {
+        if(p->qtype.getCode() == QType::ANY)
+          completeANYRecords(p, r, sd, target);
       }
+      else
+        makeNOError(p, r, rr.qname, sd, 0);
 
       goto sendit;
     }
