@@ -1943,7 +1943,7 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
     }
     else if(weDone) {
       BOOST_FOREACH(rr, rrset) {
-        if((p->qtype.getCode() == QType::ANY || rr.qtype == p->qtype) && rr.auth) 
+        if((p->qtype.getCode() == QType::ANY || rr.qtype == p->qtype) && rr.qtype.getCode() && rr.auth)
           r->addRecord(rr);
       }
 
