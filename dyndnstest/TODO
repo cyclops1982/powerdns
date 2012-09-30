@@ -1,5 +1,9 @@
 TODO (in order of importance):
+- Fix bind backend :S
+- Add test for delete of NS record (always leave one)
+- Ask about transaction/locking (see todo about 3.7)
 - use msgPrefix everywhere.
+- Understand nsec3-narrow better (nsec3 != nsec3 narrow results)
 - Packet forwarding - not sure what to do. If not support, then document.
 - Re-read the howto section - and decide if it should be in the doc or not.
 - WKS record is not supported (document this)
