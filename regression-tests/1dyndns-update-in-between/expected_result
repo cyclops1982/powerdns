@@ -1,11 +1,9 @@
-1	delete-add.test.dyndns.	IN	NSEC	86400	a.host.test.dyndns. A TXT RRSIG NSEC
-1	delete-add.test.dyndns.	IN	RRSIG	86400	NSEC 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
+0	delete-add.test.dyndns.	IN	NSEC	86400	a.host.test.dyndns. A TXT RRSIG NSEC
+0	delete-add.test.dyndns.	IN	RRSIG	86400	NSEC 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090240 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
-Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='host.test.dyndns.', qtype=ANY
 0	a.host.test.dyndns.	IN	A	3600	1.1.1.1
 0	a.host.test.dyndns.	IN	NSEC	86400	e.host.test.dyndns. A RRSIG NSEC
@@ -19,7 +17,7 @@ Reply to question for qname='a.host.test.dyndns.', qtype=ANY
 1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090240 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='a.a.host.test.dyndns.', qtype=ANY
@@ -28,7 +26,7 @@ Reply to question for qname='a.a.host.test.dyndns.', qtype=ANY
 1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090240 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='c.host.test.dyndns.', qtype=ANY
@@ -37,7 +35,7 @@ Reply to question for qname='c.host.test.dyndns.', qtype=ANY
 1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090240 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='a.c.host.test.dyndns.', qtype=ANY
@@ -46,7 +44,7 @@ Reply to question for qname='a.c.host.test.dyndns.', qtype=ANY
 1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090240 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='d.host.test.dyndns.', qtype=ANY
@@ -62,7 +60,7 @@ Reply to question for qname='e.host.test.dyndns.', qtype=ANY
 1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090240 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='f.host.test.dyndns.', qtype=ANY
@@ -72,14 +70,12 @@ Answer:
 ;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
-1	delete-add.test.dyndns.	IN	NSEC	86400	a.host.test.dyndns. A TXT RRSIG NSEC
-1	delete-add.test.dyndns.	IN	RRSIG	86400	NSEC 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
+0	delete-add.test.dyndns.	IN	NSEC	86400	a.host.test.dyndns. A TXT RRSIG NSEC
+0	delete-add.test.dyndns.	IN	RRSIG	86400	NSEC 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090241 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
-Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='host.test.dyndns.', qtype=ANY
 0	a.host.test.dyndns.	IN	A	3600	1.1.1.1
 0	a.host.test.dyndns.	IN	NSEC	86400	d.host.test.dyndns. A RRSIG NSEC
@@ -93,7 +89,7 @@ Reply to question for qname='a.host.test.dyndns.', qtype=ANY
 1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090241 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='a.a.host.test.dyndns.', qtype=ANY
@@ -102,7 +98,7 @@ Reply to question for qname='a.a.host.test.dyndns.', qtype=ANY
 1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090241 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='c.host.test.dyndns.', qtype=ANY
@@ -111,7 +107,7 @@ Reply to question for qname='c.host.test.dyndns.', qtype=ANY
 1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090241 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='a.c.host.test.dyndns.', qtype=ANY
@@ -134,7 +130,7 @@ Reply to question for qname='e.host.test.dyndns.', qtype=ANY
 1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090241 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='f.host.test.dyndns.', qtype=ANY
@@ -144,14 +140,12 @@ Answer:
 ;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
-1	delete-add.test.dyndns.	IN	NSEC	86400	a.host.test.dyndns. A TXT RRSIG NSEC
-1	delete-add.test.dyndns.	IN	RRSIG	86400	NSEC 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
+0	delete-add.test.dyndns.	IN	NSEC	86400	a.host.test.dyndns. A TXT RRSIG NSEC
+0	delete-add.test.dyndns.	IN	RRSIG	86400	NSEC 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090242 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
-Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
+Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='host.test.dyndns.', qtype=ANY
 0	a.host.test.dyndns.	IN	A	3600	1.1.1.1
 0	a.host.test.dyndns.	IN	NSEC	86400	e.host.test.dyndns. A RRSIG NSEC
@@ -165,7 +159,7 @@ Reply to question for qname='a.host.test.dyndns.', qtype=ANY
 1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090242 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='a.a.host.test.dyndns.', qtype=ANY
@@ -174,7 +168,7 @@ Reply to question for qname='a.a.host.test.dyndns.', qtype=ANY
 1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090242 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='c.host.test.dyndns.', qtype=ANY
@@ -183,7 +177,7 @@ Reply to question for qname='c.host.test.dyndns.', qtype=ANY
 1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090242 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='a.c.host.test.dyndns.', qtype=ANY
@@ -192,7 +186,7 @@ Reply to question for qname='a.c.host.test.dyndns.', qtype=ANY
 1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090242 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='d.host.test.dyndns.', qtype=ANY
@@ -208,7 +202,7 @@ Reply to question for qname='e.host.test.dyndns.', qtype=ANY
 1	test.dyndns.	IN	NSEC	86400	cname1.test.dyndns. NS SOA MX RRSIG NSEC DNSKEY
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	86400	NSEC 8 2 86400 [expiry] [inception] [keytag] test.dyndns. ...
-1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. 2012090242 28800 7200 604800 86400
+1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='f.host.test.dyndns.', qtype=ANY

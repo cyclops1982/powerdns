@@ -1,13 +1,13 @@
 #!/bin/sh
 
-cleandig host.test.dyndns ANY dnssec
-cleandig a.host.test.dyndns ANY dnssec 
-cleandig a.a.host.test.dyndns ANY dnssec
-cleandig c.host.test.dyndns ANY dnssec
-cleandig a.c.host.test.dyndns ANY dnssec
-cleandig d.host.test.dyndns ANY dnssec
-cleandig e.host.test.dyndns ANY dnssec
-cleandig f.host.test.dyndns ANY dnssec
+cleandig host.test.dyndns ANY dnssec hidesoadetails
+cleandig a.host.test.dyndns ANY dnssec hidesoadetails
+cleandig a.a.host.test.dyndns ANY dnssec hidesoadetails
+cleandig c.host.test.dyndns ANY dnssec hidesoadetails
+cleandig a.c.host.test.dyndns ANY dnssec hidesoadetails
+cleandig d.host.test.dyndns ANY dnssec hidesoadetails
+cleandig e.host.test.dyndns ANY dnssec hidesoadetails
+cleandig f.host.test.dyndns ANY dnssec hidesoadetails
 
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
@@ -17,14 +17,14 @@ send
 answer
 !
 
-cleandig host.test.dyndns ANY dnssec
-cleandig a.host.test.dyndns ANY dnssec
-cleandig a.a.host.test.dyndns ANY dnssec
-cleandig c.host.test.dyndns ANY dnssec
-cleandig a.c.host.test.dyndns ANY dnssec
-cleandig d.host.test.dyndns ANY dnssec
-cleandig e.host.test.dyndns ANY dnssec
-cleandig f.host.test.dyndns ANY dnssec
+cleandig host.test.dyndns ANY dnssec hidesoadetails
+cleandig a.host.test.dyndns ANY dnssec hidesoadetails
+cleandig a.a.host.test.dyndns ANY dnssec hidesoadetails
+cleandig c.host.test.dyndns ANY dnssec hidesoadetails
+cleandig a.c.host.test.dyndns ANY dnssec hidesoadetails
+cleandig d.host.test.dyndns ANY dnssec hidesoadetails
+cleandig e.host.test.dyndns ANY dnssec hidesoadetails
+cleandig f.host.test.dyndns ANY dnssec hidesoadetails
 
 nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
 server $nameserver $port
@@ -34,11 +34,11 @@ send
 answer
 !
 
-cleandig host.test.dyndns ANY dnssec
-cleandig a.host.test.dyndns ANY dnssec 
-cleandig a.a.host.test.dyndns ANY dnssec 
-cleandig c.host.test.dyndns ANY dnssec 
-cleandig a.c.host.test.dyndns ANY dnssec 
-cleandig d.host.test.dyndns ANY dnssec
-cleandig e.host.test.dyndns ANY dnssec
-cleandig f.host.test.dyndns ANY dnssec
+cleandig host.test.dyndns ANY dnssec hidesoadetails
+cleandig a.host.test.dyndns ANY dnssec hidesoadetails
+cleandig a.a.host.test.dyndns ANY dnssec hidesoadetails
+cleandig c.host.test.dyndns ANY dnssec hidesoadetails
+cleandig a.c.host.test.dyndns ANY dnssec hidesoadetails
+cleandig d.host.test.dyndns ANY dnssec hidesoadetails
+cleandig e.host.test.dyndns ANY dnssec hidesoadetails
+cleandig f.host.test.dyndns ANY dnssec hidesoadetails
