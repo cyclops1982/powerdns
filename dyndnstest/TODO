@@ -1,6 +1,4 @@
 TODO (in order of importance):
-- Fix bind backend :S
-- 1dyndns-update-delegate for nodnssec tests.
 - Add test for delete of NS record (always leave one)
 - Ask about transaction/locking (see todo about 3.7)
 - use msgPrefix everywhere.

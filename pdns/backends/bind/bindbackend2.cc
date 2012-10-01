@@ -232,6 +232,8 @@ bool Bind2Backend::commitTransaction()
     *d_of<<"; Zone '"+bbd.d_name+"' retrieved from master "<<endl<<"; at "<<nowTime()<<endl; // insert master info here again
 
     for (vector<Bind2DNSRecord>::const_iterator i = d_transRecords.begin(); i != d_transRecords.end(); i++) {
+      if (!i->qtype)
+        continue;
       string qname = labelReverse(i->qname); // reverse the reversed label. yay :-)
       qname = qname.empty() ? bbd.d_name : (qname+"."+bbd.d_name);
       writeRecord(d_transaction_zone, qname, i->ttl, QType(i->qtype), i->priority, i->content);
