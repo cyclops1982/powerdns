@@ -31,11 +31,9 @@ Answer:
 ;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
-0	hpnrghdi20c5ikiegdmlcknaqu9a3bg0.test.dyndns.	IN	NSEC3	86400	1 1 1 abcd HPNRGHDI20C5IKIEGDMLCKNAQU9A3BG1
 1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='delegate2.test.dyndns.', qtype=ANY
-0	h4tlip64juuiun7hbl0bsvqkkshh3pkj.test.dyndns.	IN	NSEC3	86400	1 1 1 abcd H4TLIP64JUUIUN7HBL0BSVQKKSHH3PKK
 1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 Rcode: 0, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='delegate1.test.dyndns.', qtype=ANY

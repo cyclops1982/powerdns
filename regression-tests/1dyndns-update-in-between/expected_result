@@ -1,5 +1,5 @@
-0	delete-add.test.dyndns.	IN	NSEC	86400	a.host.test.dyndns. A TXT RRSIG NSEC
-0	delete-add.test.dyndns.	IN	RRSIG	86400	NSEC 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
+1	delete-add.test.dyndns.	IN	NSEC	86400	a.host.test.dyndns. A TXT RRSIG NSEC
+1	delete-add.test.dyndns.	IN	RRSIG	86400	NSEC 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
@@ -70,8 +70,8 @@ Answer:
 ;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
-0	delete-add.test.dyndns.	IN	NSEC	86400	a.host.test.dyndns. A TXT RRSIG NSEC
-0	delete-add.test.dyndns.	IN	RRSIG	86400	NSEC 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
+1	delete-add.test.dyndns.	IN	NSEC	86400	a.host.test.dyndns. A TXT RRSIG NSEC
+1	delete-add.test.dyndns.	IN	RRSIG	86400	NSEC 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
@@ -140,8 +140,8 @@ Answer:
 ;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
-0	delete-add.test.dyndns.	IN	NSEC	86400	a.host.test.dyndns. A TXT RRSIG NSEC
-0	delete-add.test.dyndns.	IN	RRSIG	86400	NSEC 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
+1	delete-add.test.dyndns.	IN	NSEC	86400	a.host.test.dyndns. A TXT RRSIG NSEC
+1	delete-add.test.dyndns.	IN	RRSIG	86400	NSEC 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	

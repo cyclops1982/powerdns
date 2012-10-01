@@ -1,5 +1,5 @@
-0	lmrsadk2bb62qpruaules5i5ap06cp55.test.dyndns.	IN	NSEC3	86400	1 1 1 abcd LMRSADK2BB62QPRUAULES5I5AP06CP56
-0	lmrsadk2bb62qpruaules5i5ap06cp55.test.dyndns.	IN	RRSIG	86400	NSEC3 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
+1	lmrsadk2bb62qpruaules5i5ap06cp55.test.dyndns.	IN	NSEC3	86400	1 1 1 abcd LMRSADK2BB62QPRUAULES5I5AP06CP56
+1	lmrsadk2bb62qpruaules5i5ap06cp55.test.dyndns.	IN	RRSIG	86400	NSEC3 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
@@ -80,8 +80,8 @@ Answer:
 ;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
-0	lmrsadk2bb62qpruaules5i5ap06cp55.test.dyndns.	IN	NSEC3	86400	1 1 1 abcd LMRSADK2BB62QPRUAULES5I5AP06CP56
-0	lmrsadk2bb62qpruaules5i5ap06cp55.test.dyndns.	IN	RRSIG	86400	NSEC3 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
+1	lmrsadk2bb62qpruaules5i5ap06cp55.test.dyndns.	IN	NSEC3	86400	1 1 1 abcd LMRSADK2BB62QPRUAULES5I5AP06CP56
+1	lmrsadk2bb62qpruaules5i5ap06cp55.test.dyndns.	IN	RRSIG	86400	NSEC3 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	
@@ -158,8 +158,8 @@ Answer:
 ;; ZONE SECTION:
 ;test.dyndns.			IN	SOA
 
-0	lmrsadk2bb62qpruaules5i5ap06cp55.test.dyndns.	IN	NSEC3	86400	1 1 1 abcd LMRSADK2BB62QPRUAULES5I5AP06CP56
-0	lmrsadk2bb62qpruaules5i5ap06cp55.test.dyndns.	IN	RRSIG	86400	NSEC3 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
+1	lmrsadk2bb62qpruaules5i5ap06cp55.test.dyndns.	IN	NSEC3	86400	1 1 1 abcd LMRSADK2BB62QPRUAULES5I5AP06CP56
+1	lmrsadk2bb62qpruaules5i5ap06cp55.test.dyndns.	IN	RRSIG	86400	NSEC3 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	

@@ -250,8 +250,8 @@ Reply to question for qname='a.host.test.dyndns.', qtype=ANY
 2	.	IN	OPT	32768	
 Rcode: 3, RD: 0, QR: 1, TC: 0, AA: 1, opcode: 0
 Reply to question for qname='b.host.test.dyndns.', qtype=ANY
-0	fgun0ru4oe3g76tr551hg97mpu37b6mi.test.dyndns.	IN	NSEC3	86400	1 1 1 abcd FGUN0RU4OE3G76TR551HG97MPU37B6MJ
-0	fgun0ru4oe3g76tr551hg97mpu37b6mi.test.dyndns.	IN	RRSIG	86400	NSEC3 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
+1	fgun0ru4oe3g76tr551hg97mpu37b6mi.test.dyndns.	IN	NSEC3	86400	1 1 1 abcd FGUN0RU4OE3G76TR551HG97MPU37B6MJ
+1	fgun0ru4oe3g76tr551hg97mpu37b6mi.test.dyndns.	IN	RRSIG	86400	NSEC3 8 3 86400 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	RRSIG	3600	SOA 8 2 3600 [expiry] [inception] [keytag] test.dyndns. ...
 1	test.dyndns.	IN	SOA	3600	ns1.test.dyndns. ahu.example.dyndns. [serial] 28800 7200 604800 86400
 2	.	IN	OPT	32768	

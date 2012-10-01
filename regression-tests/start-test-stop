@@ -131,6 +131,7 @@ case $context in
 				--gmysql-host="$GMYSQLHOST" \
 				--gmysql-password="$GMYSQLPASSWD" &
 			skipreasons=nodnssec
+			extracontexts=nodnssec
 			;;
 
 		gmysql | gmysql-nsec3 | gmysql-nsec3-narrow)
@@ -264,6 +265,7 @@ __EOF__
 				--gpgsql-dbname="$GPGSQLDB" \
 				--gpgsql-user="$GPGSQLUSER" &
 			skipreasons=nodnssec
+			extracontacts=nodnssec
 			;;	
 
 
@@ -280,6 +282,7 @@ __EOF__
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gsqlite3-database=pdns.sqlite3 &
 			skipreasons=nodnssec
+			extracontacts=nodnssec
 
 			;;
 		opendbx-sqlite3)
@@ -297,6 +300,7 @@ __EOF__
 				--opendbx-backend=sqlite3 --opendbx-host-read=./ --opendbx-host-write=./ \
 				--opendbx-database=pdns-opendbx.sqlite3 &
 			skipreasons="nodnssec nodyndns"
+			extracontext=nodnssec
 
 			;;									
 		gsqlite3 | gsqlite3-nsec3)
@@ -341,6 +345,7 @@ __EOF__
 				--send-root-referral \
 				--tinydns-dbfile=../modules/tinydnsbackend/data.cdb & 
 			skipreasons="nodnssec nodyndns"
+			extracontext=nodnssec
 			;;
 		*)
 			echo unknown context $context
