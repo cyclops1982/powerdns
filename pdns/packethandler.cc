@@ -972,37 +972,41 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
   // REMOVAL OF RECORDS!
   vector<DNSResourceRecord> recordsToDelete;
   //Section 3.4.2.3: Delete RRs based on name and (if provided) type, but never delete NS or SOA at the zone apex.
-  if (rr->d_class == QClass::ANY) { 
-    di->backend->lookup(QType(QType::ANY), rLabel);
-    while (di->backend->get(rec)) {
-      if (!rec.qtype.getCode()) //Skip ENT records in search
-        continue;
-      if (rLabel == di->zone && (rec.qtype.getCode() == QType::SOA || rec.qtype.getCode() == QType::NS)) 
-        continue; // always leave the SOA and NS records at the zone apex.
-
-      if (rr->d_type == QType::ANY || rr->d_type == rec.qtype.getCode())
-        recordsToDelete.push_back(rec);
+  if (rr->d_class == QClass::ANY) {
+    if (! (rLabel == di->zone && (rr->d_type == QType::SOA || rr->d_type == QType::NS) ) ) { 
+      di->backend->lookup(QType(QType::ANY), rLabel);
+      while (di->backend->get(rec)) {
+        if (!rec.qtype.getCode()) //Skip ENT records in search
+          continue;
+        if (rr->d_type == QType::ANY || rr->d_type == rec.qtype.getCode())
+          recordsToDelete.push_back(rec);
+      }
     }
   }
 
   //Section 3.4.2.4, Delete a specific record that matches name, type and rdata, with some specifics for NS/SOA records.
-  if (rr->d_class == QClass::NONE) {
-    di->backend->lookup(QType(QType::ANY), rLabel);
-    bool skippedNS=false;
-    while(di->backend->get(rec)) {
-      if (!rec.qtype.getCode()) // Skip ENT records in search
-        continue;
-      if (rLabel == di->zone) {
-        if (rec.qtype.getCode() == QType::SOA)
-          continue; // always leave the SOA record at the zone apex.
-        if (rec.qtype.getCode() == QType::NS && !skippedNS) {
-          skippedNS=true; //always leave 1 NS at the zone apex.
-          continue;
-        }
+  if (rr->d_class == QClass::NONE && rr->d_type != QType::SOA) { // never remove SOA.
+    if (rLabel == di->zone && rr->d_type == QType::NS) { // special condition for apex NS
+      int nsCount=0;
+      vector<DNSResourceRecord> tmpDel;
+      di->backend->lookup(QType(QType::NS), rLabel);
+      while(di->backend->get(rec)) {
+        nsCount++;
+        if (rec.qtype == rr->d_type && rec.getZoneRepresentation() == rr->d_content->getZoneRepresentation())
+          tmpDel.push_back(rec); 
       }
-      
-      if (rec.qtype == rr->d_type && rec.getZoneRepresentation() == rr->d_content->getZoneRepresentation()) {
-        recordsToDelete.push_back(rec);
+      if (nsCount > 1) { // always keep one remaining NS at the apex.
+        for(vector<DNSResourceRecord>::const_iterator rtd=tmpDel.begin(); rtd!=tmpDel.end(); rtd++){
+          recordsToDelete.push_back(*rtd);
+        }
+      } 
+    } else {
+      di->backend->lookup(QType(QType::ANY), rLabel);
+      while(di->backend->get(rec)) {
+        if (!rec.qtype.getCode()) // Skip ENT records in search
+          continue;
+       if (rec.qtype == rr->d_type && rec.getZoneRepresentation() == rr->d_content->getZoneRepresentation())
+          recordsToDelete.push_back(rec);
       }
     }
   }
