@@ -853,8 +853,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
         if (rec.getZoneRepresentation() == content) {
           foundRecord=true;
           DNSResourceRecord newRec = rec;
-          newRec.ttl = rr->d_ttl;
-          newRec.setContent(content); //CODE: Why do we do this?
+          newRec.ttl = rr->d_ttl; // If content matches, we can only update the TTL.
           recordsToUpdate.push_back(make_pair(rec, newRec));
         }
       }
@@ -893,7 +892,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
             if (rec.qtype == QType::NS)
               auth=false;
           }
-          if (!foundShorter && shorter != rLabel && shorter != di->zone) //CODE: I think the shorter != rLabel can be removed.
+          if (!foundShorter && shorter != rLabel && shorter != di->zone)
             insnonterm.insert(shorter);
 
         } while(chopOff(shorter));
