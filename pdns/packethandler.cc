@@ -394,9 +394,7 @@ int PacketHandler::doAdditionalProcessingAndDropAA(DNSPacket *p, DNSPacket *r, c
         else {
           B.lookup(qtypes[n], content, p);
         }
-        bool foundOne=false;
         while(B.get(rr)) {
-          foundOne=true;
           if(rr.domain_id!=i->domain_id && ::arg()["out-of-zone-additional-processing"]=="no") {
             DLOG(L<<Logger::Warning<<"Not including out-of-zone additional processing of "<<i->qname<<" ("<<rr.qname<<")"<<endl);
             continue; // not adding out-of-zone additional data
@@ -861,19 +859,21 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
         }
       }
     }
-    if (! foundRecord && rr->d_type != QType::SOA) { //CODE: The compare against QType::SOA should not be needed here.
+   // Update the records
+   for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
+      di->backend->updateRecord(i->first, i->second);
+      updatedRecords++;
+    }
+  
+
+    // If the record was not replaced, we insert it.
+    if (! foundRecord) {
       DNSResourceRecord newRec(*rr);
       newRec.domain_id = di->id;
       di->backend->feedRecord(newRec);
       insertedRecords++;
     }
-
-    //CODE: move this section ABOVE the feedRecord() part?
-    for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
-      di->backend->updateRecord(i->first, i->second);
-      updatedRecords++;
-    }
-   
+    
     // The next section will fix order and Auth fields and insert ENT's 
     if (insertedRecords > 0) {
       string shorter(rLabel);
@@ -968,14 +968,13 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
 
 
 
-
-  //
-  // The following section deals with the removal of records. When the class is ANY, all records of that name (and/or type) are deleted
-  // When the type is NONE, the RDATA must match as well.
-  vector<DNSResourceRecord> recordsToDelete;
+  // The following section deals with the removal of records. When the class is ANY, all records of 
+  // that name (and/or type) are deleted. When the type is NONE, the RDATA must match as well.
+  // There are special cases for SOA and NS records to ensure the zone will remain operational.
   //Section 3.4.2.3: Delete RRs based on name and (if provided) type, but never delete NS or SOA at the zone apex.
+  vector<DNSResourceRecord> recordsToDelete;
   if (rr->d_class == QClass::ANY) {
-    if (! (rLabel == di->zone && (rr->d_type == QType::SOA || rr->d_type == QType::NS) ) ) { // Never delete NS and SOA's at apex
+    if (! (rLabel == di->zone && (rr->d_type == QType::SOA || rr->d_type == QType::NS) ) ) {
       di->backend->lookup(QType(QType::ANY), rLabel);
       while (di->backend->get(rec)) {
         if (rec.qtype.getCode() && (rr->d_type == QType::ANY || rr->d_type == rec.qtype.getCode()))
@@ -984,7 +983,9 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
     }
   }
 
-  //Section 3.4.2.4, Delete a specific record that matches name, type and rdata, with some specifics for NS/SOA records.
+  // Section 3.4.2.4, Delete a specific record that matches name, type and rdata
+  // again there are specific with some specifics for NS/SOA records. Never delete SOA and never remove
+  // the last NS from the zone.
   if (rr->d_class == QClass::NONE && rr->d_type != QType::SOA) { // never remove SOA.
     if (rLabel == di->zone && rr->d_type == QType::NS) { // special condition for apex NS
       int nsCount=0;
@@ -1010,10 +1011,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
   }
 
   if (recordsToDelete.size()) {
-
-    //
     // Perform removes on the backend and fix auth/ordername
-    //
     for(vector<DNSResourceRecord>::const_iterator recToDelete=recordsToDelete.begin(); recToDelete!=recordsToDelete.end(); ++recToDelete){
       di->backend->removeRecord(*recToDelete);
       deletedRecords++;
@@ -1021,7 +1019,6 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
       if (recToDelete->qtype.getCode() == QType::NS && recToDelete->qname != di->zone) {
         vector<string> changeAuth;
         di->backend->listSubZone(recToDelete->qname, di->id);
-      
         while (di->backend->get(rec)) {
           if (rec.qtype.getCode()) // skip ENT records
             changeAuth.push_back(rec.qname);
@@ -1040,13 +1037,11 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
       }
     }
 
-    //
     // Fix ENT records.
-    //
+    // We must check if we have a record below the current level and if we removed the 'last' record
+    // on that level. If so, we must insert an ENT record.
+    // We take extra care here to not 'include' the record that we just deleted. Some backends will still return it.
     set<string> insnonterm, delnonterm;
-    // We check with the listSubZone if there are records below the current level and if there is another record with our name.
-    // If we didn't find a record with our name and there is nothing on the same level, we insert a ENT
-    // We take extra care here to not 'include' the record that we just deleted - because some backends might still return that.
     bool foundDeeper, foundOther = false;
     di->backend->listSubZone(rLabel, di->id);
     while (di->backend->get(rec)) {
@@ -1059,24 +1054,28 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
     if (foundDeeper && !foundOther) {
       insnonterm.insert(rLabel);
     } else if (!foundOther) {
-      /*
-      If we're not removing something in between (no ENT insert needed), we might need to move up the tree to remove other ENT records
-      We do this with the while(chopOff(shorter)) loop until we find a real record BELOW the shortened. The reason we search for shorter and below is because
-      you might have a deep tree where we remove part of a branch */
+      // If we didn't have to insert an ENT, we might have deleted a record at very deep level
+      // and we must then clean up the ENT's above the deleted record.
       string shorter(rLabel);
-      bool realrrBelow=false;
       do {
+        bool foundRealRR=false;
         if (shorter == di->zone)
           break;
+        // The reason for a listSubZone here is because might go up the tree and find the root ENT of another branch
+        // consider these non ENT-records:
+        // a.b.c.d.e.test.com
+        // a.b.d.e.test.com
+        // if we delete a.b.c.d.e.test.com, we go up to d.e.test.com and then find a.b.d.e.test.com
+        // At that point we can stop deleting ENT's because the tree is in tact again.
         di->backend->listSubZone(shorter, di->id);
         while (di->backend->get(rec)) {
           if (rec.qtype.getCode())
-            realrrBelow=true;
+            foundRealRR=true;
         }
-        if (!realrrBelow)
+        if (!foundRealRR)
           delnonterm.insert(shorter);
         else
-          break;
+          break; // we found a real record - tree is ok again.
       }while(chopOff(shorter));
     }
 
