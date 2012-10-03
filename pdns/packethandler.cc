@@ -817,7 +817,6 @@ int PacketHandler::updatePrescanCheck(const DNSRecord *rr) {
 // Implements section 3.4.2 of RFC2136
 uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, DomainInfo *di, bool narrow, bool haveNSEC3, const NSEC3PARAMRecordContent *ns3pr, bool *updatedSerial) {
   //TODO: Add DLOG/verbose logging to this, so we know what is actually performed.
-  //cerr<<"d_class:"<<rr->d_class<<"; rType:"<<rr->d_type<<endl;
   DNSResourceRecord rec;
   uint16_t updatedRecords = 0, deletedRecords = 0, insertedRecords = 0;
 
@@ -845,7 +844,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
         }
         else
           L<<Logger::Notice<<msgPrefix<<"Provided serial ("<<sdUpdate.serial<<") is older than the current serial ("<<sdOld.serial<<"), ignoring SOA update."<<endl;
-      } else if (rr->d_type == QType::CNAME && rec.qtype == QType::CNAME) {
+      } else if (rr->d_type == QType::CNAME && rec.qtype == QType::CNAME) { // If the update record is a cname, we update that cname. 
         foundRecord = true;
         DNSResourceRecord newRec = rec;
         newRec.ttl = rr->d_ttl;
@@ -857,31 +856,31 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
           foundRecord=true;
           DNSResourceRecord newRec = rec;
           newRec.ttl = rr->d_ttl;
-          newRec.setContent(content);
+          newRec.setContent(content); //CODE: Why do we do this?
           recordsToUpdate.push_back(make_pair(rec, newRec));
         }
       }
     }
-    if (! foundRecord && rr->d_type != QType::SOA) {
+    if (! foundRecord && rr->d_type != QType::SOA) { //CODE: The compare against QType::SOA should not be needed here.
       DNSResourceRecord newRec(*rr);
       newRec.domain_id = di->id;
       di->backend->feedRecord(newRec);
       insertedRecords++;
     }
 
-    // Perform updates on the backend
+    //CODE: move this section ABOVE the feedRecord() part?
     for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
       di->backend->updateRecord(i->first, i->second);
       updatedRecords++;
     }
-    
+   
+    // The next section will fix order and Auth fields and insert ENT's 
     if (insertedRecords > 0) {
       string shorter(rLabel);
       bool auth=true;
 
       set<string> insnonterm;
       if (shorter != di->zone && rr->d_type != QType::DS) {
-        DNSResourceRecord rec;
         do {
           if (shorter == di->zone)
             break;
@@ -894,7 +893,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
             if (rec.qtype == QType::NS)
               auth=false;
           }
-          if (!foundShorter && shorter != rLabel && shorter != di->zone)
+          if (!foundShorter && shorter != rLabel && shorter != di->zone) //CODE: I think the shorter != rLabel can be removed.
             insnonterm.insert(shorter);
 
         } while(chopOff(shorter));
@@ -924,12 +923,13 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
           di->backend->nullifyDNSSECOrderNameAndAuth(di->id, rLabel, "AAAA");
         }
       }
+      // If we insert an NS, all the records below it become non auth - so, we're inserting a delegate.
+      // Auth can only be false when the rLabel is not the zone 
       if (auth == false && rr->d_type == QType::NS) {
         vector<string> qnames;
         di->backend->listSubZone(rLabel, di->id);
-        DNSResourceRecord rec;
         while(di->backend->get(rec)) {
-          if (rec.qtype.getCode() && rec.qtype.getCode() != QType::DS)
+          if (rec.qtype.getCode() && rec.qtype.getCode() != QType::DS) // Skip ENT and DS records.
             qnames.push_back(rec.qname);
         }
         for(vector<string>::const_iterator qname=qnames.begin(); qname != qnames.end(); ++qname) {
@@ -949,6 +949,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
         }
       }
 
+      //Insert and delete ENT's
       if (insnonterm.size() > 0 || delnonterm.size() > 0) {
         di->backend->updateEmptyNonTerminals(di->id, di->zone, insnonterm, delnonterm, false);
         for (set<string>::const_iterator i=insnonterm.begin(); i!=insnonterm.end(); i++) {
@@ -968,17 +969,16 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
 
 
 
-
-  // REMOVAL OF RECORDS!
+  //
+  // The following section deals with the removal of records. When the class is ANY, all records of that name (and/or type) are deleted
+  // When the type is NONE, the RDATA must match as well.
   vector<DNSResourceRecord> recordsToDelete;
   //Section 3.4.2.3: Delete RRs based on name and (if provided) type, but never delete NS or SOA at the zone apex.
   if (rr->d_class == QClass::ANY) {
-    if (! (rLabel == di->zone && (rr->d_type == QType::SOA || rr->d_type == QType::NS) ) ) { 
+    if (! (rLabel == di->zone && (rr->d_type == QType::SOA || rr->d_type == QType::NS) ) ) { // Never delete NS and SOA's at apex
       di->backend->lookup(QType(QType::ANY), rLabel);
       while (di->backend->get(rec)) {
-        if (!rec.qtype.getCode()) //Skip ENT records in search
-          continue;
-        if (rr->d_type == QType::ANY || rr->d_type == rec.qtype.getCode())
+        if (rec.qtype.getCode() && (rr->d_type == QType::ANY || rr->d_type == rec.qtype.getCode()))
           recordsToDelete.push_back(rec);
       }
     }
@@ -1003,9 +1003,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
     } else {
       di->backend->lookup(QType(QType::ANY), rLabel);
       while(di->backend->get(rec)) {
-        if (!rec.qtype.getCode()) // Skip ENT records in search
-          continue;
-       if (rec.qtype == rr->d_type && rec.getZoneRepresentation() == rr->d_content->getZoneRepresentation())
+        if (rec.qtype.getCode() && rec.qtype == rr->d_type && rec.getZoneRepresentation() == rr->d_content->getZoneRepresentation())
           recordsToDelete.push_back(rec);
       }
     }
@@ -1019,8 +1017,6 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
     for(vector<DNSResourceRecord>::const_iterator recToDelete=recordsToDelete.begin(); recToDelete!=recordsToDelete.end(); ++recToDelete){
       di->backend->removeRecord(*recToDelete);
       deletedRecords++;
-
-      DNSResourceRecord rec;
 
       if (recToDelete->qtype.getCode() == QType::NS && recToDelete->qname != di->zone) {
         vector<string> changeAuth;
