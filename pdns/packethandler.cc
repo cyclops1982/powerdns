@@ -1041,7 +1041,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
     // on that level. If so, we must insert an ENT record.
     // We take extra care here to not 'include' the record that we just deleted. Some backends will still return it.
     set<string> insnonterm, delnonterm;
-    bool foundDeeper, foundOther = false;
+    bool foundDeeper = false, foundOther = false;
     di->backend->listSubZone(rLabel, di->id);
     while (di->backend->get(rec)) {
       if (rec.qname == rLabel && !count(recordsToDelete.begin(), recordsToDelete.end(), rec))
