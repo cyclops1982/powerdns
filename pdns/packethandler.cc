@@ -814,13 +814,13 @@ int PacketHandler::updatePrescanCheck(const DNSRecord *rr) {
 
 // Implements section 3.4.2 of RFC2136
 uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, DomainInfo *di, bool narrow, bool haveNSEC3, const NSEC3PARAMRecordContent *ns3pr, bool *updatedSerial) {
-  //TODO: Add DLOG/verbose logging to this, so we know what is actually performed.
   DNSResourceRecord rec;
   uint16_t updatedRecords = 0, deletedRecords = 0, insertedRecords = 0;
 
   string rLabel = stripDot(rr->d_label);
 
   if (rr->d_class == QClass::IN) { // 3.4.2.2, Add/update records.
+    DLOG(L<<msgPrefix<<"Add/Update record (QClass == IN)"<<endl);
     bool foundRecord=false;
     set<string> delnonterm;
     vector<pair<DNSResourceRecord, DNSResourceRecord> > recordsToUpdate;
@@ -861,6 +861,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
    // Update the records
    for(vector<pair<DNSResourceRecord, DNSResourceRecord> >::const_iterator i=recordsToUpdate.begin(); i!=recordsToUpdate.end(); ++i){
       di->backend->updateRecord(i->first, i->second);
+      L<<Logger::Notice<<msgPrefix<<"Updating record "<<i->first.qname<<"|"<<i->first.qtype.getName()<<endl;
       updatedRecords++;
     }
   
@@ -869,6 +870,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
     if (! foundRecord) {
       DNSResourceRecord newRec(*rr);
       newRec.domain_id = di->id;
+      L<<Logger::Notice<<msgPrefix<<"Adding record "<<newRec.qname<<"|"<<newRec.qtype.getName()<<endl;
       di->backend->feedRecord(newRec);
       insertedRecords++;
     }
@@ -925,6 +927,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
       // If we insert an NS, all the records below it become non auth - so, we're inserting a delegate.
       // Auth can only be false when the rLabel is not the zone 
       if (auth == false && rr->d_type == QType::NS) {
+        DLOG(L<<msgPrefix<<"Going to fix auth flags below "<<rLabel<<endl);
         vector<string> qnames;
         di->backend->listSubZone(rLabel, di->id);
         while(di->backend->get(rec)) {
@@ -950,6 +953,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
 
       //Insert and delete ENT's
       if (insnonterm.size() > 0 || delnonterm.size() > 0) {
+        DLOG(L<<msgPrefix<<"Updating ENT records"<<endl);
         di->backend->updateEmptyNonTerminals(di->id, di->zone, insnonterm, delnonterm, false);
         for (set<string>::const_iterator i=insnonterm.begin(); i!=insnonterm.end(); i++) {
           string hashed;
@@ -973,6 +977,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
   //Section 3.4.2.3: Delete RRs based on name and (if provided) type, but never delete NS or SOA at the zone apex.
   vector<DNSResourceRecord> recordsToDelete;
   if (rr->d_class == QClass::ANY) {
+    DLOG(L<<msgPrefix<<"Deleting records (QClass == ANY)"<<endl);
     if (! (rLabel == di->zone && (rr->d_type == QType::SOA || rr->d_type == QType::NS) ) ) {
       di->backend->lookup(QType(QType::ANY), rLabel);
       while (di->backend->get(rec)) {
@@ -986,6 +991,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
   // again there are specific with some specifics for NS/SOA records. Never delete SOA and never remove
   // the last NS from the zone.
   if (rr->d_class == QClass::NONE && rr->d_type != QType::SOA) { // never remove SOA.
+    DLOG(L<<msgPrefix<<"Deleting records (QClass == NONE && type != SOA)"<<endl);
     if (rLabel == di->zone && rr->d_type == QType::NS) { // special condition for apex NS
       int nsCount=0;
       vector<DNSResourceRecord> tmpDel;
@@ -1003,7 +1009,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
     } else {
       di->backend->lookup(QType(QType::ANY), rLabel);
       while(di->backend->get(rec)) {
-        if (rec.qtype.getCode() && rec.qtype == rr->d_type && rec.getZoneRepresentation() == rr->d_content->getZoneRepresentation())
+        if (rec.qtype.getCode() && rec.qtype == rr->d_type && rec.getZoneRepresentation() == rr->d_content->getZoneRepresentation()) 
           recordsToDelete.push_back(rec);
       }
     }
@@ -1012,6 +1018,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
   if (recordsToDelete.size()) {
     // Perform removes on the backend and fix auth/ordername
     for(vector<DNSResourceRecord>::const_iterator recToDelete=recordsToDelete.begin(); recToDelete!=recordsToDelete.end(); ++recToDelete){
+      L<<Logger::Notice<<msgPrefix<<"Deleting record "<<recToDelete->qname<<"|"<<recToDelete->qtype.getName()<<endl;
       di->backend->removeRecord(*recToDelete);
       deletedRecords++;
 
@@ -1079,6 +1086,7 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
     }
 
     if (insnonterm.size() > 0 || delnonterm.size() > 0) {
+      DLOG(L<<msgPrefix<<"Updating ENT records"<<endl);
       di->backend->updateEmptyNonTerminals(di->id, di->zone, insnonterm, delnonterm, false);
       for (set<string>::const_iterator i=insnonterm.begin(); i!=insnonterm.end(); i++) {
         string hashed;
