@@ -91,7 +91,7 @@ private:
   int trySuperMaster(DNSPacket *p);
   int processNotify(DNSPacket *);
   int processUpdate(DNSPacket *p);
-  void increaseSerial(const DomainInfo& di);
+  void increaseSerial(const string &msgPrefix, const DomainInfo& di);
   void addRootReferral(DNSPacket *r);
   int makeCanonic(DNSPacket *p, DNSPacket *r, string &target);
   int findMboxFW(DNSPacket *p, DNSPacket *r, string &target);

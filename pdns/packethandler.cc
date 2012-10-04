@@ -1323,7 +1323,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
 
     // Section 3.6 - Update the SOA serial - outside of performUpdate because we do a SOA update for the complete update message
     if (changedRecords > 0 && !updatedSerial)
-      increaseSerial(di);
+      increaseSerial(msgPrefix, di);
   }
   catch (AhuException &e) {
     L<<Logger::Error<<msgPrefix<<"Caught AhuException: "<<e.reason<<"; Sending ServFail!"<<endl;
@@ -1345,7 +1345,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   return RCode::NoError; //rfc 2136 3.4.2.5
 }
 
-void PacketHandler::increaseSerial(const DomainInfo& di) {
+void PacketHandler::increaseSerial(const string &msgPrefix, const DomainInfo& di) {
   DNSResourceRecord rec, newRec;
   di.backend->lookup(QType(QType::SOA), di.zone);
   bool foundSOA=false;
@@ -1369,7 +1369,7 @@ void PacketHandler::increaseSerial(const DomainInfo& di) {
       vector<string> soaEditSetting;
       B.getDomainMetadata(di.zone, "SOA-EDIT", soaEditSetting);
       if (soaEditSetting.empty()) {
-        L<<Logger::Error<<"Using "<<soaEdit2136<<" for SOA-EDIT-2136 increase on RFC2136, but SOA-EDIT is not set for domain. Using DEFAULT for SOA-EDIT-2136"<<endl;
+        L<<Logger::Error<<msgPrefix<<"Using "<<soaEdit2136<<" for SOA-EDIT-2136 increase on RFC2136, but SOA-EDIT is not set for domain. Using DEFAULT for SOA-EDIT-2136"<<endl;
         soaEdit2136 = "DEFAULT";
       } else
         soaEdit = soaEditSetting[0];
@@ -1404,7 +1404,6 @@ void PacketHandler::increaseSerial(const DomainInfo& di) {
   
 
   newRec.content = serializeSOAData(soa2Update);
-
   di.backend->updateRecord(rec, newRec);
   PC.purge(newRec.qname); 
 }
