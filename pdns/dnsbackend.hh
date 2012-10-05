@@ -117,14 +117,14 @@ public:
 
   virtual bool getTSIGKey(const string& name, string* algorithm, string* content) { return false; }
 
-  virtual bool getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after)
+  virtual bool getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after, bool beforeCurrent=false)
   {
     std::cerr<<"Default beforeAndAfterAbsolute called!"<<std::endl;
     abort();
     return false;
   }
 
-  bool getBeforeAndAfterNames(uint32_t id, const std::string& zonename, const std::string& qname, std::string& before, std::string& after);
+  bool getBeforeAndAfterNames(uint32_t id, const std::string& zonename, const std::string& qname, std::string& before, std::string& after, bool beforeCurrent=false);
 
   virtual bool updateDNSSECOrderAndAuth(uint32_t domain_id, const std::string& zonename, const std::string& qname, bool auth)
   {
@@ -164,7 +164,7 @@ public:
     return false;
   }
   
-  //! starts the transaction for updating domain qname (FIXME: what is id?)
+  //! starts the transaction for updating domain qname 
   virtual bool startTransaction(const string &qname, int id=-1)
   {
     return false;
@@ -195,6 +195,23 @@ public:
   {
     return false; // no problem!
   }
+ 
+  virtual bool removeRecord(const DNSResourceRecord &rr)
+  {
+    return false;
+  }
+  
+  virtual bool updateRecord(const DNSResourceRecord &oldRR, const DNSResourceRecord &newRR)
+  {
+    return false;
+  }
+
+  virtual bool listSubZone(const string &zone, int domain_id)
+  {
+    return false;
+  }
+
+
   //! if this returns true, DomainInfo di contains information about the domain
   virtual bool getDomainInfo(const string &domain, DomainInfo &di)
   {

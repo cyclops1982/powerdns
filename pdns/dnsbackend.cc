@@ -249,19 +249,21 @@ bool DNSBackend::getSOA(const string &domain, SOAData &sd, DNSPacket *p)
   return true;
 }
 
-bool DNSBackend::getBeforeAndAfterNames(uint32_t id, const std::string& zonename, const std::string& qname, std::string& before, std::string& after)
+bool DNSBackend::getBeforeAndAfterNames(uint32_t id, const std::string& zonename, const std::string& qname, std::string& before, std::string& after, bool beforeCurrent)
 {
   string lcqname=toLower(qname);
   lcqname=makeRelative(qname, zonename);
   
   lcqname=labelReverse(lcqname);
   string dnc;
-  bool ret = this->getBeforeAndAfterNamesAbsolute(id, lcqname, dnc, before, after);
+  bool ret = this->getBeforeAndAfterNamesAbsolute(id, lcqname, dnc, before, after, beforeCurrent);
   
   before=dotConcat(labelReverse(before), zonename);
   after=dotConcat(labelReverse(after), zonename);
   return ret;
 }
+
+
 
 /**
  * Calculates a SOA serial for the zone and stores it in the third

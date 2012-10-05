@@ -1,4 +1,5 @@
 diff
+*.out
 real_result
 /dnssec-validation-failures
 /skipped_tests

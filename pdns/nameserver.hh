@@ -146,6 +146,7 @@ inline DNSPacket *UDPNameserver::receive(DNSPacket *prefilled)
   packet->setSocket(sock);
   packet->setRemote(&remote);
   if(packet->parse(mesg, len)<0) {
+    L<<Logger::Error<<"Unable to parse packet from "<<remote.toString()<<endl;
     S.inc("corrupt-packets");
     S.ringAccount("remotes-corrupt", packet->getRemote());
 

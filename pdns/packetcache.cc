@@ -168,6 +168,15 @@ void PacketCache::insert(const string &qname, const QType& qtype, CacheEntryType
     S.inc("deferred-cache-inserts"); 
 }
 
+/* ONLY USE FOR DEBUGGING! */
+void PacketCache::dumpCache() {
+  WriteLock l(&d_mut);
+  cerr<<"[dumpCache] Dumping packetcache:"<<endl;
+  for (cmap_t::const_iterator iter = d_map.begin(); iter != d_map.end(); iter++)
+    cerr<<"[dumpCache] "<<iter->ctype<<":"<<iter->qname<<" - "<<iter->qtype<<" - "<<iter->ttd<<endl;
+}
+
+
 /* clears the entire packetcache. */
 int PacketCache::purge()
 {
@@ -229,17 +238,15 @@ int PacketCache::purge(const string &match)
   */
   if(ends_with(match, "$")) {
     string suffix(match);
-    suffix.resize(suffix.size()-1);
+    suffix.resize(suffix.size()-1); // strip of the $
 
     cmap_t::const_iterator iter = d_map.lower_bound(tie(suffix));
     cmap_t::const_iterator start=iter;
     string dotsuffix = "."+suffix;
 
     for(; iter != d_map.end(); ++iter) {
-      if(!pdns_iequals(iter->qname, suffix) && !iends_with(iter->qname, dotsuffix)) {
-        //	cerr<<"Stopping!"<<endl;
+      if(!pdns_iequals(iter->qname, suffix) && !iends_with(iter->qname, dotsuffix))
         break;
-      }
       delcount++;
     }
     d_map.erase(start, iter);
@@ -252,6 +259,48 @@ int PacketCache::purge(const string &match)
   *d_statnumentries=d_map.size();
   return delcount;
 }
+
+
+int PacketCache::purgeRange(const string &begin, const string &end, const string &zone) {
+  cerr<<"PURGE request for "<<begin<<" -> "<<end<<" zone: "<<zone<<endl;
+  dumpCache();
+  WriteLock l(&d_mut);
+  int size=d_map.size();
+  if (size == 0)
+    return 0;
+
+  // Search for the beginning for the purge range
+  cmap_t::const_iterator beginIter = d_map.lower_bound(tie(begin));
+  if (beginIter == d_map.end() || !iends_with(beginIter->qname,zone)) {
+    beginIter = d_map.lower_bound(tie(zone));
+  }
+
+  if (beginIter == d_map.end() || !iends_with(beginIter->qname,zone)) // Couldn't find begin and not the zone? This thing is simply not in the cache!
+    return 0;
+
+  cerr<<"BEGIN AT "<<beginIter->qname<<"|"<<beginIter->qtype<<endl;
+
+  // Search for the end. We make sure we run all the way to the end (because the first match might be a different qtype)
+  cmap_t::const_iterator endIter = beginIter;
+  bool endIterFound=false;
+  for (; endIter != d_map.end(); ++endIter) {
+    if ((endIterFound && !iends_with(endIter->qname, end)) || !iends_with(endIter->qname, zone))
+      break;
+
+    if (iends_with(endIter->qname, end))
+      endIterFound=true;
+  }
+  if (endIter == d_map.end())
+    cerr<<"END AT end()"<<endl;
+  else 
+    cerr<<"END AT "<<endIter->qname<<"|"<<endIter->qtype<<endl;
+
+  // Finally erase things.
+  d_map.erase(beginIter, endIter);
+  *d_statnumentries=d_map.size();
+  return size - *d_statnumentries;
+}
+
 // called from ueberbackend
 bool PacketCache::getEntry(const string &qname, const QType& qtype, CacheEntryType cet, string& value, int zoneID, bool meritsRecursion, 
   unsigned int maxReplyLen, bool dnssecOk)

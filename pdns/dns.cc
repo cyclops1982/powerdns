@@ -194,3 +194,34 @@ string strrcode(unsigned char rcode)
     return rcodes[rcode];
   return "Err#"+lexical_cast<string>((int)rcode);
 }
+
+/*
+DNSResourceRecord::DNSResourceRecord(const DNSRecord &p) {
+  qname = p.d_label;
+  if(!qname.empty())
+    boost::erase_tail(qname, 1); // strip .
+  
+  qtype = p.d_type;
+  ttl = p.d_ttl;
+  content = p.d_content->getZoneRepresentation();
+  priority = 0;
+    
+  if(!content.empty() && (qtype==QType::MX || qtype==QType::NS || qtype==QType::CNAME))
+    boost::erase_tail(content, 1);
+
+  if(qtype.getCode() == QType::MX) {
+    vector<string> parts;
+    stringtok(parts, content);
+    priority = atoi(parts[0].c_str());
+    if(parts.size() > 1)
+      content=parts[1];
+    else
+      content=".";
+  } else if(qtype.getCode() == QType::SRV) {
+    priority = atoi(content.c_str());
+    vector<pair<string::size_type, string::size_type> > fields;
+    vstringtok(fields, content, " ");
+    if(fields.size()==4)
+      content=string(content.c_str() + fields[1].first, fields[3].second - fields[1].first);
+  }
+} */

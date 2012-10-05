@@ -266,6 +266,7 @@ GSQLBackend::GSQLBackend(const string &mode, const string &suffix)
   d_wildCardANYIDQuery=getArg("wildcard-any-id-query"+authswitch);
   
   d_listQuery=getArg("list-query"+authswitch);
+  d_listSubZone=getArg("list-subzone"+authswitch);
 
   d_MasterOfDomainsZoneQuery=getArg("master-zone-query");
   d_InfoOfDomainsZoneQuery=getArg("info-zone-query");
@@ -278,21 +279,28 @@ GSQLBackend::GSQLBackend(const string &mode, const string &suffix)
   d_ZoneLastChangeQuery=getArg("zone-lastchange-query");
   d_InfoOfAllMasterDomainsQuery=getArg("info-all-master-query");
   d_DeleteZoneQuery=getArg("delete-zone-query");
+  d_DeleteRecordQuery=getArg("delete-record-query");
   d_getAllDomainsQuery=getArg("get-all-domains-query");
 
   d_removeEmptyNonTerminalsFromZoneQuery = getArg("remove-empty-non-terminals-from-zone-query");
   d_insertEmptyNonTerminalQuery = getArg("insert-empty-non-terminal-query"+authswitch);
   d_deleteEmptyNonTerminalQuery = getArg("delete-empty-non-terminal-query");
+  d_UpdateRecordQuery=getArg("update-record-query");
+  d_UpdateRecordQueryNoPrio=getArg("update-record-query-no-prio");
   
   if (d_dnssecQueries)
   {
     d_firstOrderQuery = getArg("get-order-first-query");
     d_beforeOrderQuery = getArg("get-order-before-query");
+    d_beforeCurrentOrderQuery = getArg("get-order-before-current-query");
     d_afterOrderQuery = getArg("get-order-after-query");
     d_lastOrderQuery = getArg("get-order-last-query");
     d_setOrderAuthQuery = getArg("set-order-and-auth-query");
     d_nullifyOrderNameQuery = getArg("nullify-ordername-query");
     d_nullifyOrderNameAndAuthQuery = getArg("nullify-ordername-and-auth-query");
+    d_removeEmptyNonTerminalsFromZoneQuery = getArg("remove-empty-non-terminals-from-zone-query");
+    d_insertEmptyNonTerminalQuery = getArg("insert-empty-non-terminal-query");
+    d_deleteEmptyNonTerminalQuery = getArg("delete-empty-non-terminal-query");
     
     d_AddDomainKeyQuery = getArg("add-domain-key-query");
     d_ListDomainKeysQuery = getArg("list-domain-keys-query");
@@ -355,6 +363,8 @@ bool GSQLBackend::nullifyDNSSECOrderNameAndAuth(uint32_t domain_id, const std::s
 
 bool GSQLBackend::updateEmptyNonTerminals(uint32_t domain_id, const std::string& zonename, set<string>& insert, set<string>& erase, bool remove)
 {
+  if(!d_dnssecQueries)
+    return false;
   char output[1024];
 
   if(remove) {
@@ -400,7 +410,7 @@ bool GSQLBackend::doesDNSSEC()
     return d_dnssecQueries;
 }
 
-bool GSQLBackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after)
+bool GSQLBackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, std::string& unhashed, std::string& before, std::string& after, bool beforeCurrent)
 {
   if(!d_dnssecQueries)
     return false;
@@ -427,8 +437,10 @@ bool GSQLBackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string&
       after=row[0];
     }
   }
-
-  snprintf(output, sizeof(output)-1, d_beforeOrderQuery.c_str(), sqlEscape(lcqname).c_str(), id);
+  if (beforeCurrent)
+    snprintf(output, sizeof(output)-1, d_beforeCurrentOrderQuery.c_str(), sqlEscape(lcqname).c_str(), id);
+  else 
+    snprintf(output, sizeof(output)-1, d_beforeOrderQuery.c_str(), sqlEscape(lcqname).c_str(), id);
   d_db->doQuery(output);
   while(d_db->getRow(row)) {
     before=row[0];
@@ -839,6 +851,53 @@ bool GSQLBackend::feedRecord(const DNSResourceRecord &r)
     throw AhuException(e.txtReason());
   }
   return true; // XXX FIXME this API should not return 'true' I think -ahu 
+}
+
+bool GSQLBackend::listSubZone(const string &zone, int domain_id) {
+  string wildzone = "%." + zone;
+  string output = (boost::format(d_listSubZone) % sqlEscape(zone) % sqlEscape(wildzone) % domain_id).str();
+  try {
+    d_db->doQuery(output.c_str());
+  }
+  catch(SSqlException &e) {
+    throw AhuException("GSQLBackend listSubZone query: "+e.txtReason());
+  }
+  d_qname="";
+  d_count=0;
+  return true;
+}
+
+
+
+bool GSQLBackend::removeRecord(const DNSResourceRecord &r) {
+  string output = (boost::format(d_DeleteRecordQuery) % r.domain_id % sqlEscape(r.qname) % sqlEscape(r.qtype.getName()) % sqlEscape(r.content) % r.priority ).str();
+
+  try {
+    d_db->doCommand(output.c_str());
+  }
+  catch (SSqlException &e) {
+    throw AhuException(e.txtReason());
+  }
+  return true;
+}
+
+
+
+bool GSQLBackend::updateRecord(const DNSResourceRecord &oldR, const DNSResourceRecord &r) {
+  string output;
+  if (oldR.qtype == QType::MX || oldR.qtype == QType::SRV)
+    output = (boost::format(d_UpdateRecordQuery) % sqlEscape(r.content) % r.ttl % r.priority % sqlEscape(oldR.qname) % sqlEscape(oldR.qtype.getName()) % oldR.domain_id % oldR.priority).str();
+  else 
+    output = (boost::format(d_UpdateRecordQueryNoPrio) % sqlEscape(r.content) % r.ttl % sqlEscape(oldR.qname) % sqlEscape(oldR.qtype.getName()) % oldR.domain_id).str();
+    
+
+  try {
+    d_db->doCommand(output.c_str());
+  }
+  catch (SSqlException &e) {
+    throw AhuException(e.txtReason());
+  }
+  return true;
 }
 
 bool GSQLBackend::startTransaction(const string &domain, int domain_id)
