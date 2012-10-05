@@ -63,7 +63,7 @@ public:
     declare(suffix,"wildcard-any-id-query","Wildcard ANY with ID query","select content,ttl,prio,type,domain_id,name from records where name like '%s' and domain_id='%d'");
 
     declare(suffix,"list-query","AXFR query", "select content,ttl,prio,type,domain_id,name from records where domain_id='%d'");
-    declare(suffix,"list-subzone","Query that returns a sub-zone","select content,ttl,prio,type,domain_id,name from records where (name='%s' OR name like '%s') and domain_id=%d");
+    declare(suffix,"list-subzone","Query that lists all records on and below the given name.","select content,ttl,prio,type,domain_id,name from records where (name='%s' OR name like '%s') and domain_id=%d");
 
     declare(suffix,"remove-empty-non-terminals-from-zone-query", "remove all empty non-terminals from zone", "delete from records where domain_id='%d' and type is null");
     declare(suffix,"insert-empty-non-terminal-query", "insert empty non-terminal in zone", "insert into records (domain_id,name,type) values ('%d','%s',null)");
