@@ -262,8 +262,6 @@ int PacketCache::purge(const string &match)
 
 
 int PacketCache::purgeRange(const string &begin, const string &end, const string &zone) {
-  cerr<<"PURGE request for "<<begin<<" -> "<<end<<" zone: "<<zone<<endl;
-  dumpCache();
   WriteLock l(&d_mut);
   int size=d_map.size();
   if (size == 0)
@@ -278,8 +276,6 @@ int PacketCache::purgeRange(const string &begin, const string &end, const string
   if (beginIter == d_map.end() || !iends_with(beginIter->qname,zone)) // Couldn't find begin and not the zone? This thing is simply not in the cache!
     return 0;
 
-  cerr<<"BEGIN AT "<<beginIter->qname<<"|"<<beginIter->qtype<<endl;
-
   // Search for the end. We make sure we run all the way to the end (because the first match might be a different qtype)
   cmap_t::const_iterator endIter = beginIter;
   bool endIterFound=false;
@@ -290,11 +286,7 @@ int PacketCache::purgeRange(const string &begin, const string &end, const string
     if (iends_with(endIter->qname, end))
       endIterFound=true;
   }
-  if (endIter == d_map.end())
-    cerr<<"END AT end()"<<endl;
-  else 
-    cerr<<"END AT "<<endIter->qname<<"|"<<endIter->qtype<<endl;
-
+  
   // Finally erase things.
   d_map.erase(beginIter, endIter);
   *d_statnumentries=d_map.size();
