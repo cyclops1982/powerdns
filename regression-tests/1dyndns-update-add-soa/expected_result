@@ -10,6 +10,12 @@ Answer:
 ;; ZONE SECTION:
 ;test2.dyndns.			IN	SOA
 
+Answer:
+;; ->>HEADER<<- opcode: UPDATE, status: NOTZONE ID_REPLACED
+;; flags: qr aa; ZONE: 1, PREREQ: 0, UPDATE: 0, ADDITIONAL: 0
+;; ZONE SECTION:
+;test.dyndns.			IN	SOA
+
 1	.	IN	NS	518400	a.root-servers.net.
 1	.	IN	NS	518400	b.root-servers.net.
 1	.	IN	NS	518400	c.root-servers.net.
