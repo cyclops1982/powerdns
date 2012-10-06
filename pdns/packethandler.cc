@@ -758,6 +758,8 @@ int PacketHandler::updatePrerequisitesCheck(const DNSRecord *rr, DomainInfo *di)
   DNSResourceRecord rec;
   di->backend->lookup(QType(QType::ANY), rLabel);
   while(di->backend->get(rec)) {
+    if (!rec.qtype.getCode())
+      continue;
     if ((rr->d_type != QType::ANY && rec.qtype == rr->d_type) || rr->d_type == QType::ANY)
       foundRecord=true;
   }
