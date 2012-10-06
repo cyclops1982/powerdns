@@ -58,3 +58,12 @@ answer
 
 # if the check worked, this record still exists.
 cleandig host-2.test.dyndns A
+
+# Check ENT records
+nsupdate <<! | sed 's/\, id:.*/ ID_REPLACED/'
+server $nameserver $port
+zone test.dyndns
+prereq yxdomain host.test.dyndns 
+send
+answer
+!
