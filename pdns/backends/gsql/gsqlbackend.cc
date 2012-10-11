@@ -298,9 +298,6 @@ GSQLBackend::GSQLBackend(const string &mode, const string &suffix)
     d_setOrderAuthQuery = getArg("set-order-and-auth-query");
     d_nullifyOrderNameQuery = getArg("nullify-ordername-query");
     d_nullifyOrderNameAndAuthQuery = getArg("nullify-ordername-and-auth-query");
-    d_removeEmptyNonTerminalsFromZoneQuery = getArg("remove-empty-non-terminals-from-zone-query");
-    d_insertEmptyNonTerminalQuery = getArg("insert-empty-non-terminal-query");
-    d_deleteEmptyNonTerminalQuery = getArg("delete-empty-non-terminal-query");
     
     d_AddDomainKeyQuery = getArg("add-domain-key-query");
     d_ListDomainKeysQuery = getArg("list-domain-keys-query");
