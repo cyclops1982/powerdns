@@ -375,8 +375,6 @@ bool GSQLBackend::nullifyDNSSECOrderNameAndAuth(uint32_t domain_id, const std::s
 
 bool GSQLBackend::updateEmptyNonTerminals(uint32_t domain_id, const std::string& zonename, set<string>& insert, set<string>& erase, bool remove)
 {
-  if(!d_dnssecQueries)
-    return false;
   char output[1024];
 
   if(remove) {
