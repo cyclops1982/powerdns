@@ -375,8 +375,8 @@ __EOF__
 				--cache-ttl=$cachettl --no-config \
 				--send-root-referral \
 				--tinydns-dbfile=../modules/tinydnsbackend/data.cdb & 
-			skipreasns="nodnssec nodyndns noent"
-			extracontext=nodnssec
+			skipreasons="nodnssec nodyndns noent"
+			extracontext="nodnssec"
 			;;
 		remotebackend-*)
 			remotetype=$(echo $context | cut -d- -f 2)
