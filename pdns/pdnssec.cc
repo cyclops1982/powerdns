@@ -467,26 +467,26 @@ void disableDNSSECOnZone(DNSSECKeeper& dk, const string& zone)
 void showZone(DNSSECKeeper& dk, const std::string& zone)
 {
   if(!dk.isSecuredZone(zone)) {
-    cerr<<"Zone is not secured\n";
-    return;
+    cerr<<"Zone is not actively secured\n";
   }
   NSEC3PARAMRecordContent ns3pr;
   bool narrow;
   bool haveNSEC3=dk.getNSEC3PARAM(zone, &ns3pr, &narrow);
   
-  if(!haveNSEC3) 
-    cout<<"Zone has NSEC semantics"<<endl;
-  else
-    cout<<"Zone has " << (narrow ? "NARROW " : "") <<"hashed NSEC3 semantics, configuration: "<<ns3pr.getZoneRepresentation()<<endl;
+  DNSSECKeeper::keyset_t keyset=dk.getKeys(zone);
+  
   
   cout <<"Zone is " << (dk.isPresigned(zone) ? "" : "not ") << "presigned\n";
-  
-  DNSSECKeeper::keyset_t keyset=dk.getKeys(zone);
 
   if(keyset.empty())  {
     cerr << "No keys for zone '"<<zone<<"'."<<endl;
   }
   else {  
+    if(!haveNSEC3) 
+      cout<<"Zone has NSEC semantics"<<endl;
+    else
+      cout<<"Zone has " << (narrow ? "NARROW " : "") <<"hashed NSEC3 semantics, configuration: "<<ns3pr.getZoneRepresentation()<<endl;
+  
     cout << "keys: "<<endl;
     BOOST_FOREACH(DNSSECKeeper::keyset_t::value_type value, keyset) {
       cout<<"ID = "<<value.second.id<<" ("<<(value.second.keyOrZone ? "KSK" : "ZSK")<<"), tag = "<<value.first.getDNSKEY().getTag();
@@ -520,6 +520,12 @@ bool secureZone(DNSSECKeeper& dk, const std::string& zone)
   if(!B.getDomainInfo(zone, di) || !di.backend) { // di.backend and B are mostly identical
     cout<<"Can't find a zone called '"<<zone<<"'"<<endl;
     return false;
+  }
+
+  if(di.kind == DomainInfo::Slave)
+  {
+    cout<<"Warning! This is a slave domain! If this was a mistake, please run"<<endl;
+    cout<<"pdnssec disable-dnssec "<<zone<<" right now!"<<endl;
   }
 
   if(!dk.secureZone(zone, 8)) {

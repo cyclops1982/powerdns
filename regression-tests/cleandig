@@ -19,3 +19,4 @@ if [ -f ${testsdir}/${testname}/use.drill ]
 then
 	cat ${testsdir}/${testname}/drill.out | sed 's/ ;.*//'
 fi
+grep -iw bogus ${testsdir}/${testname}/*.out

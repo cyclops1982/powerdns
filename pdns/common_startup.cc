@@ -137,6 +137,8 @@ void declareArguments()
   ::arg().set("entropy-source", "If set, read entropy from this file")="/dev/urandom";
 
   ::arg().set("lua-prequery-script", "Lua script with prequery handler")="";
+
+  ::arg().setSwitch("traceback-handler","Enable the traceback handler (Linux only)")="yes";
 }
 
 void declareStats(void)
@@ -275,6 +277,7 @@ void *qthread(void *number)
         L<<"packetcache HIT"<<endl;
       cached.setRemote(&P->d_remote);  // inlined
       cached.setSocket(P->getSocket());                               // inlined
+      cached.d_anyLocal = P->d_anyLocal;
       cached.setMaxReplyLen(P->getMaxReplyLen());
       cached.d.rd=P->d.rd; // copy in recursion desired bit 
       cached.d.id=P->d.id;

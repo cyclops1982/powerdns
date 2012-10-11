@@ -83,7 +83,7 @@ case $context in
 		bind)
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=bind --bind-config=./named.conf                \
-				--fancy-records --send-root-referral    \
+				--send-root-referral    \
 				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no &
 			skipreasons="nodnssec"
@@ -140,9 +140,9 @@ __EOF__
 
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gmysql \
-				--fancy-records --send-root-referral \
 				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
+				--master --send-root-referral \
 				--gmysql-dbname="$GMYSQLDB" \
 				--gmysql-user="$GMYSQLUSER" \
 				--gmysql-host="$GMYSQLHOST" \
@@ -194,7 +194,7 @@ __EOF__
 
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gmysql --gmysql-dnssec \
-				--fancy-records --send-root-referral \
+				--send-root-referral \
 				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gmysql-dbname="$GMYSQLDB" \
@@ -243,7 +243,6 @@ __EOF__
 
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gpgsql --gpgsql-dnssec \
-				--fancy-records --send-root-referral \
 				--cache-ttl=$cachettl --no-config  \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gpgsql-dbname="$GPGSQLDB" \
@@ -282,7 +281,7 @@ __EOF__
 
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gpgsql \
-				--fancy-records --send-root-referral \
+				--send-root-referral \
 				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gpgsql-dbname="$GPGSQLDB" \
@@ -309,7 +308,7 @@ __EOF__
 
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gsqlite3 \
-				--fancy-records --send-root-referral \
+				 --send-root-referral \
 				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gsqlite3-database=pdns.sqlite3 &
@@ -327,7 +326,7 @@ __EOF__
 
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=opendbx \
-				--fancy-records --send-root-referral \
+				--send-root-referral \
 				--cache-ttl=$cachettl --no-config \
 				--opendbx-backend=sqlite3 --opendbx-host-read=./ --opendbx-host-write=./ \
 				--opendbx-database=pdns-opendbx.sqlite3 &
@@ -358,7 +357,7 @@ __EOF__
 
 			$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 				--no-shuffle --launch=gsqlite3 --gsqlite3-dnssec \
-				--fancy-records --send-root-referral \
+				--send-root-referral \
 				--cache-ttl=$cachettl --no-config \
 				--allow-2136-from="127.0.0.0/8" --disable-rfc2136=no \
 				--gsqlite3-database=pdns.sqlite3 &
@@ -462,7 +461,7 @@ then
 
 	$RUNWRAPPER ../pdns/pdns_server --daemon=no --local-port=$port --socket-dir=./  \
 		--no-shuffle --launch=gmysql --gmysql-dnssec \
-		--fancy-records --send-root-referral \
+		--send-root-referral \
 		--cache-ttl=0 --query-cache-ttl=0 --no-config --slave --retrieval-threads=1 \
 		--gmysql-dbname="$GMYSQL2DB" \
 		--gmysql-user="$GMYSQL2USER" \

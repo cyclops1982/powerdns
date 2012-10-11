@@ -335,7 +335,12 @@ bool GSQLBackend::updateDNSSECOrderAndAuthAbsolute(uint32_t domain_id, const std
   snprintf(output, sizeof(output)-1, d_setOrderAuthQuery.c_str(), sqlEscape(ordername).c_str(), auth, sqlEscape(qname).c_str(), domain_id);
 //  cerr<<"sql: '"<<output<<"'\n";
   
-  d_db->doCommand(output);
+  try {
+    d_db->doCommand(output);
+  }
+  catch(SSqlException &e) {
+    throw AhuException("GSQLBackend unable to update ordername/auth for domain_id "+itoa(domain_id)+": "+e.txtReason());
+  }
   return true;
 }
 
@@ -346,7 +351,12 @@ bool GSQLBackend::nullifyDNSSECOrderName(uint32_t domain_id, const std::string& 
   char output[1024];
 
   snprintf(output, sizeof(output)-1, d_nullifyOrderNameQuery.c_str(), domain_id, sqlEscape(qname).c_str());
-  d_db->doCommand(output);
+  try {
+    d_db->doCommand(output);
+  }
+  catch(SSqlException &e) {
+    throw AhuException("GSQLBackend unable to nullify ordername for domain_id "+itoa(domain_id)+": "+e.txtReason());
+  }
   return true;
 }
 
@@ -357,7 +367,12 @@ bool GSQLBackend::nullifyDNSSECOrderNameAndAuth(uint32_t domain_id, const std::s
   char output[1024];
 
   snprintf(output, sizeof(output)-1, d_nullifyOrderNameAndAuthQuery.c_str(), sqlEscape(qname).c_str(), sqlEscape(type).c_str(), domain_id);
-  d_db->doCommand(output);
+  try {
+    d_db->doCommand(output);
+  }
+  catch(SSqlException &e) {
+    throw AhuException("GSQLBackend unable to nullify ordername/auth for domain_id "+itoa(domain_id)+": "+e.txtReason());
+  }
   return true;
 }
 
@@ -424,7 +439,13 @@ bool GSQLBackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string&
 
   snprintf(output, sizeof(output)-1, d_afterOrderQuery.c_str(), sqlEscape(lcqname).c_str(), id);
   
-  d_db->doQuery(output);
+  try {
+    d_db->doQuery(output);
+  }
+  catch(SSqlException &e) {
+    throw AhuException("GSQLBackend unable to find before/after (after) for domain_id "+itoa(id)+": "+e.txtReason());
+  }
+
   while(d_db->getRow(row)) {
     after=row[0];
   }
@@ -432,7 +453,12 @@ bool GSQLBackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string&
   if(after.empty() && !lcqname.empty()) {
     snprintf(output, sizeof(output)-1, d_firstOrderQuery.c_str(), id);
   
-    d_db->doQuery(output);
+    try {
+      d_db->doQuery(output);
+    }
+    catch(SSqlException &e) {
+      throw AhuException("GSQLBackend unable to find before/after (first) for domain_id "+itoa(id)+": "+e.txtReason());
+    }
     while(d_db->getRow(row)) {
       after=row[0];
     }
@@ -441,7 +467,13 @@ bool GSQLBackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string&
     snprintf(output, sizeof(output)-1, d_beforeCurrentOrderQuery.c_str(), sqlEscape(lcqname).c_str(), id);
   else 
     snprintf(output, sizeof(output)-1, d_beforeOrderQuery.c_str(), sqlEscape(lcqname).c_str(), id);
-  d_db->doQuery(output);
+
+  try {
+    d_db->doQuery(output);
+  }
+  catch(SSqlException &e) {
+    throw AhuException("GSQLBackend unable to find before/after (before) for domain_id "+itoa(id)+": "+e.txtReason());
+  }
   while(d_db->getRow(row)) {
     before=row[0];
     unhashed=row[1];
@@ -454,7 +486,12 @@ bool GSQLBackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string&
   }
 
   snprintf(output, sizeof(output)-1, d_lastOrderQuery.c_str(), id);
-  d_db->doQuery(output);
+  try {
+    d_db->doQuery(output);
+  }
+  catch(SSqlException &e) {
+    throw AhuException("GSQLBackend unable to find before/after (last) for domain_id "+itoa(id)+": "+e.txtReason());
+  }
   while(d_db->getRow(row)) {
     before=row[0];
     unhashed=row[1];
@@ -848,7 +885,7 @@ bool GSQLBackend::feedRecord(const DNSResourceRecord &r)
     d_db->doCommand(output.c_str());
   }
   catch (SSqlException &e) {
-    throw AhuException(e.txtReason());
+    throw AhuException("GSQLBackend unable to feed record: "+e.txtReason());
   }
   return true; // XXX FIXME this API should not return 'true' I think -ahu 
 }
