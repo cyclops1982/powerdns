@@ -71,6 +71,8 @@ public:
     declare(suffix, "list-query", "AXFR query", "select content,ttl,prio,type,domain_id,name from records where domain_id=%d");
     declare(suffix, "list-subzone","Query that lists all records on and below the given name.","select content,ttl,prio,type,domain_id,name from records where (name='%s' OR name like '%s') and domain_id=%d");
     
+
+
     // and now with auth
     declare(suffix, "basic-query-auth","Basic query","select content,ttl,prio,type,domain_id,name, auth from records where type='%s' and name='%s'");
     declare(suffix, "id-query-auth","Basic with ID query","select content,ttl,prio,type,domain_id,name, auth from records where type='%s' and name='%s' and domain_id=%d");
@@ -84,6 +86,8 @@ public:
 
     declare(suffix, "list-query-auth","AXFR query", "select content,ttl,prio,type,domain_id,name, auth from records where domain_id='%d' order by name, type");
     declare(suffix, "list-subzone-auth","Query that returns a sub-zone","select content,ttl,prio,type,domain_id,name,auth from records where (name='%s' OR name like '%s') and domain_id=%d");
+
+    declare(suffix,"insert-empty-non-terminal-query-auth", "insert empty non-terminal in zone", "insert into records (domain_id,name,type,auth) values ('%d','%s',null,true)");
 
     declare(suffix, "get-order-first-query","DNSSEC Ordering Query, first", "select ordername, name from records where domain_id=%d and ordername is not null order by 1 asc limit 1");
     declare(suffix, "get-order-before-query","DNSSEC Ordering Query, before", "select ordername, name from records where ordername <= '%s' and domain_id=%d and ordername is not null order by 1 desc limit 1");
@@ -114,8 +118,8 @@ public:
     
     declare(suffix, "update-serial-query", "", "update domains set notified_serial=%d where id=%d");
     declare(suffix, "update-lastcheck-query", "", "update domains set last_check=%d where id=%d");
-    declare(suffix, "update-record-query", "Query that updates records with the prio", "update records set content='%s', ttl=%d, prio=%d where name='%s' and type='%s' and domain_id=%d and prio=%d");
-    declare(suffix, "update-record-query-no-prio", "Query that updates record without the prio", "update records set content='%s', ttl=%d where name='%s' and type='%s' and domain_id=%d");
+    declare(suffix, "update-record-query", "Query that updates records with the prio", "update records set content='%s', ttl=%d, prio=%d where name='%s' and type='%s' and domain_id=%d and content='%s' and prio=%d");
+    declare(suffix, "update-record-query-no-prio", "Query that updates record without the prio", "update records set content='%s', ttl=%d where name='%s' and type='%s' and domain_id=%d and content='%s'");
   
     declare(suffix, "zone-lastchange-query", "", "select max(change_date) from records where domain_id=%d");
     declare(suffix, "info-all-master-query", "", "select id,name,master,last_check,notified_serial,type from domains where type='MASTER'");
@@ -135,6 +139,7 @@ public:
 
     declare(suffix,"get-all-domains-query", "Retrieve all domains", "select records.domain_id, records.name, records.content, domains.type, domains.master, domains.notified_serial, domains.last_check from records, domains where records.domain_id=domains.id and records.type='SOA'");
   }
+
   
   //! Constructs a new gSQLite3Backend object.
   DNSBackend *make( const string & suffix = "" )

@@ -886,9 +886,9 @@ bool GSQLBackend::removeRecord(const DNSResourceRecord &r) {
 bool GSQLBackend::updateRecord(const DNSResourceRecord &oldR, const DNSResourceRecord &r) {
   string output;
   if (oldR.qtype == QType::MX || oldR.qtype == QType::SRV)
-    output = (boost::format(d_UpdateRecordQuery) % sqlEscape(r.content) % r.ttl % r.priority % sqlEscape(oldR.qname) % sqlEscape(oldR.qtype.getName()) % oldR.domain_id % oldR.priority).str();
+    output = (boost::format(d_UpdateRecordQuery) % sqlEscape(r.content) % r.ttl % r.priority % sqlEscape(oldR.qname) % sqlEscape(oldR.qtype.getName()) % oldR.domain_id % oldR.content % oldR.priority).str();
   else 
-    output = (boost::format(d_UpdateRecordQueryNoPrio) % sqlEscape(r.content) % r.ttl % sqlEscape(oldR.qname) % sqlEscape(oldR.qtype.getName()) % oldR.domain_id).str();
+    output = (boost::format(d_UpdateRecordQueryNoPrio) % sqlEscape(r.content) % r.ttl % sqlEscape(oldR.qname) % sqlEscape(oldR.qtype.getName()) % oldR.domain_id % oldR.content).str();
     
 
   try {
