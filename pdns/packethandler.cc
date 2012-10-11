@@ -986,30 +986,15 @@ uint16_t PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *
   }
 
   // Section 3.4.2.4, Delete a specific record that matches name, type and rdata
-  // again there are specific with some specifics for NS/SOA records. Never delete SOA and never remove
-  // the last NS from the zone.
+  // There are special conditions for SOA (never delete them). There is also a special condition for NS records,
+  // but that's filtered out by not calling this method in those cases - There's a check to make sure we don't delete the 
+  // last NS.
   if (rr->d_class == QClass::NONE && rr->d_type != QType::SOA) { // never remove SOA.
     DLOG(L<<msgPrefix<<"Deleting records (QClass == NONE && type != SOA)"<<endl);
-    if (rLabel == di->zone && rr->d_type == QType::NS) { // special condition for apex NS
-      int nsCount=0;
-      vector<DNSResourceRecord> tmpDel;
-      di->backend->lookup(QType(QType::NS), rLabel);
-      while(di->backend->get(rec)) {
-        nsCount++;
-        if (rec.qtype == rr->d_type && rec.getZoneRepresentation() == rr->d_content->getZoneRepresentation())
-          tmpDel.push_back(rec); 
-      }
-      if (nsCount > 1) { // always keep one remaining NS at the apex.
-        for(vector<DNSResourceRecord>::const_iterator rtd=tmpDel.begin(); rtd!=tmpDel.end(); rtd++){
-          recordsToDelete.push_back(*rtd);
-        }
-      } 
-    } else {
-      di->backend->lookup(QType(QType::ANY), rLabel);
-      while(di->backend->get(rec)) {
-        if (rec.qtype.getCode() && rec.qtype == rr->d_type && rec.getZoneRepresentation() == rr->d_content->getZoneRepresentation()) 
-          recordsToDelete.push_back(rec);
-      }
+    di->backend->lookup(QType(QType::ANY), rLabel);
+    while(di->backend->get(rec)) {
+      if (rec.qtype.getCode() && rec.qtype == rr->d_type && rec.getZoneRepresentation() == rr->d_content->getZoneRepresentation())
+        recordsToDelete.push_back(rec);
     }
   }
 
@@ -1307,13 +1292,36 @@ int PacketHandler::processUpdate(DNSPacket *p) {
       }
     }
 
-    // 3.4.2 - Perform the updates \0/
+    // 3.4.2 - Perform the updates.
+    // There's a special condition where deleting the last NS record at zone apex is never deleted (3.4.2.4)
+    // This means we must do it outside the normal performUpdate() because that focusses only on a seperate RR.
+    vector<const DNSRecord *> nsRRtoDelete;
     for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
       const DNSRecord *rr = &i->first;
       if (rr->d_place == DNSRecord::Nameserver) {
-        changedRecords += performUpdate(msgPrefix, rr, &di, narrow, haveNSEC3, &ns3pr, &updatedSerial);
+        if (rr->d_class == QClass::NONE  && rr->d_type == QType::NS && stripDot(rr->d_label) == di.zone)
+          nsRRtoDelete.push_back(rr);
+        else
+          changedRecords += performUpdate(msgPrefix, rr, &di, narrow, haveNSEC3, &ns3pr, &updatedSerial);
       }
     }
+    if (nsRRtoDelete.size()) {
+      vector<DNSResourceRecord> nsRRInZone;
+      DNSResourceRecord rec;
+      di.backend->lookup(QType(QType::NS), di.zone);
+      while (di.backend->get(rec)) {
+        nsRRInZone.push_back(rec);
+      }
+      if (nsRRInZone.size() > nsRRtoDelete.size()) { // only delete if the NS's we delete are less then what we have in the zone (3.4.2.4)
+        for (vector<DNSResourceRecord>::iterator inZone=nsRRInZone.begin(); inZone != nsRRInZone.end(); inZone++) {
+          for (vector<const DNSRecord *>::iterator rr=nsRRtoDelete.begin(); rr != nsRRtoDelete.end(); rr++) {
+            if (inZone->getZoneRepresentation() == (*rr)->d_content->getZoneRepresentation())
+              changedRecords += performUpdate(msgPrefix, *rr, &di, narrow, haveNSEC3, &ns3pr, &updatedSerial);
+          }
+        }
+      }
+    }
+
 
     // Purge the records!
     if (changedRecords > 0) {
