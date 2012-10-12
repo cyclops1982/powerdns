@@ -1005,8 +1005,11 @@ bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::str
   while(iter == bbd.d_records->end() || (iter->qname) > domain || (!(iter->auth) && (!(iter->qtype == QType::NS))) || (!(iter->qtype)))
     iter--;
 
-  if (beforeCurrent && iter != bbd.d_records->begin())
-    iter--;
+  if (beforeCurrent) {
+    before = iter->qname;
+    while (iter != bbd.d_records->begin() && (before == iter->qname || !iter->qtype))
+      iter--;
+  }
 
   before=iter->qname;
 
