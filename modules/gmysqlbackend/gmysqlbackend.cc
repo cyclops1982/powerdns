@@ -1,9 +1,7 @@
 // $Id$ 
 #include <string>
 #include <map>
-
 #include "pdns/namespaces.hh"
-
 #include "pdns/dns.hh"
 #include "pdns/dnsbackend.hh"
 #include "gmysqlbackend.hh"
@@ -12,10 +10,7 @@
 #include "pdns/ahuexception.hh"
 #include "pdns/logger.hh"
 #include "pdns/arguments.hh"
-
 #include "smysql.hh"
-
-
 #include <sstream>
 
 gMySQLBackend::gMySQLBackend(const string &mode, const string &suffix)  : GSQLBackend(mode,suffix)
@@ -103,8 +98,9 @@ public:
     declare(suffix,"get-order-after-query","DNSSEC Ordering Query, after", "select min(ordername) from records where ordername > '%s' and domain_id=%d and ordername is not null");
     declare(suffix,"get-order-last-query","DNSSEC Ordering Query, last", "select ordername, name from records where ordername != '' and domain_id=%d and ordername is not null order by 1 desc limit 1");
     declare(suffix,"set-order-and-auth-query", "DNSSEC set ordering query", "update records set ordername='%s',auth=%d where name='%s' and domain_id='%d'");
-    declare(suffix,"nullify-ordername-query", "DNSSEC nullify ordername query", "update records set ordername=NULL where domain_id='%d' and name='%s' and type is null");
+    declare(suffix,"nullify-ordername-and-update-auth-query", "DNSSEC nullify ordername and update auth query", "update records set ordername=NULL,auth=%d where domain_id='%d' and name='%s'");
     declare(suffix,"nullify-ordername-and-auth-query", "DNSSEC nullify ordername and auth query", "update records set ordername=NULL,auth=0 where name='%s' and type='%s' and domain_id='%d'");
+    declare(suffix,"set-auth-on-ds-record-query", "DNSSEC set auth on a DS record", "update records set auth=1 where domain_id='%d' and name='%s' and type='DS'");
 
     declare(suffix,"update-serial-query","", "update domains set notified_serial=%d where id=%d");
     declare(suffix,"update-lastcheck-query","", "update domains set last_check=%d where id=%d");
@@ -115,8 +111,8 @@ public:
     declare(suffix,"delete-zone-query","", "delete from records where domain_id=%d");
     declare(suffix,"delete-record-query", "Delete a record from the records", "delete from records where domain_id=%d and name='%s' and type='%s' and content='%s' and prio='%d'");
     declare(suffix,"add-domain-key-query","", "insert into cryptokeys (domain_id, flags, active, content) select id, %d, %d, '%s' from domains where name='%s'");
-    declare(suffix,"list-domain-keys-query","", "select cryptokeys.id, flags, active, content from domains, cryptokeys where domain_id=domains.id and name='%s'");
-    declare(suffix,"get-domain-metadata-query","", "select content from domains, domainmetadata where domain_id=domains.id and name='%s' and domainmetadata.kind='%s'");
+    declare(suffix,"list-domain-keys-query","", "select cryptokeys.id, flags, active, content from domains, cryptokeys where cryptokeys.domain_id=domains.id and name='%s'");
+    declare(suffix,"get-domain-metadata-query","", "select content from domains, domainmetadata where domainmetadata.domain_id=domains.id and name='%s' and domainmetadata.kind='%s'");
     declare(suffix,"clear-domain-metadata-query","", "delete from domainmetadata where domain_id=(select id from domains where name='%s') and domainmetadata.kind='%s'");
     declare(suffix,"set-domain-metadata-query","", "insert into domainmetadata (domain_id, kind, content) select id, '%s', '%s' from domains where name='%s'");
     declare(suffix,"activate-domain-key-query","", "update cryptokeys set active=1 where domain_id=(select id from domains where name='%s') and  cryptokeys.id=%d");

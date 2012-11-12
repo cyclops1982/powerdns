@@ -65,7 +65,7 @@ const string QType::getName() const
     if(pos->second==code)
       return pos->first;
 
-  return "#"+itoa(code);
+  return "TYPE"+itoa(code);
 }
 
 QType &QType::operator=(uint16_t n)
@@ -78,8 +78,8 @@ int QType::chartocode(const char *p)
 {
   static QType qt;
   vector<namenum>::iterator pos;
-  for(pos=names.begin();pos<names.end();++pos)
-    if(pos->first==p)
+  for(pos=names.begin(); pos < names.end(); ++pos)
+    if(pos->first == p)
       return pos->second;
   
   if(*p=='#') {

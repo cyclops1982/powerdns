@@ -99,8 +99,9 @@ public:
     declare(suffix,"get-order-after-query","DNSSEC Ordering Query, after", "select ordername from records where ordername ~>~ E'%s' and domain_id=%d and ordername is not null order by 1 using ~<~ limit 1");
     declare(suffix,"get-order-last-query","DNSSEC Ordering Query, last", "select ordername, name from records where ordername != '' and domain_id=%d and ordername is not null order by 1 using ~>~ limit 1");
     declare(suffix,"set-order-and-auth-query", "DNSSEC set ordering query", "update records set ordername=E'%s',auth=(%d = 1) where name=E'%s' and domain_id='%d'");
+    declare(suffix,"set-auth-on-ds-record-query", "DNSSEC set auth on a DS record", "update records set auth=true where domain_id='%d' and name='%s' and type='DS'");
 
-    declare(suffix,"nullify-ordername-query", "DNSSEC nullify ordername query", "update records set ordername=NULL where domain_id='%d' and name='%s' and type is null");
+    declare(suffix,"nullify-ordername-and-update-auth-query", "DNSSEC nullify ordername and update auth query", "update records set ordername=NULL,auth=(%d = 1) where domain_id='%d' and name='%s'");
     declare(suffix,"nullify-ordername-and-auth-query", "DNSSEC nullify ordername and auth query", "update records set ordername=NULL,auth=false where name=E'%s' and type=E'%s' and domain_id='%d'");
     
     declare(suffix,"update-serial-query","", "update domains set notified_serial=%d where id=%d");
@@ -113,8 +114,8 @@ public:
     declare(suffix,"delete-record-query", "Delete a record for dyndns", "delete from records where domain_id=%d and name=E'%s' and type=E'%s' and content=E'%s' and prio=%d");
 
     declare(suffix,"add-domain-key-query","", "insert into cryptokeys (domain_id, flags, active, content) select id, %d, (%d = 1), '%s' from domains where name=E'%s'");
-    declare(suffix,"list-domain-keys-query","", "select cryptokeys.id, flags, case when active then 1 else 0 end as active, content from domains, cryptokeys where domain_id=domains.id and name=E'%s'");
-    declare(suffix,"get-domain-metadata-query","", "select content from domains, domainmetadata where domain_id=domains.id and name=E'%s' and domainmetadata.kind=E'%s'");
+    declare(suffix,"list-domain-keys-query","", "select cryptokeys.id, flags, case when active then 1 else 0 end as active, content from domains, cryptokeys where cryptokeys.domain_id=domains.id and name=E'%s'");
+    declare(suffix,"get-domain-metadata-query","", "select content from domains, domainmetadata where domainmetadata.domain_id=domains.id and name=E'%s' and domainmetadata.kind=E'%s'");
     declare(suffix,"clear-domain-metadata-query","", "delete from domainmetadata where domain_id=(select id from domains where name=E'%s') and domainmetadata.kind=E'%s'");
     declare(suffix,"set-domain-metadata-query","", "insert into domainmetadata (domain_id, kind, content) select id, '%s', '%s' from domains where name=E'%s'");
     declare(suffix,"activate-domain-key-query","", "update cryptokeys set active=true where domain_id=(select id from domains where name=E'%s') and  cryptokeys.id=%d");

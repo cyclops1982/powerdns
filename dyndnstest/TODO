@@ -1,4 +1,6 @@
 TODO (in order of importance):
+- fix bindbackend
+- sdig options/usage output
 - Understand nsec3-narrow better (nsec3 != nsec3 narrow results)
 - Packet forwarding - not sure what to do. If not support, then document.
 - Re-read the howto section - and decide if it should be in the doc or not.
@@ -7,5 +9,6 @@ TODO (in order of importance):
 
 Run the full test suite! ;-)
 rm *.xml *.tar
-for d in bind bind-dnssec bind-dnssec-nsec3 gmysql-nodnssec gmysql gmysql-nsec3 gmysql-nsec3-narrow gpgsql-nodnssec gpgsql gpgsql-nsec3 gsqlite3-nodnssec gsqlite3 gsqlite3-nsec3 tinydns ; do killall -9 pdns_server ; ./start-test-stop 5300 $d nowait 600; done
+for d in bind bind-dnssec bind-dnssec-nsec3 bind-dnssec-nsec3-narrow gmysql-nodnssec gmysql gmysql-nsec3 gmysql-nsec3-narrow gpgsql-nodnssec gpgsql gpgsql-nsec3 gsqlite3-nodnssec gsqlite3 gsqlite3-nsec3 tinydns ; do killall -9 pdns_Server ; ./start-test-stop 5300 $d nowait 0; done 
+
 LC_ALL=C grep -w error *.xml

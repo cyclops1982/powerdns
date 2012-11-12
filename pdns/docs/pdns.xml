@@ -96,12 +96,40 @@
 	Beyond PowerDNS 2.9.20, the Authoritative Server and Recursor are released separately.
       </para>
       <sect2 id="changelog-auth-3-2"><title>PowerDNS Authoritative Server 3.2</title>
+      <warning><para>Version 3.2 of the PowerDNS Authoritative Server is a major upgrade if you are coming from 2.9.x. There are also some important changes if you are coming from 3.0 or 3.1
+	Please refer to <xref linkend="from2.9to3.0"/>, <xref linkend="from3.0to3.1"/> and <xref linkend="from3.1to3.2"/> for important information on 
+	correct and stable operation, as well as notes on performance and memory use.</para>
+      </warning>
   	  <note>
-      	<para>UNRELEASED</para>
+      	<para>RC1 released November 12th, 2012</para>
+      	<para>Downloads:
+      		<itemizedlist>
+      			<listitem>
+      				<para>
+      					<ulink url="http://powerdnssec.org/downloads/pdns-3.2-rc1.tar.gz">source</ulink>
+  					</para>
+  				</listitem>
+  				<listitem>
+  					<para>
+  						<ulink url="http://powerdnssec.org/downloads/packages/">semi-static packages (rpm, deb, i386, amd64)</ulink>
+  					</para>
+  				</listitem>
+  				<listitem>
+  					<para>
+  						<ulink url="http://www.monshouwer.eu/download/3rd_party/pdns-server/rc1/">native RHEL5/6 packages from Kees Monshouwer</ulink>
+  					</para>
+  				</listitem>
+  			</itemizedlist>
+  		</para>
       </note>
       <para>
       	This is a stability and confirmity update to 3.1. It mostly makes our DNSSEC implementation more robust,
-      	and improves interoperability with various validators.
+      	and improves interoperability with various validators. 3.2 has received very extensive testing on a lot
+      	of edge cases, verifying output both against common validators and compared against other authoritative servers.
+      </para>
+      <para>
+      	In addition to all the changes below, we now auto-build semi-static packages. Relevant changes to
+      	make that possible are in c2849, c2853, 2858, c2859, c2860.
       </para>
       <para>
       	DNSSEC changes in 3.2:
@@ -151,18 +179,135 @@
 				The signer thread would die in specific situations, leaving you with a non-working but very busy system. Fixed in c2668, c2670, closing t517.
 			</para>
 		</listitem>
+		<listitem>
+			<para>
+				pdnssec secure-zone now warns when you just signed a slave zone. Suggested by Mark Scholten, code in c2795, closes t592.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				pdnssec check-zone now warns about out-of-zone data. Patch by Kees Monshouwer in c2826, closing t604.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				pdnssec now honours --no-config. Patch by Kees Monshouwer in c2810.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				Various fixes for bindbackend presigned operation, mostly by Kees Monshouwer. Code in c2815, closing t600.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				Bindbackend could get confused about domain metadata, sometimes even causing hangs. Fixes by Kees Monshouwer in c2819 and c2834, closing t600 and t603.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				SQL queries in gsql backends that reference the domain_id column have been made explicit about from what table they want this column. This makes it
+				easier to operate custom schemas without changing the queries. Fix by Nicky Gerritsen in c2821.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				In various situations involving CNAMEs and wildcards, and for ANY queries involving CNAMEs, we would sometimes return bogus results. Fixed in c2825 by Kees Monshouwer.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				rectify-zone accidentally set auth=1 on NS records of secure delegations. Reported by George Notaras, fixed by Kees Monshouwer in r2831, closing t605.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				The DNSSEC signature cache now actually gets cleaned up, avoiding lasting spikes in memory usage every thursday. Code in c2836 and c2843, closing t594.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				Signatures roll at midnight on thursday. We now set their inception to be one hour before midnight,
+				to allow for some variations in clock quality on resolvers. Code in c2857.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				Duplicate records (same name/type/content/priority) would sometimes get broken RRSIGs during
+				outgoing AXFR. Fixed in c2856.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				A root zone (name="") with DNSSEC would cause crashes in some situations. Reported by Luuk Hendriks. Fixed in c2867, c2868, closing t614.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				Direct RRSIG queries for zones with auto-completed SOA records would cause trouble. Reported by Kees Monshouwer and fixed by him in r2869.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				When a name is matched only by a wildcard, but the type in the query is not present, we would be
+				lacking one NSEC(3) record to prove the existence of the wildcard. Fixed by Kees Monshouwer in r2872 and r2873.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				Luuk Hendriks spotted that our PolarSSL RSA key generation code was using inferior entropy. This can be important on virtual machines with badly implemented clocks. Fixed in c2876, closing t615.
+			</para>
+		</listitem>
 		</itemizedlist>
 
 		Non-DNSSEC improvements/changes in 3.2:
 		<itemizedlist>
 		<listitem>
 			<para>
-				A new backend, the 'Remote backend' <xref linkend="remotebackend" /> was submitted by Aki Tuomi. It aims to replace the pipebackend with a better protocol and support for more connection methods, including HTTP. Code in c2755, c2756, c2757, c2758, c2759, closing t529.
+				Bindbackend would sometimes crash on startup, due to a sync_with_stdio call. This call has been
+				moved to pdns_server proper to occur before any threads are spawned, avoiding race conditions in this call. Note that this crash has only been observed twice in thousands of regression test runs and has never been reported in the real world. Change in c2882.
 			</para>
 		</listitem>
 		<listitem>
 			<para>
-				The gsqlite (SQLite 2) backend was removed. We were not aware of any users and it was not actually working anyway. Changes in c2773-c2777, closing t565.
+				Leen Besselink submitted query logging support for the SQLite3 parts in the bindbackend. Code in c2874.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				Multi-backend operation would sometimes cause garbage domain IDs to be passed to backends. Reported by Kees Monshouwer and fixed by him in r2871.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				Bindbackend would sometimes crash during reloads/rediscovers. The changes in c2837 get rid of the crash, at the cost of returning SERVFAIL
+				during reloads. Closes t564.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				Our label decompression code was naive, causing troubles for slaving of very specifically formatted zones. Fix in t2822, closes t599.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				Bindbackend slaves would choke on unknown RR types and do silly things with RP and SRV records. Fixed in c2811 and c2812.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				The luabackend can now compile against Lua 5.2. Patch by Fredrik Danerklint in c2794, additional
+				luabackend compile fixes in c2854.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				A new backend, the 'Remote backend' <xref linkend="remotebackend" /> was submitted by Aki Tuomi. It aims to replace the pipebackend with a better protocol and support for more connection methods, including HTTP. Code in c2755, c2756, c2757, c2758, c2759, c2824, closing t529, t597.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				The gsqlite (SQLite 2) backend was removed. We were not aware of any users and it was not actually working anyway. Changes in commits C2773-C2777, closing t565.
 			</para>
 		</listitem>
 		<listitem>
@@ -182,7 +327,7 @@
 		</listitem>
   		<listitem>
   			<para>
-  				3.2 can be reliably built with or without Lua. This and many other configure/compile-related fixes in c2610, c2611 (t461), c2666, c2671, c2672 (t522), c2673 (t522), c2696 (t555), c2697 (t457), c2698, c2708, c2742 (t462), c2752 (t437), c2764.
+  				3.2 can be reliably built with or without Lua. This and many other configure/compile-related fixes in c2610, c2611 / t461, c2666, c2671, c2672 / t522, c2673 / t522, c2696 / t555, c2697 / t457, c2698, c2708, c2742 / t462), c2752 / t437, c2764, c2809, c2844, c2845, c2846, c2881.
 			</para>
 		</listitem>
 		<listitem>
@@ -192,12 +337,12 @@
 		</listitem>
 		<listitem>
 			<para>
-				Initscripts now have exit codes, submitted by Sander Hoentjes. Code in c2728. Guardian now returns 0 instead of 1 when receiving SIGTERM, requested by Morten Stevens of Fedora. Code in c2717.
+				Initscripts now have exit codes, submitted by Sander Hoentjen. Code in c2728. Guardian now returns 0 instead of 1 when receiving SIGTERM, requested by Morten Stevens of Fedora. Code in c2717.
 			</para>
 		</listitem>
 		<listitem>
 			<para>
-				Mark Zealey submitted various performance improvement patches and suggestions. Accepted as c2729 (t579), c2730 (t584), c2731 (t583), c2768 (t578). Please see commit messages for more details.
+				Mark Zealey submitted various performance improvement patches and suggestions. Accepted as c2729 / t579, c2730 / t584), c2731 / t583), c2768 / t578). Please see commit messages for more details.
 			</para>
 		</listitem>
 		<listitem>
@@ -225,10 +370,46 @@
 				gmysql users can now specify the 'group' we connect as, using the gmysql-group setting. Submitted by Kees Monshouwer, code in c2770, c2771, c2778, c2780, closing t463.
 			</para>
 		</listitem>
+		<listitem>
+			<para>
+				The Linux-only traceback handler is now optional (use traceback-handler=off to disable it). Suggested by Marc Haber. Change in c2798, closes t497.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				We now use IPV6_V6ONLY to bind IPv6 sockets. This ensures consistent behaviour between different operating systems. Change in c2799.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				MySQL connections are now logged at a higher loglevel, reducing log clutter. Change in c2800.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				We now ship a systemd unit file in contrib/. Added in c2847 and c2848, submitted by Morten Stevens.
+			</para>
+		</listitem>
 		</itemizedlist>
 
 		Assorted bugfixes:
 		<itemizedlist>
+		<listitem>
+			<para>
+				If a slave domain is removed while a transfer for it is queued, we no longer try the transfer. This also avoids a rare crash in similar circumstances. Code in c2802, closes t596.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				When using pdnssec with gsql backends, sometimes an SSqlException would pop up without any useful information. This no longer happens and errors are now in general more meaningful. Fix in c2803.
+			</para>
+		</listitem>
+		<listitem>
+			<para>
+				zone2sql now uses correct string syntax for PostgreSQL. This is needed for importing with the changed default settings in PostgreSQL 9.2 and up.
+				Code in c2797, closes t471.
+			</para>
+		</listitem>
 		<listitem>
 			<para>
 				We no longer send v6 notifications if v6 is not available. Same for IPv4. Code in c2772, fixes t515.
@@ -1520,7 +1701,7 @@ errors in some cases. Discovered by Sten Spans. Fixed in c1342.
 	<listitem>
 	  <para>
 	    In some cases, we would include duplicate CNAMEs. In addition, we would hand out
-	    a full root-referral when not configured to in some cases (ticket t223). Discovered by Andreas Jakum, fixed in c1344.
+	    a full root-referral when not configured to in some cases (ticket T223). Discovered by Andreas Jakum, fixed in c1344.
 	  </para>
 	</listitem>
 	<listitem>
@@ -2248,7 +2429,7 @@ errors in some cases. Discovered by Sten Spans. Fixed in c1342.
 	    </listitem>
 	    <listitem>
 	      <para>
-			PowerDNS Recursor can be a root-server again. Error spotted by the ever vigilant Darren Gamble (t229), fix in c1458.
+			PowerDNS Recursor can be a root-server again. Error spotted by the ever vigilant Darren Gamble (ticket T229), fix in c1458.
 	      </para>
 	    </listitem>
 	    
@@ -11407,6 +11588,9 @@ $ pdnssec rectify-zone powerdnssec.org
   <para>
     It is possible to operate a zone with different keying algorithms simultaneously, but it has also been observed that this is not reliable.
   </para>
+  <para>
+  	Depending on your master/slave setup, you may need to tinker with SOA-EDIT on your master.
+  </para>
   <section id="dnssec-packet-size-tcp"><title>Packet sizes, fragments, TCP/IP service</title>
   <para>
     DNSSEC answers contain (bulky) keying material and signatures, and are therefore a lot larger than regular DNS answers.
@@ -13018,6 +13202,8 @@ sql> insert into domainmetadata (domain_id, kind, content) values (6, 'TSIG-ALLO
 	      Sample Linux command lines would be:
 	      <screen>
 	      # iptables -t raw -I OUTPUT -p udp --dport 53 -j NOTRACK
+	      # iptables -t raw -I OUTPUT -p udp --sport 53 -j NOTRACK
+	      # iptables -t raw -I PREROUTING -p udp --dport 53 -j NOTRACK
 	      # iptables -t raw -I PREROUTING -p udp --sport 53 -j NOTRACK
 	      # iptables -I INPUT -p udp --dport 53 -j ACCEPT
 	      # iptables -I INPUT -p udp --sport 53 -j ACCEPT
@@ -13025,7 +13211,9 @@ sql> insert into domainmetadata (domain_id, kind, content) values (6, 'TSIG-ALLO
 
               # # optionally
 	      # ip6tables -t raw -I OUTPUT -p udp --dport 53 -j NOTRACK
+	      # ip6tables -t raw -I OUTPUT -p udp --sport 53 -j NOTRACK
 	      # ip6tables -t raw -I PREROUTING -p udp --sport 53 -j NOTRACK
+	      # ip6tables -t raw -I PREROUTING -p udp --dport 53 -j NOTRACK
 	      # ip6tables -I INPUT -p udp --dport 53 -j ACCEPT
 	      # ip6tables -I INPUT -p udp --sport 53 -j ACCEPT
 	      # ip6tables -I OUTPUT -p udp --dport 53 -j ACCEPT
@@ -13831,6 +14019,11 @@ To enable a Lua script for a particular slave zone, determine the domain_id for 
 	    holds for slave operation. Both can be on simultaneously.
 	  </para>
 	</warning>
+	<warning>
+	  <para>
+	  	If you have DNSSEC-signed zones and non-PowerDNS slaves, please check your SOA-EDIT settings.
+	  </para>
+	</warning>
       </para>
 
       <para>
@@ -13944,14 +14137,6 @@ To enable a Lua script for a particular slave zone, determine the domain_id for 
 	      recursion from everywhere. Example: <command>allow-recursion=192.168.0.0/24, 10.0.0.0/8, 1.2.3.4</command>.
 	    </para>
 	  </listitem></varlistentry>
-	<varlistentry>
-	  <term>allow-recursion-override=on|off</term>
-	  <listitem>
-	    <para>
-	      By specifying <command>allow-recursion-override</command>, local data even about hosts that don't exist will override
-	      the internet. This allows you to generate zones that don't really exist on the internet. Does increase the number of SQL queries for hosts that truly don't exist, also not in your database. (Setting did nothing in 3.0 and 3.1, removed in 3.1.1).
-	    </para>
-	  </listitem></varlistentry>
 	  <varlistentry><term>cache-ttl=...</term>
 	    <listitem><para>
 		Seconds to store packets in the PacketCache. See <xref linkend="packetcache"/>.
@@ -13980,6 +14165,10 @@ To enable a Lua script for a particular slave zone, determine the domain_id for 
 	    <listitem><para>
 		name to insert in the SOA record if none set in the backend
 	      </para></listitem></varlistentry>
+	  <varlistentry><term>default-ttl=...</term>
+	    <listitem><para>
+		TTL to use when none is provided.
+	      </para></listitem></varlistentry>
    	  <varlistentry><term>disable-axfr=...</term>
 	    <listitem><para>
 		Do not allow zone transfers. Before 2.9.10, this could be overridden by allow-axfr-ips.
@@ -13995,6 +14184,18 @@ To enable a Lua script for a particular slave zone, determine the domain_id for 
 	  <varlistentry><term>do-ipv6-additional-processing=...</term>
 	    <listitem><para>
 		Perform AAAA additional processing. 
+	      </para></listitem></varlistentry>
+	  <varlistentry><term>edns-subnet-option-number=...</term>
+	    <listitem><para>
+		If edns-subnet-processing is enabled, this option allows the user to override the option number.
+	      </para></listitem></varlistentry>
+	  <varlistentry><term>edns-subnet-processing=...</term>
+	    <listitem><para>
+	    	Enables EDNS subnet processing, for backends that support it.
+	      </para></listitem></varlistentry>
+	  <varlistentry><term>entropy-source=...</term>
+	    <listitem><para>
+	    	Entropy source (like /dev/urandom).
 	      </para></listitem></varlistentry>
 	  <varlistentry><term>fancy-records=...</term>
 	    <listitem><para>
@@ -14047,18 +14248,45 @@ To enable a Lua script for a particular slave zone, determine the domain_id for 
 	    <listitem><para>
 		Amount of logging. Higher is more. Do not set below 3
 	      </para></listitem></varlistentry>
+	  <varlistentry><term>log-dns-queries [,=no]</term>
+	    <listitem><para>
+Tell PowerDNS to log all incoming DNS queries. This will lead to a lot of logging! Only enable for debugging!
+	      </para></listitem></varlistentry>
+
+	  <varlistentry>
+	    <term>lua-prequery-script=...</term>
+	    <listitem>
+	      <para>
+		Lua script to run before answering a query. Not for production use!
+	      </para>
+	    </listitem>
+	  </varlistentry>
+
+
+
 	  <varlistentry><term>master [,=on].</term>
 	    <listitem><para>
 	    Turn on master support. Boolean.
 	      </para></listitem></varlistentry>
 	  <varlistentry>
-	    <term>max-cache-entries</term>
+	    <term>max-cache-entries=...</term>
 	    <listitem>
 	      <para>
 		Maximum number of cache entries. 1 million will generally suffice for most installations. Available since version 2.9.22.
 	      </para>
 	    </listitem>
 	  </varlistentry>
+
+
+	  	  <varlistentry>
+	    <term>max-ent-entries=...</term>
+	    <listitem>
+	      <para>
+		Maximum number of empty non-terminals to add to a zone. This is a protection measure to avoid database explosion due to long names.
+	      </para>
+	    </listitem>
+	  </varlistentry>
+
 	  <varlistentry><term>max-queue-length=...</term>
 	    <listitem><para>
 	      If this many packets are waiting for database attention, consider the situation hopeless and respawn.
@@ -14083,6 +14311,10 @@ To enable a Lua script for a particular slave zone, determine the domain_id for 
 	    <listitem><para>
 	      Do not attempt to shuffle query results.
 	      </para></listitem></varlistentry>
+     	  <varlistentry><term>overload-queue-length=...</term>
+	    <listitem><para>
+	      If this many packets are waiting for database attention, answer any new questions strictly from the packet cache.
+	      </para></listitem></varlistentry>
 	  <varlistentry>
 	    <term>server-id</term>
 	    <listitem>
@@ -14097,6 +14329,11 @@ To enable a Lua script for a particular slave zone, determine the domain_id for 
 	      Do out of zone additional processing. This means that if a malicious user adds a '.com' zone to your server, it is not used for 
 	      other domains and will not contaminate answers. Do not enable this setting if you run a public DNS service with untrusted users. Off by default.
 	    </para></listitem></varlistentry>
+	   <varlistentry><term>pipebackend-abi-version=...</term>
+	    <listitem><para>
+	      ABI version to use for the pipe backend. See <xref linkend="pipebackend-protocol"/>.
+	      </para></listitem></varlistentry>
+
 	  <varlistentry><term>query-cache-ttl=...</term>
 	    <listitem><para>
 	      Seconds to store queries with an answer in the Query Cache. See <xref linkend="querycache"/>.
@@ -14117,6 +14354,10 @@ To enable a Lua script for a particular slave zone, determine the domain_id for 
 	    <listitem><para>
 		Maximum number of milliseconds to queue a query. See <xref linkend="performance"/>.
 	      </para></listitem></varlistentry>
+      	  <varlistentry><term>receiver-threads=...</term>
+	    <listitem><para>
+		Number of receiver threads to start. See <xref linkend="performance"/>.
+	      </para></listitem></varlistentry>
 	  <varlistentry><term>recursive-cache-ttl=...</term>
 	    <listitem><para>
 		Seconds to store recursive packets in the PacketCache. See <xref linkend="packetcache"/>.
@@ -14125,6 +14366,11 @@ To enable a Lua script for a particular slave zone, determine the domain_id for 
 	    <listitem><para>
 	      If set, recursive queries will be handed to the recursor specified here. See <xref linkend="recursion"/>.
 	    </para></listitem></varlistentry>
+	  <varlistentry><term>retrieval-threads=...</term>
+	    <listitem><para>
+		Number of AXFR slave threads to start.
+	      </para></listitem></varlistentry>
+
 	<varlistentry><term>send-root-referral | --send-root-referral=yes | --send-root-referral=no | --send-root-referral=lean</term>
 	    <listitem><para>
 	      If set, PowerDNS will send out old-fashioned root-referrals when queried for domains for which it is not authoritative. Wastes some bandwidth
@@ -14142,9 +14388,23 @@ To enable a Lua script for a particular slave zone, determine the domain_id for 
 	    <listitem><para>
 		If set, change user id to this uid for more security. See <xref linkend="security"/>.
 	      </para></listitem></varlistentry>
+
+   	  <varlistentry><term>slave [,=on].</term>
+	    <listitem><para>
+	    	Turn on slave support. Boolean.
+  	      </para></listitem></varlistentry>
+
 	  <varlistentry><term>slave-cycle-interval=60</term>
 	    <listitem><para>
 	      Schedule slave up-to-date checks of domains whose status is unknown every .. seconds.
+	      </para></listitem></varlistentry>
+	  <varlistentry><term>slave-renotify [,=no]</term>
+	    <listitem><para>
+This setting will make PowerDNS renotify the after a AXFR is *received* from a master. This is useful when using when running a signing-slave.
+	      </para></listitem></varlistentry>
+	  <varlistentry><term>signing-threads=3</term>
+	    <listitem><para>
+		Tell PowerDNS how many threads to use for signing. It might help improve signing speed by changing this number.
 	      </para></listitem></varlistentry>
 	  <varlistentry><term>smtpredirector=...</term>
 	    <listitem><para>
@@ -14180,6 +14440,31 @@ To enable a Lua script for a particular slave zone, determine the domain_id for 
 	    <listitem><para>
 	      Perform strictly RFC-conforming AXFRs, which are slow, but may be necessary to placate some old client tools.
 	      </para></listitem></varlistentry>
+	  <varlistentry><term>tcp-control-address=...</term>
+	    <listitem><para>
+		Address to bind to for TCP control.
+	      </para></listitem></varlistentry>
+	  <varlistentry><term>tcp-control-port=...</term>
+	    <listitem><para>
+		Port to bind to for TCP control.
+	      </para></listitem></varlistentry>
+	  <varlistentry><term>tcp-control-range=...</term>
+	    <listitem><para>
+		Limit TCP control to a specific client range.
+	      </para></listitem></varlistentry>
+	  <varlistentry><term>tcp-control-secret=...</term>
+	    <listitem><para>
+		Password for TCP control.
+	      </para></listitem></varlistentry>
+	  <varlistentry><term>traceback-handler=...</term>
+	    <listitem><para>
+		Enable the Linux-only traceback handler (default on).
+	      </para></listitem></varlistentry>
+
+	  <varlistentry><term>trusted-notification-proxy=...</term>
+	    <listitem><para>
+			IP address of incoming notification proxy
+	      </para></listitem></varlistentry>
 	  <varlistentry><term>urlredirector=...</term>
 	    <listitem><para>
 		Where we send hosts to that need to be url redirected. See <xref linkend="fancy-records"/>.
@@ -14209,13 +14494,13 @@ To enable a Lua script for a particular slave zone, determine the domain_id for 
 	    <listitem><para>
 		Port of webserver to listen on. See <xref linkend="monitoring"/>.
 	      </para></listitem></varlistentry>
+	  <varlistentry><term>webserver-print-arguments=...</term>
+	    <listitem><para>
+        If the webserver should print arguments. See <xref linkend="monitoring"/>.
+	      </para></listitem></varlistentry>
 	  <varlistentry><term>wildcard-url=...</term>
 	    <listitem><para>
 	      Check for wildcard URL records.
-	      </para></listitem></varlistentry>
-	  <varlistentry><term>wildcards=...</term>
-	    <listitem><para>
-		Honor wildcards in the database. On by default. Turning this off has performance implications, see <xref linkend="performance"/>.
 	      </para></listitem></varlistentry>
       </variablelist>
     </para>

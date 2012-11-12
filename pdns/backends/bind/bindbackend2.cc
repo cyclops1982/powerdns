@@ -1,6 +1,6 @@
 /*
     PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2002 - 2011  PowerDNS.COM BV
+    Copyright (C) 2002 - 2012  PowerDNS.COM BV
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License version 2 as 
@@ -234,8 +234,8 @@ bool Bind2Backend::commitTransaction()
     for (vector<Bind2DNSRecord>::const_iterator i = d_transRecords.begin(); i != d_transRecords.end(); i++) {
       if (!i->qtype)
         continue;
-      string qname = labelReverse(i->qname); // reverse the reversed label. yay :-)
-      qname = qname.empty() ? bbd.d_name : (qname+"."+bbd.d_name);
+      string qname = labelReverse(i->qname);
+      qname = i->qname.empty() ? bbd.d_name : (qname+"."+bbd.d_name);
       writeRecord(d_transaction_zone, qname, i->ttl, QType(i->qtype), i->priority, i->content);
     }
   } 
@@ -272,7 +272,7 @@ bool Bind2Backend::updateRecord(const DNSResourceRecord &oldR, const DNSResource
     return false;
 
   for (vector<Bind2DNSRecord>::iterator i = d_transRecords.begin(); i != d_transRecords.end(); i++) {
-    string qname = labelReverse(i->qname); // reverse the reversed label. yay :-)
+    string qname = labelReverse(i->qname);
     qname = i->qname.empty() ? d_transaction_zone : (i->qname+"."+d_transaction_zone);
     if (qname == oldR.qname && i->qtype == oldR.qtype.getCode() && i->priority == oldR.priority) {
       i->content = r.content;
@@ -287,7 +287,7 @@ bool Bind2Backend::removeRecord(const DNSResourceRecord &r) {
     return false;
 
   for (vector<Bind2DNSRecord>::iterator i = d_transRecords.begin(); i != d_transRecords.end(); i++) {
-    string qname = labelReverse(i->qname); // reverse the reversed label. yay :-)
+    string qname = labelReverse(i->qname);
     qname = qname.empty() ? d_transaction_zone : (qname+"."+d_transaction_zone);
     if (qname == r.qname && i->qtype == r.qtype.getCode() && i->content == r.content) {
       d_transRecords.erase(i);
@@ -304,37 +304,18 @@ bool Bind2Backend::feedRecord(const DNSResourceRecord &r)
   if (d_transaction_id >= 0) {
     writeRecord(state->id_zone_map[d_transaction_id].d_name, r.qname, r.ttl, r.qtype, r.priority, r.content);
   } else {
-    string hashed;
-    if (d_transaction_nsec3zone)
-      hashed = toLower(toBase32Hex(hashQNameWithSalt(d_transaction_ns3p.d_iterations, d_transaction_ns3p.d_salt, r.qname)));
-
     Bind2DNSRecord bdr;
+    
+    string name = r.qname;
+    if(!stripDomainSuffix(&name, d_transaction_zone)) 
+      throw DBException("out-of-zone data '"+r.qname+"' during writing of zone '"+d_transaction_zone+"'");
 
-    bdr.qname=toLower(canonic(r.qname));
-    if(d_transaction_zone.empty())
-      ;
-    else if(bdr.qname==toLower(d_transaction_zone))
-      bdr.qname.clear();
-    else if(bdr.qname.length() > d_transaction_zone.length())
-      bdr.qname.resize(bdr.qname.length() - (d_transaction_zone.length() + 1));
-    else
-      throw AhuException("Trying to insert non-zone data, name='"+bdr.qname+"', qtype="+r.qtype.getName()+", zone='"+d_transaction_zone+"'");
-
-    bdr.qname.swap(bdr.qname);
-    bdr.qname=labelReverse(bdr.qname);
-
+    bdr.qname=labelReverse(name);
     bdr.qtype=r.qtype.getCode();
     bdr.content=r.content; 
-    bdr.nsec3hash = hashed;
-
     bdr.priority=r.priority;
-    //if(bdr.qtype==QType::CNAME || bdr.qtype==QType::MX || bdr.qtype==QType::NS || bdr.qtype==QType::AFSDB)
-    //  bdr.content=canonic(bdr.content); // I think this is wrong, the zoneparser should not come up with . terminated stuff XXX FIXME
-
     bdr.ttl=r.ttl;
- 
     d_transRecords.push_back(bdr);
-
   }
   return true;
 }
@@ -347,13 +328,17 @@ void Bind2Backend::writeRecord(const string &domain, const string &qname, const 
   string name = qname;
 
   if(!stripDomainSuffix(&name, domain)) 
-    throw DBException("out-of-zone data '"+qname+"' during AXFR of zone '"+domain+"'");
+    throw DBException("out-of-zone data '"+qname+"' during writing of zone '"+domain+"'");
 
 
   // SOA needs stripping too! XXX FIXME - also, this should not be here I think
   switch(qtype.getCode()) {
-    case QType::SRV:
     case QType::MX:
+      if(!stripDomainSuffix(&content, domain))
+        content+=".";
+      *d_of<<name<<"\t"<<ttl<<"\t"<<qtype.getName()<<"\t"<<priority<<"\t"<<content<<endl;
+      break;
+    case QType::SRV:
       if(!stripDomainSuffix(&content, domain))
         content+=".";
       *d_of<<name<<"\t"<<ttl<<"\t"<<qtype.getName()<<"\t"<<priority<<"\t"<<content<<endl;
@@ -496,7 +481,7 @@ void Bind2Backend::alsoNotifies(const string &domain, set<string> *ips)
 /** THIS IS AN INTERNAL FUNCTION! It does moadnsparser prio impedence matching
     This function adds a record to a domain with a certain id. 
     Much of the complication is due to the efforts to benefit from std::string reference counting copy on write semantics */
-void Bind2Backend::insert(shared_ptr<State> stage, int id, const string &qnameu, const QType &qtype, const string &content, uint32_t ttl, uint16_t prio, const std::string& hashed)
+void Bind2Backend::insert(shared_ptr<State> stage, int id, const string &qnameu, const QType &qtype, const string &content, int ttl, uint16_t prio, const std::string& hashed)
 {
   BB2DomainInfo bb2 = stage->id_zone_map[id];
 
@@ -526,6 +511,7 @@ void Bind2Backend::insert(shared_ptr<State> stage, int id, const string &qnameu,
   bdr.qtype=qtype.getCode();
   bdr.content=content; 
   bdr.nsec3hash = hashed;
+  // cerr<<"qname '"<<bdr.qname<<"' nsec3hash '"<<hashed<<"' qtype '"<<qtype.getName()<<"'"<<endl;
   
   if (!qtype.getCode()) // Set auth on empty non-terminals
     bdr.auth=true;
@@ -548,12 +534,6 @@ void Bind2Backend::insert(shared_ptr<State> stage, int id, const string &qnameu,
   records.insert(bdr);
 }
 
-void Bind2Backend::reload()
-{
-  Lock l(&s_state_lock);
-  for(id_zone_map_t::iterator i = s_state->id_zone_map.begin(); i != s_state->id_zone_map.end(); ++i) 
-    i->second.d_checknow=true;
-}
 
 string Bind2Backend::DLReloadNowHandler(const vector<string>&parts, Utility::pid_t ppid)
 {
@@ -616,9 +596,6 @@ string Bind2Backend::DLListRejectsHandler(const vector<string>&parts, Utility::p
 
 Bind2Backend::Bind2Backend(const string &suffix, bool loadZones)
 {
-#if __GNUC__ >= 3
-    std::ios_base::sync_with_stdio(false);
-#endif
   d_logprefix="[bind"+suffix+"backend]";
   setArgPrefix("bind"+suffix);
   Lock l(&s_startup_lock);
@@ -643,27 +620,19 @@ Bind2Backend::Bind2Backend(const string &suffix, bool loadZones)
 
 Bind2Backend::~Bind2Backend()
 {
-
 }
 
 void Bind2Backend::rediscover(string *status)
 {
   loadConfig(status);
 }
-#if 0
-static void prefetchFile(const std::string& fname)
+
+void Bind2Backend::reload()
 {
-
-  static int fd;
-  if(fd > 0)
-    close(fd);
-  fd=open(fname.c_str(), O_RDONLY);
-  if(fd < 0)
-    return;
-
-  posix_fadvise(fd, 0, 0, POSIX_FADV_WILLNEED);
+  Lock l(&s_state_lock);
+  for(id_zone_map_t::iterator i = s_state->id_zone_map.begin(); i != s_state->id_zone_map.end(); ++i) 
+    i->second.d_checknow=true;
 }
-#endif 
 
 void Bind2Backend::fixupAuth(shared_ptr<recordstorage_t> records)
 {
@@ -687,7 +656,7 @@ void Bind2Backend::fixupAuth(shared_ptr<recordstorage_t> records)
     do {
       if(sqname.empty()) // this is auth of course!
         continue; 
-      if(bdr.qtype == QType::NS || nssets.count(labelReverse(sqname))) { // NS records which are not apex are unauth by definition
+      if(bdr.qtype == QType::NS || nssets.count(sqname)) { // NS records which are not apex are unauth by definition
         bdr.auth=false;
         break;
       }
@@ -706,7 +675,7 @@ void Bind2Backend::doEmptyNonTerminals(shared_ptr<State> stage, int id, bool nse
   uint32_t maxent = ::arg().asNum("max-ent-entries");
 
   BOOST_FOREACH(const Bind2DNSRecord& bdr, *bb2.d_records)
-    if (bdr.auth)
+    if (bdr.auth && (bdr.qtype != QType::RRSIG))
       qnames.insert(labelReverse(bdr.qname));
 
   BOOST_FOREACH(const string& qname, qnames)
@@ -732,7 +701,7 @@ void Bind2Backend::doEmptyNonTerminals(shared_ptr<State> stage, int id, bool nse
   }
 
   DNSResourceRecord rr;
-  rr.qtype="0";
+  rr.qtype="#0";
   rr.content="";
   rr.ttl=0;
   rr.priority=0;
@@ -803,7 +772,7 @@ void Bind2Backend::loadConfig(string* status)
           bbd->d_id=domain_id++;
         
           // this isn't necessary, we do this on the actual load
-          //	  bbd->d_records=shared_ptr<recordstorage_t > (new recordstorage_t);
+          //    bbd->d_records=shared_ptr<recordstorage_t > (new recordstorage_t);
 
           bbd->setCheckInterval(getArgAsNum("check-interval"));
           bbd->d_lastnotified=0;
@@ -838,8 +807,12 @@ void Bind2Backend::loadConfig(string* status)
             DNSResourceRecord rr;
             string hashed;
             while(zpt.get(rr)) {
-              if(nsec3zone)
-                hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr.d_iterations, ns3pr.d_salt, rr.qname)));
+              if(nsec3zone) {
+                if(rr.qtype.getCode() != QType::NSEC3 && rr.qtype.getCode() != QType::RRSIG)
+                  hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr.d_iterations, ns3pr.d_salt, rr.qname)));
+                else
+                  hashed="";
+              }
               insert(staging, bbd->d_id, rr.qname, rr.qtype, rr.content, rr.ttl, rr.priority, hashed);
             }
         
@@ -951,9 +924,10 @@ void Bind2Backend::queueReload(BB2DomainInfo *bbd)
   // we reload *now* for the time being
 
   try {
-    nukeZoneRecords(bbd); // ? do we need this?
+    // nukeZoneRecords(bbd); // ? do we need this?
     staging->id_zone_map[bbd->d_id]=s_state->id_zone_map[bbd->d_id];
-    staging->id_zone_map[bbd->d_id].d_records=shared_ptr<recordstorage_t > (new recordstorage_t);  // nuke it
+    shared_ptr<recordstorage_t > newrecords(new recordstorage_t);
+    staging->id_zone_map[bbd->d_id].d_records=newrecords;
 
     ZoneParserTNG zpt(bbd->d_filename, bbd->d_name, s_binddirectory);
     DNSResourceRecord rr;
@@ -961,8 +935,12 @@ void Bind2Backend::queueReload(BB2DomainInfo *bbd)
     NSEC3PARAMRecordContent ns3pr;
     bool nsec3zone=getNSEC3PARAM(bbd->d_name, &ns3pr);
     while(zpt.get(rr)) {
-      if(nsec3zone)
-        hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr.d_iterations, ns3pr.d_salt, rr.qname)));
+      if(nsec3zone) {
+        if(rr.qtype.getCode() != QType::NSEC3 && rr.qtype.getCode() != QType::RRSIG)
+          hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr.d_iterations, ns3pr.d_salt, rr.qname)));
+        else
+          hashed="";
+      }
       insert(staging, bbd->d_id, rr.qname, rr.qtype, rr.content, rr.ttl, rr.priority, hashed);
     }
     // cerr<<"Start sort of "<<staging->id_zone_map[bbd->d_id].d_records->size()<<" records"<<endl;        
@@ -994,7 +972,7 @@ void Bind2Backend::queueReload(BB2DomainInfo *bbd)
   }
 }
 
-bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::string& qname, std::string& before, std::string& after, bool beforeCurrent)
+bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::string& qname, std::string& unhashed, std::string& before, std::string& after, bool beforeCurrent)
 {
   string domain=toLower(qname);
 
@@ -1033,7 +1011,7 @@ bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::str
         break;
       }
     }
-    after = iter->qname;
+    after = (iter)->qname;
   }
 
   //cerr<<"Before: '"<<before<<"', after: '"<<after<<"'\n";
@@ -1049,7 +1027,7 @@ bool Bind2Backend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string
     
   if(!getNSEC3PARAM(auth, &ns3pr)) {
     //cerr<<"in bind2backend::getBeforeAndAfterAbsolute: no nsec3 for "<<auth<<endl;
-    return findBeforeAndAfterUnhashed(bbd, qname, before, after, beforeCurrent);
+    return findBeforeAndAfterUnhashed(bbd, qname, unhashed, before, after, beforeCurrent);
   
   }
   else {
@@ -1074,11 +1052,21 @@ bool Bind2Backend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string
       iter = hashindex.end();
     }
 
-    while(iter == hashindex.end() || !(iter->auth))
+    bool wraponce = false;
+    while(iter == hashindex.end() || !(iter->auth) || iter->nsec3hash.empty())
     {
       iter--;
-      if(iter == hashindex.begin())
-        iter = hashindex.end();
+      if(iter == hashindex.begin()) {
+        if (!wraponce) {
+          iter = hashindex.end();
+          wraponce = true;
+        }
+        else {
+          before.clear();
+          after.clear();
+          return false;
+        }
+      }
     }
 
     before = iter->nsec3hash;
@@ -1092,7 +1080,7 @@ bool Bind2Backend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string
       iter = hashindex.begin();
     }
 
-    while(!(iter->auth))
+    while(!(iter->auth) || iter->nsec3hash.empty())
     {
       iter++;
       if(iter == hashindex.end())
@@ -1122,8 +1110,9 @@ void Bind2Backend::lookup(const QType &qtype, const string &qname, DNSPacket *pk
   shared_ptr<State> state = s_state;
 
   name_id_map_t::const_iterator iditer;
-  while((iditer=state->name_id_map.find(domain)) == state->name_id_map.end() && chopOff(domain))
-    ;
+  do {
+    iditer=state->name_id_map.find(domain);
+  } while ((iditer == state->name_id_map.end() || (zoneId != iditer->second && zoneId != -1)) && chopOff(domain));
 
   if(iditer==state->name_id_map.end()) {
     if(mustlog)
@@ -1157,7 +1146,7 @@ void Bind2Backend::lookup(const QType &qtype, const string &qname, DNSPacket *pk
   if(!bbd.current()) {
     L<<Logger::Warning<<"Zone '"<<bbd.d_name<<"' ("<<bbd.d_filename<<") needs reloading"<<endl;
     queueReload(&bbd);  // how can this be safe - ok, everybody should have their own reference counted copy of 'records'
-    state = s_state;
+    throw DBException("Zone for '"+bbd.d_name+"' in '"+bbd.d_filename+"' being reloaded"); // if we don't throw here, we crash for some reason
   }
 
   d_handle.d_records = bbd.d_records; // give it a reference counted copy
@@ -1221,6 +1210,13 @@ bool Bind2Backend::handle::get(DNSResourceRecord &r)
     return get_list(r);
   else
     return get_normal(r);
+}
+
+void Bind2Backend::handle::reset()
+{
+  d_records.reset();
+  qname.clear();
+  mustlog=false;
 }
 
 //#define DLOG(x) x

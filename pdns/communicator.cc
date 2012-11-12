@@ -54,15 +54,16 @@ void CommunicatorClass::retrievalLoopThread(void)
       cerr<<"Error: "<<ae.reason<<endl;
     }
   }
+
 }
 
 
 void CommunicatorClass::go()
 {
   pthread_t tid;
-  pthread_create(&tid,0,&launchhelper,this);
+  pthread_create(&tid,0,&launchhelper,this); // Starts CommunicatorClass::mainloop()
   for(int n=0; n < ::arg().asNum("retrieval-threads"); ++n)
-    pthread_create(&tid, 0, &retrieveLaunchhelper, this);
+    pthread_create(&tid, 0, &retrieveLaunchhelper, this); // Starts CommunicatorClass::retrievalLoopThread()
 
 }
 

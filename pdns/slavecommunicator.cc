@@ -43,20 +43,16 @@
 #include <boost/scoped_ptr.hpp>
 using boost::scoped_ptr;
 
-void CommunicatorClass::addSuckRequest(const string &domain, const string &master, bool priority)
+
+void CommunicatorClass::addSuckRequest(const string &domain, const string &master)
 {
   Lock l(&d_lock);
-  
   SuckRequest sr;
   sr.domain = domain;
   sr.master = master;
   pair<UniQueue::iterator, bool>  res;
-  if(priority) {
-    res=d_suckdomains.push_front(sr);
-  }
-  else {
-    res=d_suckdomains.push_back(sr);
-  }
+
+  res=d_suckdomains.push_back(sr);
   
   if(res.second) {
     d_suck_sem.post();
@@ -258,22 +254,25 @@ void CommunicatorClass::suck(const string &domain,const string &remote)
             break;
           }
         }while(chopOff(shorter));
-
-        if(dsnames.count(qname))
-          auth=true;
       }
 
       if(dnssecZone && haveNSEC3)
       {
         if(!narrow) { 
           hashed=toLower(toBase32Hex(hashQNameWithSalt(ns3pr.d_iterations, ns3pr.d_salt, qname)));
+          di.backend->updateDNSSECOrderAndAuthAbsolute(domain_id, qname, hashed, auth);
         }
-        di.backend->updateDNSSECOrderAndAuthAbsolute(domain_id, qname, hashed, auth); // this should always be done
-        if((!auth || dsnames.count(qname)) && realrr)
+        else
+          di.backend->nullifyDNSSECOrderNameAndUpdateAuth(domain_id, qname, auth);
+        if(realrr)
         {
-          di.backend->nullifyDNSSECOrderNameAndAuth(domain_id, qname, "NS");
-          di.backend->nullifyDNSSECOrderNameAndAuth(domain_id, qname, "A");
-          di.backend->nullifyDNSSECOrderNameAndAuth(domain_id, qname, "AAAA");
+          if (dsnames.count(qname))
+            di.backend->setDNSSECAuthOnDsRecord(domain_id, qname);
+          if (!auth || nsset.count(qname)) {
+            di.backend->nullifyDNSSECOrderNameAndAuth(domain_id, qname, "NS");
+            di.backend->nullifyDNSSECOrderNameAndAuth(domain_id, qname, "A");
+            di.backend->nullifyDNSSECOrderNameAndAuth(domain_id, qname, "AAAA");
+          }
         }
       }
       else // NSEC
@@ -281,8 +280,9 @@ void CommunicatorClass::suck(const string &domain,const string &remote)
         if(realrr)
         {
           di.backend->updateDNSSECOrderAndAuth(domain_id, domain, qname, auth);
-          if(!auth || dsnames.count(qname))
-          {
+          if (dsnames.count(qname))
+            di.backend->setDNSSECAuthOnDsRecord(domain_id, qname);
+          if (!auth || nsset.count(qname)) {
             di.backend->nullifyDNSSECOrderNameAndAuth(domain_id, qname, "A");
             di.backend->nullifyDNSSECOrderNameAndAuth(domain_id, qname, "AAAA");
           }
@@ -320,10 +320,6 @@ void CommunicatorClass::suck(const string &domain,const string &remote)
       }
     }
 
-    di.backend->commitTransaction();
-    di.backend->setFresh(domain_id);
-    PC.purge(domain+"$");
-
     // now we also need to update the presigned flag and NSEC3PARAM
     // for the zone
     if (gotPresigned) {
@@ -354,6 +350,10 @@ void CommunicatorClass::suck(const string &domain,const string &remote)
       dk.unsetPresigned(domain);
       dk.unsetNSEC3PARAM(domain);
     }
+
+    di.backend->commitTransaction();
+    di.backend->setFresh(domain_id);
+    PC.purge(domain+"$");
 
 
     L<<Logger::Error<<"AXFR done for '"<<domain<<"', zone committed with serial number "<<soa_serial<<endl;
@@ -479,7 +479,7 @@ void CommunicatorClass::slaveRefresh(PacketHandler *P)
 {
   UeberBackend *B=dynamic_cast<UeberBackend *>(P->getBackend());
   vector<DomainInfo> rdomains;
-  vector<DomainNotificationInfo > sdomains; // the bool is for 'presigned'
+  vector<DomainNotificationInfo> sdomains; // the bool is for 'presigned'
   vector<DNSPacket> trysuperdomains;
   
   {
@@ -508,7 +508,6 @@ void CommunicatorClass::slaveRefresh(PacketHandler *P)
   DNSSECKeeper dk(B); // NOW HEAR THIS! This DK uses our B backend, so no interleaved access!
   {
     Lock l(&d_lock);
-    typedef UniQueue::index<IDTag>::type domains_by_name_t;
     domains_by_name_t& nameindex=boost::multi_index::get<IDTag>(d_suckdomains);
 
     BOOST_FOREACH(DomainInfo& di, rdomains) {
@@ -518,8 +517,9 @@ void CommunicatorClass::slaveRefresh(PacketHandler *P)
         continue;
       // remove unfresh domains already queued for AXFR, no sense polling them again
       sr.master=*di.masters.begin();
-      if(nameindex.count(sr))
+      if(nameindex.count(sr)) {
         continue;
+      }
       DomainNotificationInfo dni;
       dni.di=di;
       dni.dnssecOk = dk.isPresigned(di.zone);
@@ -583,12 +583,12 @@ void CommunicatorClass::slaveRefresh(PacketHandler *P)
     uint32_t theirserial = ssr.d_freshness[di.id].theirSerial, ourserial = di.serial;
     
     if(rfc1982LessThan(theirserial, ourserial)) {
-      L<<Logger::Error<<"Domain "<<di.zone<<" more recent than master, our serial " << ourserial << " > their serial "<< theirserial << endl;
+      L<<Logger::Error<<"Domain '"<<di.zone<<"' more recent than master, our serial " << ourserial << " > their serial "<< theirserial << endl;
       di.backend->setFresh(di.id);
     }
     else if(theirserial == ourserial) {
       if(!dk.isPresigned(di.zone)) {
-        L<<Logger::Warning<<"Domain "<< di.zone<<" is fresh (not presigned, no RRSIG check)"<<endl;
+        L<<Logger::Warning<<"Domain '"<< di.zone<<"' is fresh (not presigned, no RRSIG check)"<<endl;
         di.backend->setFresh(di.id);
       }
       else {
@@ -603,17 +603,17 @@ void CommunicatorClass::slaveRefresh(PacketHandler *P)
           }
         }
         if(maxInception == ssr.d_freshness[di.id].theirInception && maxExpire == ssr.d_freshness[di.id].theirExpire) {
-          L<<Logger::Warning<<"Domain "<< di.zone<<" is fresh and apex RRSIGs match"<<endl;
+          L<<Logger::Warning<<"Domain '"<< di.zone<<"' is fresh and apex RRSIGs match"<<endl;
           di.backend->setFresh(di.id);
         }
         else {
-          L<<Logger::Warning<<"Domain "<< di.zone<<" is fresh, but RRSIGS differ, so DNSSEC stale"<<endl;
+          L<<Logger::Warning<<"Domain '"<< di.zone<<"' is fresh, but RRSIGS differ, so DNSSEC stale"<<endl;
           addSuckRequest(di.zone, *di.masters.begin());
         }
       }
     }
     else {
-      L<<Logger::Warning<<"Domain "<< di.zone<<" is stale, master serial "<<theirserial<<", our serial "<< ourserial <<endl;
+      L<<Logger::Warning<<"Domain '"<< di.zone<<"' is stale, master serial "<<theirserial<<", our serial "<< ourserial <<endl;
       addSuckRequest(di.zone, *di.masters.begin());
     }
   }

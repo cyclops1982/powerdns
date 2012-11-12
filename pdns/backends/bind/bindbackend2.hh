@@ -91,10 +91,10 @@ class BB2DomainInfo
 {
 public:
   BB2DomainInfo();
-
   void setCtime();
-
   bool current();
+  //! configure how often this domain should be checked for changes (on disk)
+  void setCheckInterval(time_t seconds);
 
   bool d_loaded;  //!< if a domain is loaded
   string d_status; //!< message describing status of a domain, for human consumption
@@ -109,13 +109,9 @@ public:
 
   uint32_t d_lastnotified; //!< Last serial number we notified our slaves of
 
-  //! configure how often this domain should be checked for changes (on disk)
-  void setCheckInterval(time_t seconds);
-
   shared_ptr<recordstorage_t > d_records;  //!< the actual records belonging to this domain
 private:
   time_t getCtime();
-
   time_t d_checkinterval;
 };
 
@@ -185,7 +181,7 @@ public:
   
 private:
   Bind2DNSRecord createRecord(const string &domain, const string &qnameu, const QType &qtype, const string &content, uint32_t ttl, uint16_t prio, const string &hashed);
-  static void insert(shared_ptr<State> stage, int id, const string &qname, const QType &qtype, const string &content, uint32_t ttl=300, uint16_t prio=25, const std::string& hashed=string());  
+  static void insert(shared_ptr<State> stage, int id, const string &qname, const QType &qtype, const string &content, int ttl=300, uint16_t prio=25, const std::string& hashed=string());  
   void writeRecord(const string &domain, const string &qname, const uint32_t ttl, const QType &qtype, uint16_t prio, const string &content);
   void setupDNSSEC();
   shared_ptr<SSQLite3> d_dnssecdb;
@@ -194,13 +190,8 @@ private:
   {
   public:
     bool get(DNSResourceRecord &);
-    void reset()
-    {
-      d_records.reset();
-      qname.clear();
-      mustlog=false;
-    }
-
+    void reset();
+    
     handle();
 
     shared_ptr<recordstorage_t > d_records;
@@ -249,7 +240,7 @@ private:
   handle d_handle;
 
   void queueReload(BB2DomainInfo *bbd);
-  bool findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::string& qname, std::string& before, std::string& after, bool beforeCurrent);
+  bool findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const std::string& qname, std::string& unhashed, std::string& before, std::string& after, bool beforeCurrent=false);
   void reload();
   static string DLDomStatusHandler(const vector<string>&parts, Utility::pid_t ppid);
   static string DLListRejectsHandler(const vector<string>&parts, Utility::pid_t ppid);

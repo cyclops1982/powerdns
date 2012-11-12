@@ -17,6 +17,8 @@ $ORIGIN example.com.
 ns1			IN	A	192.168.1.1
 ns2			IN	A	192.168.1.2
 ;
+double			IN	A	192.168.5.1
+;
 hightype		IN	A	192.168.1.5
 hightype		IN	TYPE65534 \# 5 07ED260001
 ;
@@ -28,6 +30,13 @@ location		IN	LOC	51 56 0.123 N 5 54 0.000 E 4.00m 1.00m 10000.00m 10.00m
 			IN	LOC	51 56 2.789 N 5 54 0.000 W 4.00m 3.00m 10000.00m 10.00m
 			IN	LOC	51 56 3.012 S 5 54 0.000 W 4.00m 4.00m 10000.00m 10.00m
 ;
+unauth			IN	CNAME	no-idea.example.org.
+;
+dsdelegation		IN	NS	ns.example.com.
+			IN	DS	28129 8 1 caf1eaaecdabe7616670788f9022454bf5fd9fda
+;
+nxd			IN	CNAME	nxdomain.example.com.
+;
 hwinfo			IN	HINFO	"abc" "def"
 ;
 smtp-servers		IN	A	192.168.0.2
@@ -35,6 +44,14 @@ smtp-servers		IN	A	192.168.0.3
 smtp-servers		IN	A	192.168.0.4
 ;
 outpost			IN	A	192.168.2.1
+
+start                   IN      CNAME   x.y.z.w1
+*.w1                    IN      CNAME   x.y.z.w2
+*.w2                    IN      CNAME   x.y.z.w3
+*.w3                    IN      CNAME   x.y.z.w4
+*.w4                    IN      CNAME   x.y.z.w5
+*.w5                    IN      A       1.2.3.5
+
 ;
 start1			IN	CNAME	start2
 start2			IN	CNAME	start3
@@ -20157,3 +20174,5 @@ host-19996	IN	A	192.168.1.28
 host-19997	IN	A	192.168.1.29
 host-19998	IN	A	192.168.1.30
 host-19999	IN	A	192.168.1.31
+;
+double			IN	A	192.168.5.1

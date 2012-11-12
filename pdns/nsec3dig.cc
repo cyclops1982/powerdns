@@ -6,6 +6,7 @@
 #include "statbag.hh"
 #include "base32.hh"
 #include "dnssecinfra.hh"
+#include <boost/foreach.hpp>
 
 StatBag S;
 
@@ -21,6 +22,7 @@ void proveOrDeny(const nsec3set &nsec3s, const string &qname, const string &salt
 {
   string hashed = nsec3Hash(qname, salt, iters);
 
+  // cerr<<"proveOrDeny(.., '"<<qname<<"', ..)"<<endl;
   // cerr<<"hashed: "<<hashed<<endl;
   for(nsec3set::const_iterator pos=nsec3s.begin(); pos != nsec3s.end(); ++pos) {
     string base=(*pos).first;
@@ -80,12 +82,32 @@ try
   pw.addOpt(2800, 0, EDNSOpts::DNSSECOK);
   pw.commit();
 
-  Socket sock(InterNetwork, Datagram);
+  Socket sock(InterNetwork, Stream);
   ComboAddress dest(argv[1] + (*argv[1]=='@'), atoi(argv[2]));
-  sock.sendTo(string((char*)&*packet.begin(), (char*)&*packet.end()), dest);
+  sock.connect(dest);
+  uint16_t len;
+  len = htons(packet.size());
+  if(sock.write((char *) &len, 2) != 2)
+    throw AhuException("tcp write failed");
+
+  sock.writen(string((char*)&*packet.begin(), (char*)&*packet.end()));
   
-  string reply;
-  sock.recvFrom(reply, dest);
+  if(sock.read((char *) &len, 2) != 2)
+    throw AhuException("tcp read failed");
+
+  len=ntohs(len);
+  char *creply = new char[len];
+  int n=0;
+  int numread;
+  while(n<len) {
+    numread=sock.read(creply+n, len-n);
+    if(numread<0)
+      throw AhuException("tcp read failed");
+    n+=numread;
+  }
+
+  string reply(creply, len);
+  delete[] creply;
 
   MOADNSParser mdp(reply);
   cout<<"Reply to question for qname='"<<mdp.d_qname<<"', qtype="<<DNSRecordContent::NumberToType(mdp.d_qtype)<<endl;
@@ -93,6 +115,8 @@ try
   cout<<", TC: "<<mdp.d_header.tc<<", AA: "<<mdp.d_header.aa<<", opcode: "<<mdp.d_header.opcode<<endl;
 
   set<string> names;
+  set<string> namesseen;
+  set<string> namestocheck;
   nsec3set nsec3s;
   string nsec3salt;
   int nsec3iters = 0;
@@ -112,7 +136,14 @@ try
     }
     else
     {
-      names.insert(i->first.d_label);
+      // cerr<<"namesseen.insert('"<<i->first.d_label<<"')"<<endl;
+      names.insert(stripDot(i->first.d_label));
+      namesseen.insert(stripDot(i->first.d_label));
+    }
+
+    if(i->first.d_type == QType::CNAME)
+    {
+      namesseen.insert(stripDot(i->first.d_content->getZoneRepresentation()));
     }
 
     cout<<i->first.d_place-1<<"\t"<<i->first.d_label<<"\tIN\t"<<DNSRecordContent::NumberToType(i->first.d_type);
@@ -133,11 +164,19 @@ try
   cout<<"== nsec3 prove/deny report follows =="<<endl;
   set<string> proven;
   set<string> denied;
-  string shorter(qname);
-  do {
-    proveOrDeny(nsec3s, shorter, nsec3salt, nsec3iters, proven, denied);
-    proveOrDeny(nsec3s, "*."+shorter, nsec3salt, nsec3iters, proven, denied);
-  } while(chopOff(shorter));
+  namesseen.insert(stripDot(qname));
+  BOOST_FOREACH(string n, namesseen)
+  {
+    string shorter(n);
+    do {
+      namestocheck.insert(shorter);
+    } while(chopOff(shorter));
+  }
+  BOOST_FOREACH(string n, namestocheck)
+  {
+    proveOrDeny(nsec3s, n, nsec3salt, nsec3iters, proven, denied);
+    proveOrDeny(nsec3s, "*."+n, nsec3salt, nsec3iters, proven, denied);
+  }
 
   if(names.count(qname+"."))
   {
@@ -150,7 +189,7 @@ try
     cout<<"qname found proven, NODATA response?"<<endl;
     exit(EXIT_SUCCESS);
   }
-  shorter=qname;
+  string shorter=qname;
   string encloser;
   string nextcloser;
   string prev(qname);

@@ -159,6 +159,8 @@ void DNSPacket::clearRecords()
 
 void DNSPacket::addRecord(const DNSResourceRecord &rr)
 {
+  // this removes duplicates from the packet in case we are not compressing
+  // for AXFR, no such checking is performed!
   if(d_compress)
     for(vector<DNSResourceRecord>::const_iterator i=d_rrs.begin();i!=d_rrs.end();++i) 
       if(rr.qname==i->qname && rr.qtype==i->qtype && rr.content==i->content) {
@@ -305,7 +307,7 @@ void DNSPacket::wrapup()
               drc->toPacket(pw);
         if(pw.size() + 20U > (d_tcp ? 65535 : getMaxReplyLen())) { // 20 = room for EDNS0
           pw.rollback();
-          if(pos->d_place == DNSResourceRecord::ANSWER) {
+          if(pos->d_place == DNSResourceRecord::ANSWER || pos->d_place == DNSResourceRecord::AUTHORITY) {
             pw.getHeader()->tc=1;
           }
           goto noCommit;

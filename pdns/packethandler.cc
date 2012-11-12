@@ -417,9 +417,9 @@ void PacketHandler::emitNSEC(const std::string& begin, const std::string& end, c
     nrc.d_set.insert(QType::DNSKEY);
 
   DNSResourceRecord rr;
-  B.lookup(QType(QType::ANY), begin);
+  B.lookup(QType(QType::ANY), begin, NULL, sd.domain_id);
   while(B.get(rr)) {
-    if(rr.domain_id == sd.domain_id && (rr.qtype.getCode() == QType::NS || rr.auth))
+    if(rr.qtype.getCode() == QType::NS || rr.auth)
       nrc.d_set.insert(rr.qtype.getCode());    
   }
   
@@ -487,18 +487,18 @@ void PacketHandler::emitNSEC3(const NSEC3PARAMRecordContent& ns3prc, const SOADa
    mode 4 = Name Error Responses
    mode 5 = ANY or direct NSEC request
 */
-void PacketHandler::addNSECX(DNSPacket *p, DNSPacket *r, const string& target, const string& target3, const string& auth, int mode)
+void PacketHandler::addNSECX(DNSPacket *p, DNSPacket *r, const string& target, const string& wildcard, const string& auth, int mode)
 {
   NSEC3PARAMRecordContent ns3rc;
   // cerr<<"Doing NSEC3PARAM lookup for '"<<auth<<"', "<<p->qdomain<<"|"<<p->qtype.getName()<<": ";
   bool narrow;
   if(d_dk.getNSEC3PARAM(auth, &ns3rc, &narrow))  {
     // cerr<<"Present, narrow="<<narrow<<endl;
-    addNSEC3(p, r, target3, auth, ns3rc, narrow, mode);
+    addNSEC3(p, r, target, wildcard, auth, ns3rc, narrow, mode);
   }
   else {
     // cerr<<"Not present"<<endl;
-    addNSEC(p, r, target, auth, mode);
+    addNSEC(p, r, target, wildcard, auth, mode);
   }
 }
 
@@ -555,9 +555,9 @@ bool getNSEC3Hashes(bool narrow, DNSBackend* db, int id, const std::string& hash
   return ret;
 }
 
-void PacketHandler::addNSEC3(DNSPacket *p, DNSPacket *r, const string& target, const string& auth, const NSEC3PARAMRecordContent& ns3rc, bool narrow, int mode)
+void PacketHandler::addNSEC3(DNSPacket *p, DNSPacket *r, const string& target, const string& wildcard, const string& auth, const NSEC3PARAMRecordContent& ns3rc, bool narrow, int mode)
 {
-  // L<<"mode="<<mode<<" target="<<target<<" auth="<<auth<<endl;
+  // L<<"mode="<<mode<<" target="<<target<<" wildcard="<<wildcard<<" auth="<<auth<<endl;
   
   SOAData sd;
   sd.db = (DNSBackend*)-1;
@@ -566,8 +566,9 @@ void PacketHandler::addNSEC3(DNSPacket *p, DNSPacket *r, const string& target, c
     return;
   }
   // cerr<<"salt in ph: '"<<makeHexDump(ns3rc.d_salt)<<"', narrow="<<narrow<<endl;
+  
   string unhashed, hashed, before, after;
-  string closest(target);
+  string closest=(mode == 3 || mode == 4) ? wildcard : target;
   
   if (mode == 2 || mode == 3 || mode == 4) {
     chopOff(closest);
@@ -586,12 +587,7 @@ void PacketHandler::addNSEC3(DNSPacket *p, DNSPacket *r, const string& target, c
   
   // add matching NSEC3 RR
   if (mode != 3) {
-    if (mode == 0 || mode == 5) {
-      unhashed=target;
-    }
-    else {
-      unhashed=closest;
-    }
+    unhashed=(mode == 0 || mode == 5) ? target : closest;
 
     hashed=hashQNameWithSalt(ns3rc.d_iterations, ns3rc.d_salt, unhashed);
     // L<<"1 hash: "<<toBase32Hex(hashed)<<" "<<unhashed<<endl;
@@ -603,7 +599,7 @@ void PacketHandler::addNSEC3(DNSPacket *p, DNSPacket *r, const string& target, c
 
   // add covering NSEC3 RR
   if (mode != 0 && mode != 5) {
-    string next(p->qdomain);
+    string next(target);
     do {
       unhashed=next;
     }
@@ -618,49 +614,48 @@ void PacketHandler::addNSEC3(DNSPacket *p, DNSPacket *r, const string& target, c
   }
   
   // wildcard denial
-  if (mode == 4) {
+  if (mode == 2 || mode == 4) {
     unhashed=dotConcat("*", closest);
 
     hashed=hashQNameWithSalt(ns3rc.d_iterations, ns3rc.d_salt, unhashed);
     // L<<"3 hash: "<<toBase32Hex(hashed)<<" "<<unhashed<<endl;
     
-    getNSEC3Hashes(narrow, sd.db, sd.domain_id,  hashed, true, unhashed, before, after);
+    getNSEC3Hashes(narrow, sd.db, sd.domain_id,  hashed, (mode != 2), unhashed, before, after);
     DLOG(L<<"Done calling for '*', hashed: '"<<toBase32Hex(hashed)<<"' before='"<<toBase32Hex(before)<<"', after='"<<toBase32Hex(after)<<"'"<<endl);
     emitNSEC3( ns3rc, sd, unhashed, before, after, target, r, mode);
   }
 }
 
-void PacketHandler::addNSEC(DNSPacket *p, DNSPacket *r, const string& target, const string& auth, int mode)
+void PacketHandler::addNSEC(DNSPacket *p, DNSPacket *r, const string& target, const string& wildcard, const string& auth, int mode)
 {
   if(!p->d_dnssecOk)
     return;
   
   DLOG(L<<"Should add NSEC covering '"<<target<<"' from zone '"<<auth<<"', mode = "<<mode<<endl);
   SOAData sd;
-  sd.db=(DNSBackend *)-1; // force uncached answer
 
   if(auth.empty()) {
     getAuth(p, &sd, target, 0);
   }
-  else if(!B.getSOA(auth, sd)) {
+  sd.db=(DNSBackend *)-1; // force uncached answer
+  if(!B.getSOA(auth, sd)) {
     DLOG(L<<"Could not get SOA for domain"<<endl);
     return;
   }
 
   string before,after;
-  //cerr<<"Calling getBeforeandAfter!"<<endl;
+  //cerr<<"Calling getBeforeandAfter! "<<(void*)sd.db<<endl;
 
   if (mode == 2) {
     // wildcard NO-DATA
-    sd.db->getBeforeAndAfterNames(sd.domain_id, auth, p->qdomain, before, after);
+    sd.db->getBeforeAndAfterNames(sd.domain_id, auth, target, before, after);
     emitNSEC(before, after, target, sd, r, mode);
-    sd.db->getBeforeAndAfterNames(sd.domain_id, auth, target, before, after);
+    sd.db->getBeforeAndAfterNames(sd.domain_id, auth, wildcard, before, after);
   }
-  else {
+  else
     sd.db->getBeforeAndAfterNames(sd.domain_id, auth, target, before, after);
-  }
   emitNSEC(before, after, target, sd, r, mode);
-  
+
   if (mode == 4) {
       // this one does wildcard denial, if applicable
       sd.db->getBeforeAndAfterNames(sd.domain_id, auth, auth, before, after);
@@ -1518,6 +1513,11 @@ void PacketHandler::synthesiseRRSIGs(DNSPacket* p, DNSPacket* r)
     if(!rr.auth) 
       continue;
     
+    // make sure all fields are present in the SOA content
+    if(rr.qtype.getCode() == QType::SOA) {
+      rr.content = serializeSOAData(sd);
+    }
+ 
     // this deals with the 'prio' mismatch!
     if(rr.qtype.getCode()==QType::MX || rr.qtype.getCode() == QType::SRV) {  
       rr.content = lexical_cast<string>(rr.priority) + " " + rr.content;
@@ -1573,7 +1573,7 @@ void PacketHandler::synthesiseRRSIGs(DNSPacket* p, DNSPacket* r)
   }
 }
 
-void PacketHandler::makeNXDomain(DNSPacket* p, DNSPacket* r, const std::string& target, const std::string& nextcloser, SOAData& sd)
+void PacketHandler::makeNXDomain(DNSPacket* p, DNSPacket* r, const std::string& target, const std::string& wildcard, SOAData& sd)
 {
   DNSResourceRecord rr;
   rr.qname=sd.qname;
@@ -1588,13 +1588,13 @@ void PacketHandler::makeNXDomain(DNSPacket* p, DNSPacket* r, const std::string& 
   r->addRecord(rr);
   
   if(p->d_dnssecOk && d_dk.isSecuredZone(sd.qname))
-    addNSECX(p, r, target, nextcloser, sd.qname, 4);
+    addNSECX(p, r, target, wildcard, sd.qname, 4);
   
   r->setRcode(RCode::NXDomain);  
   S.ringAccount("nxdomain-queries",p->qdomain+"/"+p->qtype.getName());
 }
 
-void PacketHandler::makeNOError(DNSPacket* p, DNSPacket* r, const std::string& target, SOAData& sd, int mode)
+void PacketHandler::makeNOError(DNSPacket* p, DNSPacket* r, const std::string& target, const std::string& wildcard, SOAData& sd, int mode)
 {
   DNSResourceRecord rr;
   rr.qname=sd.qname;
@@ -1609,7 +1609,7 @@ void PacketHandler::makeNOError(DNSPacket* p, DNSPacket* r, const std::string& t
   r->addRecord(rr);
 
   if(p->d_dnssecOk && d_dk.isSecuredZone(sd.qname))
-    addNSECX(p, r, target, target, sd.qname, mode);
+    addNSECX(p, r, target, wildcard, sd.qname, mode);
 
   S.ringAccount("noerror-queries",p->qdomain+"/"+p->qtype.getName());
 }
@@ -1645,7 +1645,7 @@ bool PacketHandler::tryReferral(DNSPacket *p, DNSPacket*r, SOAData& sd, const st
   r->setA(false);
 
   if(p->d_dnssecOk && d_dk.isSecuredZone(sd.qname) && !addDSforNS(p, r, sd, rrset.begin()->qname))
-    addNSECX(p, r, rrset.begin()->qname, rrset.begin()->qname, sd.qname, 1);
+    addNSECX(p, r, rrset.begin()->qname, "", sd.qname, 1);
   
   return true;
 }
@@ -1659,7 +1659,7 @@ void PacketHandler::completeANYRecords(DNSPacket *p, DNSPacket*r, SOAData& sd, c
   if(!d_dk.isSecuredZone(sd.qname))
     return;
     
-  addNSECX(p, r, target, target, sd.qname, 5); 
+  addNSECX(p, r, target, "", sd.qname, 5); 
   if(pdns_iequals(sd.qname, p->qdomain)) {
     addDNSKEY(p, r, sd);
     addNSEC3PARAM(p, r, sd);
@@ -1669,6 +1669,7 @@ void PacketHandler::completeANYRecords(DNSPacket *p, DNSPacket*r, SOAData& sd, c
 bool PacketHandler::tryWildcard(DNSPacket *p, DNSPacket*r, SOAData& sd, string &target, string &wildcard, bool& retargeted, bool& nodata)
 {
   retargeted = nodata = false;
+  string bestmatch;
 
   vector<DNSResourceRecord> rrset;
   if(!getBestWildcard(p, sd, target, wildcard, &rrset))
@@ -1682,7 +1683,7 @@ bool PacketHandler::tryWildcard(DNSPacket *p, DNSPacket*r, SOAData& sd, string &
     DLOG(L<<"The best wildcard match: "<<rrset.begin()->qname<<endl);
     BOOST_FOREACH(DNSResourceRecord rr, rrset) {
       rr.wildcardname = rr.qname;
-      rr.qname=target;
+      rr.qname=bestmatch=target;
 
       if(rr.qtype.getCode() == QType::CNAME)  {
         retargeted=true;
@@ -1695,7 +1696,7 @@ bool PacketHandler::tryWildcard(DNSPacket *p, DNSPacket*r, SOAData& sd, string &
     }
   }
   if(p->d_dnssecOk && d_dk.isSecuredZone(sd.qname) && !nodata) {
-    addNSECX(p, r, p->qdomain, wildcard, sd.qname, 3);
+    addNSECX(p, r, bestmatch, wildcard, sd.qname, 3);
   }
   return true;
 }
@@ -1867,7 +1868,7 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
 
     // this TRUMPS a cname!
     if(p->qtype.getCode() == QType::NSEC && p->d_dnssecOk && d_dk.isSecuredZone(sd.qname) && !d_dk.getNSEC3PARAM(sd.qname, 0)) {
-      addNSEC(p, r, target, sd.qname, 5); // only NSEC please
+      addNSEC(p, r, target, "", sd.qname, 5); // only NSEC please
       goto sendit;
     }
 
@@ -1917,7 +1918,7 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
     DLOG(L<<"After first ANY query for '"<<target<<"', id="<<sd.domain_id<<": weDone="<<weDone<<", weHaveUnauth="<<weHaveUnauth<<", weRedirected="<<weRedirected<<endl);
     if(p->qtype.getCode() == QType::DS && weHaveUnauth &&  !weDone && !weRedirected && d_dk.isSecuredZone(sd.qname)) {
       DLOG(L<<"Q for DS of a name for which we do have NS, but for which we don't have on a zone with DNSSEC need to provide an AUTH answer that proves we don't"<<endl);
-      makeNOError(p, r, target, sd, 1);
+      makeNOError(p, r, target, "", sd, 1);
       goto sendit;
     }
 
@@ -1941,15 +1942,15 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
           retargetcount++;
           goto retargeted;
         }
-        if(nodata) {
-          target=wildcard;
-          makeNOError(p, r, target, sd, 2);
-        }
+        if(nodata) 
+          makeNOError(p, r, target, wildcard, sd, 2);
+
         goto sendit;
       }
       else
       {        
-        makeNXDomain(p, r, target, wildcard, sd);
+        if (!(((p->qtype.getCode() == QType::CNAME) || (p->qtype.getCode() == QType::ANY)) && retargetcount > 0))
+          makeNXDomain(p, r, target, wildcard, sd);
       }
       
       goto sendit;
@@ -1979,7 +1980,7 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
           completeANYRecords(p, r, sd, target);
       }
       else
-        makeNOError(p, r, rr.qname, sd, 0);
+        makeNOError(p, r, rr.qname, "", sd, 0);
 
       goto sendit;
     }
@@ -1991,7 +1992,7 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
     }
     else {
       DLOG(L<<"Have some data, but not the right data"<<endl);
-      makeNOError(p, r, target, sd, 0);
+      makeNOError(p, r, target, "", sd, 0);
     }
     
   sendit:;
