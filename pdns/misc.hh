@@ -126,6 +126,11 @@ stringtok (Container &container, string const &in,
   }
 }
 
+template<typename T> bool rfc1982LessThan(T a, T b)
+{
+  return ((signed)(a - b)) < 0;
+}
+
 template <typename Container>
 void
 vstringtok (Container &container, string const &in,
