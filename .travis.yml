@@ -30,6 +30,8 @@ script:
  - ./start-test-stop 5318 gmysql-nsec3 nowait 3600
  - ./start-test-stop 5319 gmysql-nsec3-presigned nowait 3600
  - ./start-test-stop 5320 gmysql-nsec3-narrow nowait 3600
+ - cd ../regression-tests.nobackend/
+ - ./runtests
 notifications:
   irc:
     channels:
