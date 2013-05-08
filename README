@@ -1,3 +1,16 @@
+WARNING
+=======
+
+DO NOT use this code. It is an old repository which was deprecated when PowerDNS moved to github.
+
+Go to https://github.com/cyclops1982/pdns/ or https://github.com/PowerDNS/pdns/
+
+
+
+
+
+
+
 PowerDNS is copyright 2012 by PowerDNS.COM BV & lots of contributors 
 
 This file may lag behind at times. For most recent updates, always check
